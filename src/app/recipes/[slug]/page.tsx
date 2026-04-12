@@ -14,6 +14,7 @@ export default function RecipePage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -77,6 +78,27 @@ export default function RecipePage() {
 
   const category = getCategoryBySlug(recipe.category);
   const totalTime = recipe.prepTime + recipe.cookTime;
+
+  function copyIngredients() {
+    const r = recipe!;
+    const text = `${r.title} — Ingredients\n\n${r.ingredients.map((i) => `- ${i}`).join("\n")}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function downloadIngredients() {
+    const r = recipe!;
+    const text = `${r.title} — Ingredients\n\n${r.ingredients.map((i) => `- ${i}`).join("\n")}\n\nServings: ${r.servings}`;
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${r.slug}-ingredients.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <main className="min-h-screen bg-cream">
@@ -301,13 +323,45 @@ export default function RecipePage() {
           {/* Ingredients (right, sidebar) */}
           <div className="lg:col-span-1">
             <div className="rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30 lg:sticky lg:top-8">
-              <h2 className="font-serif text-2xl font-bold text-charcoal">
-                Ingredients
-              </h2>
-              <p className="mt-1 font-sans text-xs text-slate">
-                {recipe.servings}{" "}
-                {recipe.servings === 1 ? "serving" : "servings"}
-              </p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="font-serif text-2xl font-bold text-charcoal">
+                    Ingredients
+                  </h2>
+                  <p className="mt-1 font-sans text-xs text-slate">
+                    {recipe.servings}{" "}
+                    {recipe.servings === 1 ? "serving" : "servings"}
+                  </p>
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={copyIngredients}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate/50 hover:bg-cream-dark/30 hover:text-charcoal transition-colors cursor-pointer"
+                    title="Copy ingredients"
+                  >
+                    {copied ? (
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-sage">
+                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                        <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
+                        <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={downloadIngredients}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate/50 hover:bg-cream-dark/30 hover:text-charcoal transition-colors cursor-pointer"
+                    title="Download ingredients"
+                  >
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                      <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
               <ul className="mt-5 space-y-3">
                 {recipe.ingredients.map((ingredient, index) => (
                   <li key={index} className="flex items-start gap-3">
