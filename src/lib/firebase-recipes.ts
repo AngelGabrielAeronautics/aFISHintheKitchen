@@ -98,6 +98,14 @@ export async function uploadRecipeImage(
 
 export async function seedRecipes(recipes: Recipe[]): Promise<void> {
   const db = getDb();
+  // Delete all existing recipes first
+  const existing = await getDocs(recipesCollection());
+  if (!existing.empty) {
+    const deleteBatch = writeBatch(db);
+    existing.docs.forEach((d) => deleteBatch.delete(d.ref));
+    await deleteBatch.commit();
+  }
+  // Write new recipes
   const batch = writeBatch(db);
   for (const recipe of recipes) {
     const docRef = doc(db, "recipes", recipe.id);

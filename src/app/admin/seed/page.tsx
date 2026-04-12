@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { RECIPES } from "@/lib/seed-data";
+import { KOOKBOOK_RECIPES } from "@/lib/kookbook-all";
 import { MEMBERS } from "@/lib/seed-members";
 import {
   seedRecipes,
@@ -44,7 +45,8 @@ export default function SeedPage() {
     setSuccess(false);
 
     try {
-      await Promise.all([seedRecipes(RECIPES), seedMembers(MEMBERS)]);
+      const allRecipes = [...RECIPES, ...KOOKBOOK_RECIPES];
+      await Promise.all([seedRecipes(allRecipes), seedMembers(MEMBERS)]);
       setSuccess(true);
       const [rc, mc] = await Promise.all([
         getRecipeCount(),
@@ -87,7 +89,7 @@ export default function SeedPage() {
               <span className="font-semibold text-charcoal">
                 {recipeCount !== null ? recipeCount : "..."}
               </span>
-              <span className="text-slate/50"> / {RECIPES.length} available</span>
+              <span className="text-slate/50"> / {RECIPES.length + KOOKBOOK_RECIPES.length} available ({KOOKBOOK_RECIPES.length} from The Kookbook)</span>
             </p>
             <p>
               Members in Firestore:{" "}
