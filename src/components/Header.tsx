@@ -1,0 +1,197 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { signOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase";
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/recipes", label: "Recipes" },
+  { href: "/submit", label: "Submit a Recipe" },
+];
+
+export default function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const { user, loading } = useAuth();
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
+
+  async function handleSignOut() {
+    await signOut(getFirebaseAuth());
+    setMenuOpen(false);
+  }
+
+  return (
+    <header className="sticky top-0 z-50 bg-warm-white/95 backdrop-blur-sm border-b border-gold-light">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-18 sm:h-20">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <svg
+              viewBox="0 0 40 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-9 h-6 text-terracotta transition-colors group-hover:text-terracotta-dark"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 14c2-4 6-8 12-8s8 2 12 4 6 3 10 2c-2 4-6 7-12 7s-8-2-12-4-6-2.5-10-1Z"
+                fill="currentColor"
+              />
+              <circle cx="10" cy="11" r="1.2" fill="white" />
+              <path
+                d="M32 10c2-1 4-3 5-6-1 3-1 5-3 7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="flex flex-col">
+              <span className="font-serif text-xl sm:text-2xl font-semibold text-charcoal leading-tight tracking-tight">
+                The Fish Kitchen
+              </span>
+              <span className="hidden sm:block font-sans text-xs text-slate italic leading-tight">
+                Family Recipes Worth Catching
+              </span>
+            </div>
+          </Link>
+
+          {/* Desktop navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "text-terracotta bg-terracotta/8"
+                    : "text-slate hover:text-charcoal hover:bg-cream-dark/60"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {/* Auth button */}
+            {!loading && (
+              <>
+                {user ? (
+                  <div className="flex items-center gap-3 ml-2 pl-3 border-l border-gold-light">
+                    <span className="text-xs text-slate">
+                      {user.displayName || user.email}
+                    </span>
+                    <button
+                      onClick={handleSignOut}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/auth"
+                    className={`ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive("/auth")
+                        ? "text-terracotta bg-terracotta/8"
+                        : "bg-terracotta text-white hover:bg-terracotta-dark"
+                    }`}
+                  >
+                    Sign In
+                  </Link>
+                )}
+              </>
+            )}
+          </nav>
+
+          {/* Mobile menu button */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden p-2 -mr-2 rounded-lg text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="w-6 h-6"
+              aria-hidden="true"
+            >
+              {menuOpen ? (
+                <>
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="6" y1="18" x2="18" y2="6" />
+                </>
+              ) : (
+                <>
+                  <line x1="4" y1="7" x2="20" y2="7" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="17" x2="20" y2="17" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <nav className="md:hidden border-t border-gold-light/60 bg-warm-white">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "text-terracotta bg-terracotta/8"
+                    : "text-slate hover:text-charcoal hover:bg-cream-dark/60"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {/* Mobile auth */}
+            {!loading && (
+              <div className="mt-2 pt-2 border-t border-gold-light/60">
+                {user ? (
+                  <>
+                    <p className="px-4 py-1 text-xs text-slate">
+                      Signed in as {user.displayName || user.email}
+                    </p>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/auth"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2.5 rounded-lg text-sm font-medium text-terracotta hover:bg-terracotta/8 transition-colors"
+                  >
+                    Sign In / Sign Up
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        </nav>
+      )}
+    </header>
+  );
+}

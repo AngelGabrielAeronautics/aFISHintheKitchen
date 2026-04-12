@@ -1,0 +1,216 @@
+"use client";
+
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  getAllRecipes,
+  searchRecipes,
+  getRecipesByCategory,
+} from "@/lib/firebase-recipes";
+import { CATEGORIES, type Recipe } from "@/lib/types";
+import RecipeCard from "@/components/RecipeCard";
+
+function RecipesContent() {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category") ?? "all";
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState(categoryParam);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRecipes = useCallback(
+    async (search: string, category: string) => {
+      setLoading(true);
+      try {
+        let results: Recipe[];
+
+        if (search.trim() && category !== "all") {
+          // Both search and category active: search first, then filter client-side
+          results = await searchRecipes(search);
+          results = results.filter((r) => r.category === category);
+        } else if (search.trim()) {
+          results = await searchRecipes(search);
+        } else if (category !== "all") {
+          results = await getRecipesByCategory(category);
+        } else {
+          results = await getAllRecipes();
+        }
+
+        setRecipes(results);
+      } catch (error) {
+        console.error("Failed to fetch recipes:", error);
+        setRecipes([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  // Fetch on mount and when category changes (no debounce needed)
+  useEffect(() => {
+    fetchRecipes(searchQuery, activeCategory);
+    // Only re-run when activeCategory changes, not searchQuery (that's debounced separately)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory]);
+
+  // Debounced search: 300ms delay
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      fetchRecipes(searchQuery, activeCategory);
+    }, 300);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  return (
+    <main className="min-h-screen bg-cream">
+      {/* Header */}
+      <section className="border-b border-cream-dark/30 bg-warm-white px-4 pb-10 pt-16 text-center sm:px-6 lg:px-8">
+        <h1 className="font-serif text-4xl font-bold tracking-tight text-charcoal sm:text-5xl">
+          Our Recipes
+        </h1>
+        <p className="mx-auto mt-3 max-w-lg font-sans text-lg text-slate">
+          Every dish tells a family story
+        </p>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        {/* Search bar */}
+        <div className="mx-auto max-w-xl">
+          <div className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate/50"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search recipes, ingredients, tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 pr-4 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+            />
+          </div>
+        </div>
+
+        {/* Category filter pills */}
+        <div className="mt-8 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => setActiveCategory("all")}
+            className={`shrink-0 rounded-full px-4 py-2 font-sans text-sm font-medium transition-all ${
+              activeCategory === "all"
+                ? "bg-terracotta text-white shadow-sm"
+                : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:bg-cream-dark/20 hover:text-charcoal"
+            }`}
+          >
+            All
+          </button>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.slug}
+              onClick={() => setActiveCategory(cat.slug)}
+              className={`shrink-0 rounded-full px-4 py-2 font-sans text-sm font-medium transition-all ${
+                activeCategory === cat.slug
+                  ? "bg-terracotta text-white shadow-sm"
+                  : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:bg-cream-dark/20 hover:text-charcoal"
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+          </div>
+        ) : (
+          <>
+            {/* Recipe count */}
+            <p className="mt-6 font-sans text-sm text-slate">
+              Showing {recipes.length}{" "}
+              {recipes.length === 1 ? "recipe" : "recipes"}
+            </p>
+
+            {/* Recipe grid */}
+            {recipes.length > 0 ? (
+              <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {recipes.map((recipe) => (
+                  <RecipeCard key={recipe.id} recipe={recipe} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-16 flex flex-col items-center gap-4 text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-cream-dark/20">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-10 w-10 text-slate/40"
+                  >
+                    <path d="m21 21-5.197-5.197M15.803 15.803A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                  </svg>
+                </div>
+                <h3 className="font-serif text-xl font-semibold text-charcoal">
+                  No recipes found
+                </h3>
+                <p className="max-w-sm font-sans text-sm text-slate">
+                  We couldn&apos;t find any recipes matching your search. Try
+                  different keywords or clear your filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setActiveCategory("all");
+                  }}
+                  className="mt-2 rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+export default function RecipesPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-cream">
+          <section className="border-b border-cream-dark/30 bg-warm-white px-4 pb-10 pt-16 text-center sm:px-6 lg:px-8">
+            <h1 className="font-serif text-4xl font-bold tracking-tight text-charcoal sm:text-5xl">
+              Our Recipes
+            </h1>
+            <p className="mx-auto mt-3 max-w-lg font-sans text-lg text-slate">
+              Every dish tells a family story
+            </p>
+          </section>
+          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <RecipesContent />
+    </Suspense>
+  );
+}
