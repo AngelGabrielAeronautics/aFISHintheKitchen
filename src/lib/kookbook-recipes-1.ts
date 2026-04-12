@@ -434,7 +434,7 @@ export const KOOKBOOK_RECIPES_1: Recipe[] = [
       "chips",
       "family-famous",
     ],
-    featured: false,
+    featured: true,
     createdAt: "2026-04-12T00:00:00Z",
   },
   {

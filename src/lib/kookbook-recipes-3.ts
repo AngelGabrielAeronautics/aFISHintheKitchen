@@ -91,7 +91,7 @@ export const KOOKBOOK_RECIPES_3: Recipe[] = [
       "brunch",
       "one-pan",
     ],
-    featured: false,
+    featured: true,
     createdAt: "2026-04-12T00:00:00Z",
   },
   {
@@ -505,7 +505,7 @@ export const KOOKBOOK_RECIPES_3: Recipe[] = [
       "comfort-food",
       "do-not-modify",
     ],
-    featured: false,
+    featured: true,
     createdAt: "2026-04-12T00:00:00Z",
   },
   {
@@ -545,7 +545,7 @@ export const KOOKBOOK_RECIPES_3: Recipe[] = [
     story:
       "It's very difficult to write about this one. Over the years I've tried using a mix of lean beef mince and pork, beef and lamb and pretty much everything in between. What changed it for me and made it permanent, were simple additions that gave it the familiar taste.",
     tags: ["pie", "mince", "comfort-food", "family-favourite", "cottage-pie"],
-    featured: false,
+    featured: true,
     createdAt: "2026-04-12T00:00:00Z",
   },
   {
@@ -653,7 +653,7 @@ export const KOOKBOOK_RECIPES_3: Recipe[] = [
       "bobotie",
       "classic",
     ],
-    featured: false,
+    featured: true,
     createdAt: "2026-04-12T00:00:00Z",
   },
   {
@@ -702,7 +702,7 @@ export const KOOKBOOK_RECIPES_3: Recipe[] = [
       "special-occasion",
       "comfort-food",
     ],
-    featured: false,
+    featured: true,
     createdAt: "2026-04-12T00:00:00Z",
   },
   {
