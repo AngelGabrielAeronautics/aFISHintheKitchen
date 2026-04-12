@@ -8,6 +8,7 @@ import { getCategoryBySlug, formatTime } from "@/lib/types";
 import type { Recipe } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 import RecipePreferences from "@/components/RecipePreferences";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RecipePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -15,6 +16,7 @@ export default function RecipePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!slug) return;
@@ -102,9 +104,9 @@ export default function RecipePage() {
 
   return (
     <main className="min-h-screen bg-cream">
-      {/* Back link */}
+      {/* Back link + Edit */}
       <div className="border-b border-cream-dark/30 bg-warm-white px-4 py-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-4xl flex items-center justify-between">
           <Link
             href="/recipes"
             className="inline-flex items-center gap-2 font-sans text-sm font-medium text-slate transition-colors hover:text-terracotta"
@@ -123,6 +125,18 @@ export default function RecipePage() {
             </svg>
             Back to recipes
           </Link>
+          {user && (
+            <Link
+              href={`/recipes/${recipe.slug}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-terracotta/10 px-4 py-2 font-sans text-sm font-medium text-terracotta transition-colors hover:bg-terracotta/20"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+              </svg>
+              Edit
+            </Link>
+          )}
         </div>
       </div>
 

@@ -44,8 +44,8 @@ export default function MembersPage() {
                 className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-charcoal/5"
               >
                 {/* Header */}
-                <div className="flex items-center gap-4 border-b border-cream-dark/30 bg-warm-white px-6 py-5 sm:px-8">
-                  <Avatar name={member.name} size="lg" />
+                <div className="flex items-center gap-5 border-b border-cream-dark/30 bg-warm-white px-6 py-6 sm:px-8">
+                  <Avatar name={member.name} size="xl" ring />
                   <div>
                     <h2 className="font-serif text-xl font-bold text-charcoal sm:text-2xl">
                       {member.name}

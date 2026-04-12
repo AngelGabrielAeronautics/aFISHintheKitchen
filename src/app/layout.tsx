@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Neuton, Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
 import "./globals.css";
 
-const playfair = Playfair_Display({
+const neuton = Neuton({
   variable: "--font-serif",
   subsets: ["latin"],
   display: "swap",
+  weight: ["200", "300", "400", "700", "800"],
 });
 
 const inter = Inter({
@@ -42,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${inter.variable} h-full antialiased`}
+      className={`${neuton.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cream text-charcoal font-sans">
         <Providers>

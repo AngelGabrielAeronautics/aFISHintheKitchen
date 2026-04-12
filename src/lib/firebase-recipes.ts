@@ -106,6 +106,14 @@ export async function seedRecipes(recipes: Recipe[]): Promise<void> {
   await batch.commit();
 }
 
+export async function updateRecipe(
+  recipeId: string,
+  data: Partial<Omit<Recipe, "id" | "slug" | "createdAt">>
+): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  await updateDoc(docRef, data);
+}
+
 export async function toggleLoved(recipeId: string, name: string, add: boolean): Promise<void> {
   const docRef = doc(getDb(), "recipes", recipeId);
   if (add) {

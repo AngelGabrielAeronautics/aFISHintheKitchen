@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { CATEGORIES, type Recipe } from "@/lib/types";
 import { getFeaturedRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
@@ -20,39 +21,38 @@ export default function HomePage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative isolate overflow-hidden bg-gradient-to-br from-navy via-navy to-sage-dark py-24 md:py-32">
-        {/* Decorative fish watermark */}
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 400 200"
-          fill="none"
-          className="pointer-events-none absolute right-[-4rem] top-1/2 h-[28rem] w-[28rem] -translate-y-1/2 opacity-[0.04] md:right-8 md:h-[36rem] md:w-[36rem]"
-        >
-          <ellipse cx="200" cy="100" rx="120" ry="60" fill="currentColor" className="text-warm-white" />
-          <path d="M80 100 L30 50 L30 150 Z" fill="currentColor" className="text-warm-white" />
-          <circle cx="260" cy="85" r="10" fill="currentColor" className="text-navy" />
-          <path d="M180 40 Q200 10 220 40" stroke="currentColor" strokeWidth="4" fill="none" className="text-warm-white" />
-          <path d="M180 160 Q200 190 220 160" stroke="currentColor" strokeWidth="4" fill="none" className="text-warm-white" />
-          <path d="M150 80 Q170 100 150 120" stroke="currentColor" strokeWidth="2" fill="none" className="text-warm-white" opacity="0.5" />
-          <path d="M180 75 Q200 100 180 125" stroke="currentColor" strokeWidth="2" fill="none" className="text-warm-white" opacity="0.5" />
-          <path d="M210 75 Q230 100 210 125" stroke="currentColor" strokeWidth="2" fill="none" className="text-warm-white" opacity="0.5" />
-        </svg>
+      <section className="relative isolate overflow-hidden -mt-[72px] pt-[72px] py-32 md:py-48">
+        {/* Background image */}
+        <Image
+          src="/hero.jpg"
+          alt=""
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-navy/80 via-navy/60 to-navy/30" />
 
-        <div className="relative mx-auto max-w-4xl px-6 text-center">
-          <h1 className="font-serif text-5xl font-bold tracking-tight text-warm-white md:text-7xl">
-            A Fish in the Kitchen
-          </h1>
+        <div className="relative mx-auto max-w-6xl px-6 text-left">
+          <Image
+            src="/logo.png"
+            alt="A Fish in the Kitchen"
+            width={300}
+            height={300}
+            className="mb-4 w-[200px] h-auto md:w-[300px]"
+            priority
+          />
 
           <p className="mt-4 font-serif text-xl italic text-gold-light md:text-2xl">
             Family Recipes Worth Catching
           </p>
 
-          <p className="mx-auto mt-6 max-w-2xl font-sans text-base leading-relaxed text-cream md:text-lg">
+          <p className="mt-6 max-w-xl font-sans text-base leading-relaxed text-cream md:text-lg">
             Our family&rsquo;s favourite recipes, gathered from kitchen tables
             across generations. Passed down, written up, and now shared with you.
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row">
             <Link
               href="/recipes"
               className="inline-flex items-center rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold tracking-wide text-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"

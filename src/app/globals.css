@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-cream: #FFF8F0;
-  --color-cream-dark: #F5EDE3;
-  --color-warm-white: #FFFDF9;
-  --color-charcoal: #2C2C2C;
-  --color-slate: #4A4A4A;
-  --color-terracotta: #C45D3E;
-  --color-terracotta-dark: #A84B30;
-  --color-terracotta-light: #E8A690;
-  --color-sage: #7D8B6E;
-  --color-sage-light: #A8B5A0;
-  --color-sage-dark: #5C6950;
-  --color-gold: #D4A574;
-  --color-gold-light: #E8C9A0;
-  --color-navy: #1A2332;
-  --font-serif: "Playfair Display", Georgia, serif;
+  --color-cream: #F0EBD8;
+  --color-cream-dark: #E0D8C0;
+  --color-warm-white: #F7F4EA;
+  --color-charcoal: #1A1A1A;
+  --color-slate: #3D3D3D;
+  --color-terracotta: #3D5A3E;
+  --color-terracotta-dark: #2D4A2E;
+  --color-terracotta-light: #A8C4A0;
+  --color-sage: #6B7D5E;
+  --color-sage-light: #9BAF8E;
+  --color-sage-dark: #4A5C3E;
+  --color-gold: #8B7B4A;
+  --color-gold-light: #C4B88A;
+  --color-navy: #1A2E1A;
+  --font-serif: "Neuton", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
@@ -36,6 +36,31 @@ body {
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-sage-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sage);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-sage-light) transparent;
 }
 
 /* Recipe content styling */

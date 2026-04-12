@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import Avatar from "@/components/Avatar";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -31,7 +32,7 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-warm-white/95 backdrop-blur-sm border-b border-gold-light">
+    <header className="sticky top-0 z-50 bg-warm-white/50 backdrop-blur-md border-b border-gold-light/50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-18 sm:h-20">
           {/* Logo */}
@@ -74,6 +75,7 @@ export default function Header() {
               <>
                 {user ? (
                   <div className="flex items-center gap-3 ml-2 pl-3 border-l border-gold-light">
+                    <Avatar name={user.displayName || user.email || "?"} size="sm" />
                     <span className="text-xs text-slate">
                       {user.displayName || user.email}
                     </span>
@@ -158,9 +160,12 @@ export default function Header() {
               <div className="mt-2 pt-2 border-t border-gold-light/60">
                 {user ? (
                   <>
-                    <p className="px-4 py-1 text-xs text-slate">
-                      Signed in as {user.displayName || user.email}
-                    </p>
+                    <div className="flex items-center gap-2 px-4 py-1">
+                      <Avatar name={user.displayName || user.email || "?"} size="sm" />
+                      <p className="text-xs text-slate">
+                        {user.displayName || user.email}
+                      </p>
+                    </div>
                     <button
                       onClick={handleSignOut}
                       className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"
