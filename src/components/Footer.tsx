@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -10,25 +11,13 @@ export default function Footer() {
           {/* Branding */}
           <div className="flex flex-col items-center sm:items-start gap-3">
             <div className="flex items-center gap-2.5">
-              <svg
-                viewBox="0 0 40 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-5 text-terracotta"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 14c2-4 6-8 12-8s8 2 12 4 6 3 10 2c-2 4-6 7-12 7s-8-2-12-4-6-2.5-10-1Z"
-                  fill="currentColor"
-                />
-                <circle cx="10" cy="11" r="1.2" fill="white" />
-                <path
-                  d="M32 10c2-1 4-3 5-6-1 3-1 5-3 7"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <Image
+                src="/logo.png"
+                alt="A Fish in the Kitchen"
+                width={36}
+                height={36}
+                className="rounded-full"
+              />
               <span className="font-serif text-lg font-semibold text-charcoal">
                 A Fish in the Kitchen
               </span>

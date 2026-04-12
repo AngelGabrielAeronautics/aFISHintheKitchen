@@ -24,6 +24,14 @@ export const metadata: Metadata = {
   },
   description:
     "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

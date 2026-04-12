@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "firebase/auth";
@@ -35,25 +36,13 @@ export default function Header() {
         <div className="flex items-center justify-between h-18 sm:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <svg
-              viewBox="0 0 40 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-9 h-6 text-terracotta transition-colors group-hover:text-terracotta-dark"
-              aria-hidden="true"
-            >
-              <path
-                d="M2 14c2-4 6-8 12-8s8 2 12 4 6 3 10 2c-2 4-6 7-12 7s-8-2-12-4-6-2.5-10-1Z"
-                fill="currentColor"
-              />
-              <circle cx="10" cy="11" r="1.2" fill="white" />
-              <path
-                d="M32 10c2-1 4-3 5-6-1 3-1 5-3 7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            <Image
+              src="/logo.png"
+              alt="A Fish in the Kitchen"
+              width={44}
+              height={44}
+              className="rounded-full"
+            />
             <div className="flex flex-col">
               <span className="font-serif text-xl sm:text-2xl font-semibold text-charcoal leading-tight tracking-tight">
                 A Fish in the Kitchen
