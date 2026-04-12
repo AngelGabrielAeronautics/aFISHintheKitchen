@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Recipe, formatTime, getCategoryBySlug } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 
@@ -15,6 +19,7 @@ const difficultyColor: Record<Recipe["difficulty"], string> = {
 export default function RecipeCard({ recipe }: RecipeCardProps) {
   const category = getCategoryBySlug(recipe.category);
   const totalTime = recipe.prepTime + recipe.cookTime;
+  const [iconError, setIconError] = useState(false);
 
   return (
     <Link
@@ -23,7 +28,6 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
     >
       {/* Image placeholder */}
       <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30">
-        {/* Decorative utensils icon */}
         <div className="absolute inset-0 flex items-center justify-center opacity-20 transition-opacity duration-300 group-hover:opacity-30">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -35,9 +39,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             strokeLinejoin="round"
             className="h-20 w-20 text-terracotta"
           >
-            {/* Fork */}
             <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
-            {/* Knife */}
             <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
           </svg>
         </div>
@@ -108,15 +110,26 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
           </span>
         </div>
 
-        {/* Contributor & love count */}
+        {/* Contributor & category icon */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Avatar name={recipe.contributedBy} size="sm" />
+            <Avatar name={recipe.contributedBy} size="lg" ring />
             <p className="font-sans text-xs text-slate/70">
               {recipe.contributedBy}
             </p>
           </div>
-          {(recipe.lovedBy?.length ?? 0) > 0 && (
+          <div className="flex items-center gap-2">
+            {!iconError && (
+              <Image
+                src={`/icons/${recipe.category}.png`}
+                alt={category?.name || ""}
+                width={56}
+                height={56}
+                className="rounded-full object-contain"
+                onError={() => setIconError(true)}
+              />
+            )}
+            {(recipe.lovedBy?.length ?? 0) > 0 && (
             <div className="flex items-center gap-1 font-sans text-xs text-terracotta/70">
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
                 <path d="m9.653 16.915-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 0 1-.692 0h-.002Z" />
@@ -124,6 +137,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
               <span>{recipe.lovedBy!.length}</span>
             </div>
           )}
+          </div>
         </div>
       </div>
     </Link>

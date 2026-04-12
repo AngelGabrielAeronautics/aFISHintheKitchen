@@ -6,6 +6,7 @@ import Image from "next/image";
 import { CATEGORIES, type Recipe } from "@/lib/types";
 import { getFeaturedRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
+import CategoryIcon from "@/components/CategoryIcon";
 
 export default function HomePage() {
   const [featuredRecipes, setFeaturedRecipes] = useState<Recipe[]>([]);
@@ -139,15 +140,7 @@ export default function HomePage() {
                 href={`/recipes?category=${category.slug}`}
                 className="group flex flex-col items-center gap-3 rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-charcoal/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:ring-terracotta/20"
               >
-                <span className="text-3xl transition-transform duration-300 group-hover:scale-110">
-                  {category.icon}
-                </span>
-                <h3 className="font-serif text-sm font-semibold leading-tight text-charcoal md:text-base">
-                  {category.name}
-                </h3>
-                <p className="hidden font-sans text-xs leading-snug text-slate sm:block">
-                  {category.description}
-                </p>
+                <CategoryIcon slug={category.slug} emoji={category.icon} name={category.name} description={category.description} />
               </Link>
             ))}
           </div>

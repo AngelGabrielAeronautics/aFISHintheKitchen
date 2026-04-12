@@ -154,9 +154,7 @@ export default function RecipePage() {
               strokeLinejoin="round"
               className="h-32 w-32 text-terracotta sm:h-40 sm:w-40"
             >
-              {/* Fork */}
               <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
-              {/* Knife */}
               <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
             </svg>
           </div>
@@ -177,18 +175,29 @@ export default function RecipePage() {
 
         {/* Title & category */}
         <div className="mt-8">
-          <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
-            {recipe.title}
-          </h1>
-
-          {category && (
-            <Link
-              href={`/recipes?category=${category.slug}`}
-              className="mt-3 inline-block rounded-full bg-terracotta/10 px-4 py-1.5 font-sans text-xs font-semibold text-terracotta transition-colors hover:bg-terracotta/20"
-            >
-              {category.name}
-            </Link>
-          )}
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
+              {recipe.title}
+            </h1>
+            {category && (
+              <Link
+                href={`/recipes?category=${category.slug}`}
+                className="shrink-0 transition-transform hover:scale-105"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/icons/${category.slug}.png`}
+                  alt={category.name}
+                  className="h-16 w-16 object-contain"
+                  onError={(e) => {
+                    const el = e.currentTarget;
+                    el.style.display = "none";
+                    el.parentElement!.innerHTML = `<span class="inline-block rounded-full bg-terracotta/10 px-4 py-1.5 font-sans text-xs font-semibold text-terracotta">${category.name}</span>`;
+                  }}
+                />
+              </Link>
+            )}
+          </div>
 
           <p className="mt-4 font-sans text-base leading-relaxed text-slate">
             {recipe.description}
@@ -198,7 +207,7 @@ export default function RecipePage() {
         {/* Contributed by & story */}
         <div className="mt-6">
           <div className="flex items-center gap-3">
-            <Avatar name={recipe.contributedBy} size="lg" />
+            <Avatar name={recipe.contributedBy} size="xl" ring />
             <div>
               <p className="font-sans text-xs text-slate">Contributed by</p>
               <p className="font-sans text-base font-semibold text-charcoal">
