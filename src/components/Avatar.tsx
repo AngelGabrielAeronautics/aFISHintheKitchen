@@ -16,9 +16,13 @@ const AVATAR_COLORS = [
 
 // Map display names to avatar image filenames in /public/avatars/
 const AVATAR_IMAGES: Record<string, string> = {
+  poppie: "poppie.png",
+  "granny gill": "gill.png",
+  dylan: "dylan.png",
   sam: "sam.png",
   bella: "bella.png",
   charlie: "charlie.png",
+  quaid: "quaid.png",
 };
 
 function getAvatarImage(name: string): string | null {
