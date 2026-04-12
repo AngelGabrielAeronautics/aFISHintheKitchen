@@ -40,7 +40,7 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-4xl px-6 text-center">
           <h1 className="font-serif text-5xl font-bold tracking-tight text-warm-white md:text-7xl">
-            The Fish Kitchen
+            A Fish in the Kitchen
           </h1>
 
           <p className="mt-4 font-serif text-xl italic text-gold-light md:text-2xl">
@@ -165,7 +165,7 @@ export default function HomePage() {
             <p>
               Every family has its own recipes &mdash; the ones scribbled on
               stained notecards, passed between generations, or shouted across a
-              noisy kitchen. The Fish Kitchen is our attempt to keep them all in
+              noisy kitchen. A Fish in the Kitchen is our attempt to keep them all in
               one place, so the next generation can cook them too.
             </p>
             <p>

@@ -121,7 +121,7 @@ export default function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-cream px-4 py-12">
       <div className="w-full max-w-md">
         <h1 className="mb-8 text-center font-serif text-3xl font-bold text-charcoal">
-          Welcome to The Fish Kitchen
+          Welcome to A Fish in the Kitchen
         </h1>
 
         <div className="rounded-2xl bg-white p-8 shadow-lg">

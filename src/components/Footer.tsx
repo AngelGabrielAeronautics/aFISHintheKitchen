@@ -30,7 +30,7 @@ export default function Footer() {
                 />
               </svg>
               <span className="font-serif text-lg font-semibold text-charcoal">
-                The Fish Kitchen
+                A Fish in the Kitchen
               </span>
             </div>
             <p className="text-sm text-slate italic">
@@ -76,7 +76,7 @@ export default function Footer() {
         {/* Bottom row */}
         <div className="mt-8 pt-6 border-t border-gold-light/40 text-center">
           <p className="text-xs text-slate">
-            &copy; {year} The Fish Kitchen. Made with love and a pinch of salt.
+            &copy; {year} A Fish in the Kitchen. Made with love and a pinch of salt.
           </p>
         </div>
       </div>

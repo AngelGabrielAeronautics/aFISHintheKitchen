@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getAllRecipes,
@@ -10,6 +10,9 @@ import {
 import { CATEGORIES, type Recipe } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
 
+type Difficulty = "Easy" | "Medium" | "Hard";
+type SortOption = "newest" | "quickest" | "longest" | "az";
+
 function RecipesContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") ?? "all";
@@ -17,7 +20,31 @@ function RecipesContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState(categoryParam);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Advanced filters
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterCook, setFilterCook] = useState("all");
+  const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | "all">("all");
+  const [filterMaxTime, setFilterMaxTime] = useState<number | "">("");
+  const [filterSort, setFilterSort] = useState<SortOption>("newest");
+  const [filterIngredient, setFilterIngredient] = useState("");
+
+  // Derive unique contributors from all recipes
+  const contributors = useMemo(() => {
+    const names = new Set(allRecipes.map((r) => r.contributedBy));
+    return Array.from(names).sort();
+  }, [allRecipes]);
+
+  const activeFilterCount = [
+    filterCook !== "all",
+    filterDifficulty !== "all",
+    filterMaxTime !== "",
+    filterSort !== "newest",
+    filterIngredient.trim() !== "",
+    activeCategory !== "all",
+  ].filter(Boolean).length;
 
   const fetchRecipes = useCallback(
     async (search: string, category: string) => {
@@ -26,7 +53,6 @@ function RecipesContent() {
         let results: Recipe[];
 
         if (search.trim() && category !== "all") {
-          // Both search and category active: search first, then filter client-side
           results = await searchRecipes(search);
           results = results.filter((r) => r.category === category);
         } else if (search.trim()) {
@@ -48,10 +74,19 @@ function RecipesContent() {
     []
   );
 
-  // Fetch on mount and when category changes (no debounce needed)
+  // Fetch all recipes once for category counts and contributor list
+  useEffect(() => {
+    getAllRecipes().then(setAllRecipes).catch(() => {});
+  }, []);
+
+  const categoryCounts = allRecipes.reduce<Record<string, number>>((acc, r) => {
+    acc[r.category] = (acc[r.category] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Fetch on mount and when category changes
   useEffect(() => {
     fetchRecipes(searchQuery, activeCategory);
-    // Only re-run when activeCategory changes, not searchQuery (that's debounced separately)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
@@ -63,6 +98,58 @@ function RecipesContent() {
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  // Apply client-side filters and sorting on top of fetched results
+  const filteredRecipes = useMemo(() => {
+    let results = [...recipes];
+
+    if (filterCook !== "all") {
+      results = results.filter((r) => r.contributedBy === filterCook);
+    }
+
+    if (filterDifficulty !== "all") {
+      results = results.filter((r) => r.difficulty === filterDifficulty);
+    }
+
+    if (filterMaxTime !== "") {
+      results = results.filter((r) => r.prepTime + r.cookTime <= filterMaxTime);
+    }
+
+    if (filterIngredient.trim()) {
+      const term = filterIngredient.toLowerCase();
+      results = results.filter((r) =>
+        r.ingredients.some((ing) => ing.toLowerCase().includes(term))
+      );
+    }
+
+    switch (filterSort) {
+      case "quickest":
+        results.sort((a, b) => (a.prepTime + a.cookTime) - (b.prepTime + b.cookTime));
+        break;
+      case "longest":
+        results.sort((a, b) => (b.prepTime + b.cookTime) - (a.prepTime + a.cookTime));
+        break;
+      case "az":
+        results.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      // "newest" is already the default order from Firestore
+    }
+
+    return results;
+  }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient]);
+
+  function clearAllFilters() {
+    setSearchQuery("");
+    setActiveCategory("all");
+    setFilterCook("all");
+    setFilterDifficulty("all");
+    setFilterMaxTime("");
+    setFilterSort("newest");
+    setFilterIngredient("");
+  }
+
+  const selectClasses =
+    "w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 transition-colors appearance-none";
 
   return (
     <main className="min-h-screen bg-cream">
@@ -77,7 +164,7 @@ function RecipesContent() {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Search bar */}
+        {/* Search bar + filter toggle */}
         <div className="mx-auto max-w-xl">
           <div className="relative">
             <svg
@@ -97,10 +184,145 @@ function RecipesContent() {
               placeholder="Search recipes, ingredients, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 pr-4 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+              className="w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 pr-14 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
             />
+            <button
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full px-3 py-1.5 font-sans text-xs font-medium transition-colors cursor-pointer ${
+                filtersOpen || activeFilterCount > 0
+                  ? "bg-terracotta text-white"
+                  : "bg-cream-dark/30 text-slate hover:bg-cream-dark/50"
+              }`}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
+              </svg>
+              {activeFilterCount > 0 ? activeFilterCount : ""}
+            </button>
           </div>
         </div>
+
+        {/* Filter panel */}
+        {filtersOpen && (
+          <div className="mx-auto mt-4 max-w-xl rounded-xl bg-white p-5 shadow-sm ring-1 ring-charcoal/5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Category / Type */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Category
+                </label>
+                <select
+                  value={activeCategory}
+                  onChange={(e) => setActiveCategory(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="all">All categories</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.slug} value={cat.slug}>
+                      {cat.name}{categoryCounts[cat.slug] ? ` (${categoryCounts[cat.slug]})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cook / Contributor */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Cook
+                </label>
+                <select
+                  value={filterCook}
+                  onChange={(e) => setFilterCook(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="all">All cooks</option>
+                  {contributors.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Difficulty */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Difficulty
+                </label>
+                <select
+                  value={filterDifficulty}
+                  onChange={(e) => setFilterDifficulty(e.target.value as Difficulty | "all")}
+                  className={selectClasses}
+                >
+                  <option value="all">Any difficulty</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              {/* Ingredient */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Ingredient
+                </label>
+                <input
+                  type="text"
+                  value={filterIngredient}
+                  onChange={(e) => setFilterIngredient(e.target.value)}
+                  placeholder="e.g. chicken, garlic, butter"
+                  className={selectClasses}
+                />
+              </div>
+
+              {/* Max total time */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Max total time
+                </label>
+                <select
+                  value={filterMaxTime}
+                  onChange={(e) => setFilterMaxTime(e.target.value === "" ? "" : Number(e.target.value))}
+                  className={selectClasses}
+                >
+                  <option value="">Any time</option>
+                  <option value="15">Under 15 min</option>
+                  <option value="30">Under 30 min</option>
+                  <option value="45">Under 45 min</option>
+                  <option value="60">Under 1 hour</option>
+                  <option value="90">Under 1.5 hours</option>
+                  <option value="120">Under 2 hours</option>
+                </select>
+              </div>
+
+              {/* Sort */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Sort by
+                </label>
+                <select
+                  value={filterSort}
+                  onChange={(e) => setFilterSort(e.target.value as SortOption)}
+                  className={selectClasses}
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="quickest">Quickest first</option>
+                  <option value="longest">Longest first</option>
+                  <option value="az">A &ndash; Z</option>
+                </select>
+              </div>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearAllFilters}
+                className="mt-4 font-sans text-xs font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Category filter pills */}
         <div className="mt-8 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -112,21 +334,41 @@ function RecipesContent() {
                 : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:bg-cream-dark/20 hover:text-charcoal"
             }`}
           >
-            All
+            All{allRecipes.length > 0 && (
+              <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 text-xs ${
+                activeCategory === "all"
+                  ? "bg-white/20 text-white"
+                  : "bg-cream-dark/30 text-slate"
+              }`}>
+                {allRecipes.length}
+              </span>
+            )}
           </button>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.slug}
-              onClick={() => setActiveCategory(cat.slug)}
-              className={`shrink-0 rounded-full px-4 py-2 font-sans text-sm font-medium transition-all ${
-                activeCategory === cat.slug
-                  ? "bg-terracotta text-white shadow-sm"
-                  : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:bg-cream-dark/20 hover:text-charcoal"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const count = categoryCounts[cat.slug] || 0;
+            return (
+              <button
+                key={cat.slug}
+                onClick={() => setActiveCategory(cat.slug)}
+                className={`shrink-0 rounded-full px-4 py-2 font-sans text-sm font-medium transition-all ${
+                  activeCategory === cat.slug
+                    ? "bg-terracotta text-white shadow-sm"
+                    : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:bg-cream-dark/20 hover:text-charcoal"
+                }`}
+              >
+                {cat.name}
+                {count > 0 && (
+                  <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 text-xs ${
+                    activeCategory === cat.slug
+                      ? "bg-white/20 text-white"
+                      : "bg-cream-dark/30 text-slate"
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
@@ -137,14 +379,14 @@ function RecipesContent() {
           <>
             {/* Recipe count */}
             <p className="mt-6 font-sans text-sm text-slate">
-              Showing {recipes.length}{" "}
-              {recipes.length === 1 ? "recipe" : "recipes"}
+              Showing {filteredRecipes.length}{" "}
+              {filteredRecipes.length === 1 ? "recipe" : "recipes"}
             </p>
 
             {/* Recipe grid */}
-            {recipes.length > 0 ? (
+            {filteredRecipes.length > 0 ? (
               <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {recipes.map((recipe) => (
+                {filteredRecipes.map((recipe) => (
                   <RecipeCard key={recipe.id} recipe={recipe} />
                 ))}
               </div>
@@ -172,13 +414,10 @@ function RecipesContent() {
                   different keywords or clear your filters.
                 </p>
                 <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setActiveCategory("all");
-                  }}
-                  className="mt-2 rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark"
+                  onClick={clearAllFilters}
+                  className="mt-2 rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark cursor-pointer"
                 >
-                  Clear filters
+                  Clear all filters
                 </button>
               </div>
             )}

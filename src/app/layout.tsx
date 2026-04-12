@@ -19,8 +19,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "The Fish Kitchen — Family Recipes Worth Catching",
-    template: "%s | The Fish Kitchen",
+    default: "A Fish in the Kitchen — Family Recipes Worth Catching",
+    template: "%s | A Fish in the Kitchen",
   },
   description:
     "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",

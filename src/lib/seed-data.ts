@@ -381,7 +381,7 @@ export const RECIPES: Recipe[] = [
     ],
     contributedBy: "Dad (Fish)",
     story:
-      "Dad used to guard this recipe like state secrets. If you walked into the kitchen while he was making it, he'd cover the ingredients with a tea towel. The family only got the full recipe after years of negotiations and the agreement that it would stay in The Fish Kitchen. Turns out the secret ingredient was just smoked paprika — but don't tell him we said that.",
+      "Dad used to guard this recipe like state secrets. If you walked into the kitchen while he was making it, he'd cover the ingredients with a tea towel. The family only got the full recipe after years of negotiations and the agreement that it would stay in A Fish in the Kitchen. Turns out the secret ingredient was just smoked paprika — but don't tell him we said that.",
     tags: [
       "bbq",
       "sauce",

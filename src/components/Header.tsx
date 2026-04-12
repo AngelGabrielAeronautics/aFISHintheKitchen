@@ -10,6 +10,7 @@ import { getFirebaseAuth } from "@/lib/firebase";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/recipes", label: "Recipes" },
+  { href: "/members", label: "The Family" },
   { href: "/submit", label: "Submit a Recipe" },
 ];
 
@@ -55,7 +56,7 @@ export default function Header() {
             </svg>
             <div className="flex flex-col">
               <span className="font-serif text-xl sm:text-2xl font-semibold text-charcoal leading-tight tracking-tight">
-                The Fish Kitchen
+                A Fish in the Kitchen
               </span>
               <span className="hidden sm:block font-sans text-xs text-slate italic leading-tight">
                 Family Recipes Worth Catching

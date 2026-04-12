@@ -3,27 +3,38 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { RECIPES } from "@/lib/seed-data";
-import { seedRecipes, getRecipeCount } from "@/lib/firebase-recipes";
+import { MEMBERS } from "@/lib/seed-members";
+import {
+  seedRecipes,
+  getRecipeCount,
+  seedMembers,
+  getMemberCount,
+} from "@/lib/firebase-recipes";
 import { useAuth } from "@/context/AuthContext";
 
 export default function SeedPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
   const [recipeCount, setRecipeCount] = useState<number | null>(null);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function fetchCount() {
+    async function fetchCounts() {
       try {
-        const count = await getRecipeCount();
-        setRecipeCount(count);
+        const [rc, mc] = await Promise.all([
+          getRecipeCount(),
+          getMemberCount(),
+        ]);
+        setRecipeCount(rc);
+        setMemberCount(mc);
       } catch {
-        setError("Failed to fetch recipe count from Firestore.");
+        setError("Failed to fetch counts from Firestore.");
       }
     }
     if (!authLoading) {
-      fetchCount();
+      fetchCounts();
     }
   }, [authLoading]);
 
@@ -33,10 +44,14 @@ export default function SeedPage() {
     setSuccess(false);
 
     try {
-      await seedRecipes(RECIPES);
+      await Promise.all([seedRecipes(RECIPES), seedMembers(MEMBERS)]);
       setSuccess(true);
-      const count = await getRecipeCount();
-      setRecipeCount(count);
+      const [rc, mc] = await Promise.all([
+        getRecipeCount(),
+        getMemberCount(),
+      ]);
+      setRecipeCount(rc);
+      setMemberCount(mc);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "An unknown error occurred.";
@@ -72,20 +87,22 @@ export default function SeedPage() {
               <span className="font-semibold text-charcoal">
                 {recipeCount !== null ? recipeCount : "..."}
               </span>
+              <span className="text-slate/50"> / {RECIPES.length} available</span>
             </p>
             <p>
-              Seed recipes available:{" "}
+              Members in Firestore:{" "}
               <span className="font-semibold text-charcoal">
-                {RECIPES.length}
+                {memberCount !== null ? memberCount : "..."}
               </span>
+              <span className="text-slate/50"> / {MEMBERS.length} available</span>
             </p>
           </div>
 
           {/* Warning */}
-          {recipeCount !== null && recipeCount > 0 && !success && (
+          {recipeCount !== null && (recipeCount > 0 || (memberCount ?? 0) > 0) && !success && (
             <div className="mb-6 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
-              There are already {recipeCount} recipes in the database. Seeding
-              will overwrite any existing seed recipes.
+              There is existing data in the database. Seeding will overwrite
+              any existing seed data.
             </div>
           )}
 
@@ -100,14 +117,22 @@ export default function SeedPage() {
           {success && (
             <div className="mb-6 rounded-lg border border-sage/30 bg-sage/10 px-4 py-3 font-sans text-sm text-charcoal">
               <p className="font-medium">
-                Successfully seeded {RECIPES.length} recipes.
+                Seeded {RECIPES.length} recipes and {MEMBERS.length} family members.
               </p>
-              <Link
-                href="/recipes"
-                className="mt-2 inline-block font-medium text-terracotta hover:text-terracotta-dark transition-colors"
-              >
-                View recipes &rarr;
-              </Link>
+              <div className="mt-2 flex gap-4">
+                <Link
+                  href="/recipes"
+                  className="font-medium text-terracotta hover:text-terracotta-dark transition-colors"
+                >
+                  View recipes &rarr;
+                </Link>
+                <Link
+                  href="/members"
+                  className="font-medium text-terracotta hover:text-terracotta-dark transition-colors"
+                >
+                  View family &rarr;
+                </Link>
+              </div>
             </div>
           )}
 

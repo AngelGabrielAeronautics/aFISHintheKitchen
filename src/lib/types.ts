@@ -33,8 +33,23 @@ export interface Recipe {
   contributedBy: string;
   story?: string;
   tags: string[];
+  lovedBy?: string[];
+  dislikedBy?: string[];
   featured?: boolean;
   createdAt: string;
+}
+
+export interface Member {
+  id: string;
+  order: number;
+  name: string;
+  title: string;
+  bio: string;
+  goodAt: string[];
+  loves: string[];
+  hates: string[];
+  favouriteFromBook: string;
+  favouriteNotInBook: string;
 }
 
 export const CATEGORIES: CategoryInfo[] = [
@@ -59,7 +74,7 @@ export const CATEGORIES: CategoryInfo[] = [
   {
     slug: "seafood",
     name: "Seafood",
-    description: "Fresh catches from The Fish Kitchen",
+    description: "Fresh catches from A Fish in the Kitchen",
     icon: "🐟",
   },
   {

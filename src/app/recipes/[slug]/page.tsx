@@ -6,6 +6,8 @@ import Link from "next/link";
 import { getRecipeBySlug } from "@/lib/firebase-recipes";
 import { getCategoryBySlug, formatTime } from "@/lib/types";
 import type { Recipe } from "@/lib/types";
+import Avatar from "@/components/Avatar";
+import RecipePreferences from "@/components/RecipePreferences";
 
 export default function RecipePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -35,9 +37,9 @@ export default function RecipePage() {
 
   useEffect(() => {
     if (recipe) {
-      document.title = `${recipe.title} | The Fish Kitchen`;
+      document.title = `${recipe.title} | A Fish in the Kitchen`;
     } else if (notFound) {
-      document.title = "Recipe Not Found | The Fish Kitchen";
+      document.title = "Recipe Not Found | A Fish in the Kitchen";
     }
   }, [recipe, notFound]);
 
@@ -159,12 +161,15 @@ export default function RecipePage() {
 
         {/* Contributed by & story */}
         <div className="mt-6">
-          <p className="font-sans text-sm text-slate">
-            Contributed by{" "}
-            <span className="font-semibold text-charcoal">
-              {recipe.contributedBy}
-            </span>
-          </p>
+          <div className="flex items-center gap-3">
+            <Avatar name={recipe.contributedBy} size="lg" />
+            <div>
+              <p className="font-sans text-xs text-slate">Contributed by</p>
+              <p className="font-sans text-base font-semibold text-charcoal">
+                {recipe.contributedBy}
+              </p>
+            </div>
+          </div>
 
           {recipe.story && (
             <blockquote className="mt-4 border-l-4 border-terracotta/30 bg-warm-white/60 py-4 pl-5 pr-4 rounded-r-lg">
@@ -174,6 +179,13 @@ export default function RecipePage() {
             </blockquote>
           )}
         </div>
+
+        {/* Family verdict */}
+        <RecipePreferences
+          recipeId={recipe.id}
+          initialLovedBy={recipe.lovedBy ?? []}
+          initialDislikedBy={recipe.dislikedBy ?? []}
+        />
 
         {/* Info bar */}
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
