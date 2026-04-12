@@ -39,7 +39,7 @@ export default function HomePage() {
             alt="A Fish in the Kitchen"
             width={300}
             height={300}
-            className="mb-4 w-[200px] h-auto md:w-[300px]"
+            className="mb-4 w-[200px] h-[200px] md:w-[300px] md:h-[300px] object-contain"
             priority
           />
 
