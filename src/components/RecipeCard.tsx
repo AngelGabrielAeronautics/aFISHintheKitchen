@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Recipe, formatTime, getCategoryBySlug, HEAT_ICONS, HEAT_LABELS } from "@/lib/types";
+import { Recipe, formatTime, getCategoryBySlug, HEAT_ICONS, HEAT_LABELS, DIFFICULTY_ICONS } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 
 interface RecipeCardProps {
@@ -81,7 +81,6 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             <span>{formatTime(totalTime)}</span>
           </div>
 
-          {/* Divider */}
           <span className="text-cream-dark">|</span>
 
           {/* Servings */}
@@ -99,34 +98,21 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             </span>
           </div>
 
-          {/* Divider */}
-          <span className="text-cream-dark">|</span>
-
-          {/* Difficulty */}
-          <span
-            className={`rounded-full px-2 py-0.5 font-semibold ${difficultyColor[recipe.difficulty]}`}
-          >
-            {recipe.difficulty}
-          </span>
-
-          {/* Heat */}
-          {recipe.heat && (
+          {(recipe.lovedBy?.length ?? 0) > 0 && (
             <>
               <span className="text-cream-dark">|</span>
-              <Image
-                src={HEAT_ICONS[recipe.heat]}
-                alt={HEAT_LABELS[recipe.heat]}
-                width={20}
-                height={20}
-                className="object-contain"
-                title={HEAT_LABELS[recipe.heat]}
-              />
+              <div className="flex items-center gap-1 text-terracotta/70">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path d="m9.653 16.915-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 0 1-.692 0h-.002Z" />
+                </svg>
+                <span>{recipe.lovedBy!.length}</span>
+              </div>
             </>
           )}
         </div>
 
-        {/* Contributor & category icon */}
-        <div className="flex items-center justify-between">
+        {/* Bottom row: contributor + icons */}
+        <div className="flex items-center justify-between border-t border-cream-dark/40 pt-3">
           <div className="flex items-center gap-2">
             <Avatar name={recipe.contributedBy} size="lg" ring />
             <p className="font-sans text-xs text-slate/70">
@@ -134,24 +120,44 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Image
+              src={DIFFICULTY_ICONS[recipe.difficulty]}
+              alt={recipe.difficulty}
+              width={44}
+              height={44}
+              className="h-11 w-11 object-contain"
+              title={recipe.difficulty}
+            />
             {!iconError && (
               <Image
                 src={`/icons/${recipe.category}.png`}
                 alt={category?.name || ""}
-                width={56}
-                height={56}
-                className="rounded-full object-contain"
+                width={44}
+                height={44}
+                className="h-11 w-11 object-contain"
                 onError={() => setIconError(true)}
               />
             )}
-            {(recipe.lovedBy?.length ?? 0) > 0 && (
-            <div className="flex items-center gap-1 font-sans text-xs text-terracotta/70">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                <path d="m9.653 16.915-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 0 1-.692 0h-.002Z" />
-              </svg>
-              <span>{recipe.lovedBy!.length}</span>
-            </div>
-          )}
+            {recipe.protein && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/icons/${recipe.protein}.png`}
+                alt={recipe.protein}
+                className="h-11 w-11 object-contain"
+                title={recipe.protein}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+            )}
+            {recipe.heat && (
+              <Image
+                src={HEAT_ICONS[recipe.heat]}
+                alt={HEAT_LABELS[recipe.heat]}
+                width={44}
+                height={44}
+                className="h-11 w-11 object-contain"
+                title={HEAT_LABELS[recipe.heat]}
+              />
+            )}
           </div>
         </div>
       </div>

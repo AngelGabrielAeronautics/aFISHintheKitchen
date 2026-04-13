@@ -30,6 +30,12 @@ export type Protein =
   | "eggs"
   | "mixed";
 
+export const DIFFICULTY_ICONS: Record<string, string> = {
+  Easy: "/icons/easy.png",
+  Medium: "/icons/medium.png",
+  Hard: "/icons/hard.png",
+};
+
 export type HeatLevel = 1 | 2 | 3 | 4 | 5;
 
 export const HEAT_LABELS: Record<HeatLevel, string> = {

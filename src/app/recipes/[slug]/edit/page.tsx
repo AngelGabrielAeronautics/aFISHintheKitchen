@@ -4,7 +4,8 @@ import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/types";
-import type { Category, Recipe } from "@/lib/types";
+import type { Category, Recipe, Protein, HeatLevel } from "@/lib/types";
+import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import {
   getRecipeBySlug,
@@ -17,6 +18,7 @@ interface FormErrors {
   description?: string;
   category?: string;
   difficulty?: string;
+  protein?: string;
   prepTime?: string;
   cookTime?: string;
   servings?: string;
@@ -41,17 +43,20 @@ export default function EditRecipePage() {
   const [difficulty, setDifficulty] = useState<
     "Easy" | "Medium" | "Hard" | ""
   >("");
+  const [protein, setProtein] = useState<Protein | "">("");
+  const [heat, setHeat] = useState<HeatLevel | "">("");
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [servings, setServings] = useState("");
   const [contributedBy, setContributedBy] = useState("");
   const [story, setStory] = useState("");
+  const [originalSource, setOriginalSource] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([""]);
   const [instructions, setInstructions] = useState<string[]>([""]);
   const [tags, setTags] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -77,11 +82,14 @@ export default function EditRecipePage() {
         setDescription(fetched.description);
         setCategory(fetched.category);
         setDifficulty(fetched.difficulty);
+        setProtein(fetched.protein || "");
+        setHeat(fetched.heat || "");
         setPrepTime(String(fetched.prepTime));
         setCookTime(String(fetched.cookTime));
         setServings(String(fetched.servings));
         setContributedBy(fetched.contributedBy);
         setStory(fetched.story || "");
+        setOriginalSource(fetched.originalSource || "");
         setIngredients(
           fetched.ingredients.length > 0 ? [...fetched.ingredients] : [""]
         );
@@ -89,8 +97,10 @@ export default function EditRecipePage() {
           fetched.instructions.length > 0 ? [...fetched.instructions] : [""]
         );
         setTags(fetched.tags.join(", "));
-        if (fetched.image) {
-          setExistingImageUrl(fetched.image);
+        if (fetched.images && fetched.images.length > 0) {
+          setExistingImages(fetched.images);
+        } else if (fetched.image) {
+          setExistingImages([fetched.image]);
         }
       } catch (error) {
         console.error("Failed to fetch recipe:", error);
@@ -132,10 +142,16 @@ export default function EditRecipePage() {
   }
 
   // --- Photo helpers ---
+  const totalPhotos = existingImages.length + photoFiles.length;
+
   function handlePhotoSelect(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setErrors((prev) => ({ ...prev, photo: "Please select an image file." }));
+      return;
+    }
+    if (totalPhotos >= 3) {
+      setErrors((prev) => ({ ...prev, photo: "Maximum 3 images allowed." }));
       return;
     }
     setErrors((prev) => {
@@ -143,10 +159,9 @@ export default function EditRecipePage() {
       delete next.photo;
       return next;
     });
-    setPhotoFile(file);
-    setExistingImageUrl(null);
+    setPhotoFiles((prev) => [...prev, file]);
     const reader = new FileReader();
-    reader.onload = (e) => setPhotoPreview(e.target?.result as string);
+    reader.onload = (e) => setPhotoPreviews((prev) => [...prev, e.target?.result as string]);
     reader.readAsDataURL(file);
   }
 
@@ -160,10 +175,13 @@ export default function EditRecipePage() {
     handlePhotoSelect(e.dataTransfer.files?.[0]);
   }
 
-  function removePhoto() {
-    setPhotoFile(null);
-    setPhotoPreview(null);
-    setExistingImageUrl(null);
+  function removeExistingImage(index: number) {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function removeNewPhoto(index: number) {
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
   // --- Validation ---
@@ -175,6 +193,7 @@ export default function EditRecipePage() {
       newErrors.description = "A short description is required.";
     if (!category) newErrors.category = "Please choose a category.";
     if (!difficulty) newErrors.difficulty = "Please select a difficulty.";
+    if (!protein) newErrors.protein = "Please select a protein.";
     if (!prepTime || Number(prepTime) <= 0)
       newErrors.prepTime = "Prep time is required.";
     if (!cookTime || Number(cookTime) < 0)
@@ -209,23 +228,29 @@ export default function EditRecipePage() {
     });
 
     try {
-      // Upload new image if provided
-      let imageUrl = existingImageUrl || recipe.image || "";
-      if (photoFile) {
-        imageUrl = await uploadRecipeImage(photoFile, recipe.slug);
+      // Upload new images
+      const newImageUrls: string[] = [];
+      for (const file of photoFiles) {
+        const url = await uploadRecipeImage(file, recipe.slug);
+        newImageUrls.push(url);
       }
+      const allImages = [...existingImages, ...newImageUrls];
 
-      const recipeData: Partial<Omit<Recipe, "id" | "slug" | "createdAt">> = {
+      const recipeData: Record<string, unknown> = {
         title,
         description,
-        category: category as Category,
-        difficulty: difficulty as "Easy" | "Medium" | "Hard",
+        category,
+        difficulty,
+        protein: protein || null,
+        heat: heat || null,
         prepTime: Number(prepTime),
         cookTime: Number(cookTime),
         servings: Number(servings),
-        image: imageUrl,
+        image: allImages[0] || "",
+        images: allImages.length > 0 ? allImages : [],
         contributedBy,
-        story: story || undefined,
+        story: story || "",
+        originalSource: originalSource || "",
         ingredients: ingredients.filter((i) => i.trim()),
         instructions: instructions.filter((i) => i.trim()),
         tags: tags
@@ -234,7 +259,7 @@ export default function EditRecipePage() {
           .filter(Boolean),
       };
 
-      await updateRecipe(recipe.id, recipeData);
+      await updateRecipe(recipe.id, recipeData as Partial<Omit<Recipe, "id" | "slug" | "createdAt">>);
       setSubmitted(true);
     } catch (error) {
       console.error("Failed to update recipe:", error);
@@ -443,8 +468,32 @@ export default function EditRecipePage() {
               )}
             </div>
 
-            {/* Category & Difficulty */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Difficulty, Category, Protein & Heat */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div>
+                <label htmlFor="difficulty" className={labelClasses}>
+                  Difficulty <span className="text-terracotta">*</span>
+                </label>
+                <select
+                  id="difficulty"
+                  value={difficulty}
+                  onChange={(e) =>
+                    setDifficulty(
+                      e.target.value as "Easy" | "Medium" | "Hard"
+                    )
+                  }
+                  className={`${inputClasses} appearance-none`}
+                >
+                  <option value="">Select difficulty</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+                {errors.difficulty && (
+                  <p className={errorClasses}>{errors.difficulty}</p>
+                )}
+              </div>
+
               <div>
                 <label htmlFor="category" className={labelClasses}>
                   Category <span className="text-terracotta">*</span>
@@ -468,27 +517,48 @@ export default function EditRecipePage() {
               </div>
 
               <div>
-                <label htmlFor="difficulty" className={labelClasses}>
-                  Difficulty <span className="text-terracotta">*</span>
+                <label htmlFor="protein" className={labelClasses}>
+                  Protein <span className="text-terracotta">*</span>
                 </label>
                 <select
-                  id="difficulty"
-                  value={difficulty}
-                  onChange={(e) =>
-                    setDifficulty(
-                      e.target.value as "Easy" | "Medium" | "Hard"
-                    )
-                  }
+                  id="protein"
+                  value={protein}
+                  onChange={(e) => setProtein(e.target.value as Protein)}
                   className={`${inputClasses} appearance-none`}
                 >
-                  <option value="">Select difficulty</option>
-                  <option value="Easy">Easy</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Hard">Hard</option>
+                  <option value="">Select protein</option>
+                  <option value="beef">Beef</option>
+                  <option value="poultry">Poultry</option>
+                  <option value="lamb">Lamb</option>
+                  <option value="pork">Pork</option>
+                  <option value="seafood">Seafood</option>
+                  <option value="eggs">Eggs</option>
+                  <option value="vegetarian">Vegetarian</option>
+                  <option value="vegan">Vegan</option>
+                  <option value="mixed">Mixed</option>
                 </select>
-                {errors.difficulty && (
-                  <p className={errorClasses}>{errors.difficulty}</p>
+                {errors.protein && (
+                  <p className={errorClasses}>{errors.protein}</p>
                 )}
+              </div>
+
+              <div>
+                <label htmlFor="heat" className={labelClasses}>
+                  Heat Level <span className="text-slate/50 font-normal">(optional)</span>
+                </label>
+                <select
+                  id="heat"
+                  value={heat}
+                  onChange={(e) => setHeat(e.target.value ? Number(e.target.value) as HeatLevel : "")}
+                  className={`${inputClasses} appearance-none`}
+                >
+                  <option value="">No heat</option>
+                  {([1, 2, 3, 4, 5] as HeatLevel[]).map((level) => (
+                    <option key={level} value={level}>
+                      {HEAT_LABELS[level]} ({level})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </section>
@@ -564,19 +634,41 @@ export default function EditRecipePage() {
 
             <div>
               <label htmlFor="contributedBy" className={labelClasses}>
-                Your Name <span className="text-terracotta">*</span>
+                Contributed by <span className="text-terracotta">*</span>
               </label>
-              <input
+              <select
                 id="contributedBy"
-                type="text"
                 value={contributedBy}
                 onChange={(e) => setContributedBy(e.target.value)}
-                placeholder="Who's sharing this recipe?"
-                className={inputClasses}
-              />
+                className={`${inputClasses} appearance-none`}
+              >
+                <option value="">Select family member</option>
+                <option value="Poppie">Poppie</option>
+                <option value="Granny Gill">Granny Gill</option>
+                <option value="Dylan">Dylan</option>
+                <option value="Sam">Sam</option>
+                <option value="Bella">Bella</option>
+                <option value="Charlie">Charlie</option>
+                <option value="Quaid">Quaid</option>
+              </select>
               {errors.contributedBy && (
                 <p className={errorClasses}>{errors.contributedBy}</p>
               )}
+            </div>
+
+            <div>
+              <label htmlFor="originalSource" className={labelClasses}>
+                Original Source{" "}
+                <span className="text-slate/50 font-normal">(optional)</span>
+              </label>
+              <input
+                id="originalSource"
+                type="text"
+                value={originalSource}
+                onChange={(e) => setOriginalSource(e.target.value)}
+                placeholder="e.g. Marcella Hazan, Jamie Oliver, Grandma's recipe"
+                className={inputClasses}
+              />
             </div>
 
             <div>
@@ -759,119 +851,69 @@ export default function EditRecipePage() {
               </p>
             </div>
 
-            {/* Photo Upload */}
+            {/* Photo Upload — up to 3 */}
             <div>
               <label className={labelClasses}>
-                Recipe Photo{" "}
-                <span className="text-slate/50 font-normal">(optional)</span>
+                Recipe Photos{" "}
+                <span className="text-slate/50 font-normal">(up to 3)</span>
               </label>
 
-              {existingImageUrl && !photoPreview ? (
-                <div className="relative rounded-lg overflow-hidden border border-gold-light">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={existingImageUrl}
-                    alt="Current recipe photo"
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-charcoal/60 px-3 py-1.5">
-                    <p className="text-xs text-white/80">Current photo</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removePhoto}
-                    className="absolute top-2 right-2 w-8 h-8 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                    aria-label="Remove photo"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+              {/* Existing + new previews */}
+              {(existingImages.length > 0 || photoPreviews.length > 0) && (
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  {existingImages.map((url, index) => (
+                    <div key={`existing-${index}`} className="relative rounded-lg overflow-hidden border border-gold-light">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Recipe photo ${index + 1}`} className="w-full h-32 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(index)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  {photoPreviews.map((preview, index) => (
+                    <div key={`new-${index}`} className="relative rounded-lg overflow-hidden border border-gold-light">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={preview} alt={`New photo ${index + 1}`} className="w-full h-32 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeNewPhoto(index)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ) : photoPreview ? (
-                <div className="relative rounded-lg overflow-hidden border border-gold-light">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photoPreview}
-                    alt="Recipe preview"
-                    className="w-full h-48 object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={removePhoto}
-                    className="absolute top-2 right-2 w-8 h-8 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                    aria-label="Remove photo"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              ) : (
+              )}
+
+              {totalPhotos < 3 && (
                 <label
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
-                  className={`flex flex-col items-center justify-center w-full h-44 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                  className={`flex flex-col items-center justify-center w-full h-32 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
                     isDragging
                       ? "border-terracotta bg-terracotta-light/20"
                       : "border-gold-light bg-warm-white hover:border-terracotta/50"
                   }`}
                 >
-                  <svg
-                    className="w-10 h-10 text-slate/40 mb-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"
-                    />
+                  <svg className="w-8 h-8 text-slate/40 mb-2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
                   </svg>
-                  <p className="text-sm text-slate/60 mb-1">
-                    Drag and drop a photo here, or{" "}
-                    <span className="text-terracotta font-medium">browse</span>
+                  <p className="text-xs text-slate/60">
+                    {totalPhotos === 0 ? "Add photos" : `Add another (${3 - totalPhotos} remaining)`}{" "}
+                    — <span className="text-terracotta font-medium">browse</span>
                   </p>
-                  <p className="text-xs text-slate/40">
-                    JPG, PNG or WebP
-                  </p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileInput}
-                    className="hidden"
-                  />
+                  <input type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
                 </label>
               )}
               {errors.photo && (

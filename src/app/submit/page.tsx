@@ -418,30 +418,8 @@ export default function SubmitRecipePage() {
               )}
             </div>
 
-            {/* Category, Difficulty, Protein & Heat */}
+            {/* Difficulty, Category, Protein & Heat */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div>
-                <label htmlFor="category" className={labelClasses}>
-                  Category <span className="text-terracotta">*</span>
-                </label>
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as Category)}
-                  className={`${inputClasses} appearance-none`}
-                >
-                  <option value="">Select a category</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.slug} value={cat.slug}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.category && (
-                  <p className={errorClasses}>{errors.category}</p>
-                )}
-              </div>
-
               <div>
                 <label htmlFor="difficulty" className={labelClasses}>
                   Difficulty <span className="text-terracotta">*</span>
@@ -463,6 +441,28 @@ export default function SubmitRecipePage() {
                 </select>
                 {errors.difficulty && (
                   <p className={errorClasses}>{errors.difficulty}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="category" className={labelClasses}>
+                  Category <span className="text-terracotta">*</span>
+                </label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as Category)}
+                  className={`${inputClasses} appearance-none`}
+                >
+                  <option value="">Select a category</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.category && (
+                  <p className={errorClasses}>{errors.category}</p>
                 )}
               </div>
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getRecipeBySlug } from "@/lib/firebase-recipes";
-import { getCategoryBySlug, formatTime, HEAT_ICONS, HEAT_LABELS } from "@/lib/types";
+import { getCategoryBySlug, formatTime, HEAT_ICONS, HEAT_LABELS, DIFFICULTY_ICONS } from "@/lib/types";
 import type { Recipe } from "@/lib/types";
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
@@ -142,54 +142,72 @@ export default function RecipePage() {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Hero image placeholder */}
-        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 shadow-md">
-          <div className="absolute inset-0 flex items-center justify-center opacity-15">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 64 64"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-32 w-32 text-terracotta sm:h-40 sm:w-40"
-            >
-              <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
-              <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
-            </svg>
+        {/* Recipe images or placeholder */}
+        {recipe.images && recipe.images.length > 0 ? (
+          <div className={`grid gap-3 ${recipe.images.length === 1 ? "grid-cols-1" : recipe.images.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+            {recipe.images.map((url, index) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={index}
+                src={url}
+                alt={`${recipe.title} — photo ${index + 1}`}
+                className={`w-full object-cover rounded-2xl shadow-md ${recipe.images!.length === 1 ? "aspect-[16/9]" : "aspect-square"}`}
+              />
+            ))}
           </div>
+        ) : recipe.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={recipe.image}
+            alt={recipe.title}
+            className="w-full aspect-[16/9] object-cover rounded-2xl shadow-md"
+          />
+        ) : (
+          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 shadow-md">
+            <div className="absolute inset-0 flex items-center justify-center opacity-15">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 64 64"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-32 w-32 text-terracotta sm:h-40 sm:w-40"
+              >
+                <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
+                <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
+              </svg>
+            </div>
+          </div>
+        )}
 
-          {/* Difficulty badge */}
-          <span
-            className={`absolute right-4 top-4 rounded-full px-3 py-1 font-sans text-xs font-semibold shadow-sm ${
-              recipe.difficulty === "Easy"
-                ? "bg-sage-light text-sage-dark"
-                : recipe.difficulty === "Medium"
-                  ? "bg-gold-light text-charcoal"
-                  : "bg-terracotta-light text-terracotta-dark"
-            }`}
-          >
-            {recipe.difficulty}
-          </span>
-        </div>
-
-        {/* Title & category */}
+        {/* Title & icons */}
         <div className="mt-8">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
-              {recipe.title}
-            </h1>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
+            {recipe.title}
+          </h1>
+
+          {/* Icon row: Difficulty, Category, Protein, Heat */}
+          <div className="mt-4 flex items-center gap-3">
+            <Image
+              src={DIFFICULTY_ICONS[recipe.difficulty]}
+              alt={recipe.difficulty}
+              width={56}
+              height={56}
+              className="h-14 w-14 object-contain"
+              title={recipe.difficulty}
+            />
             {category && (
               <Link
                 href={`/recipes?category=${category.slug}`}
-                className="shrink-0 transition-transform hover:scale-105"
+                className="transition-transform hover:scale-105"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`/icons/${category.slug}.png`}
                   alt={category.name}
-                  className="h-16 w-16 object-contain"
+                  className="h-14 w-14 object-contain"
                   onError={(e) => {
                     const el = e.currentTarget;
                     el.style.display = "none";
@@ -197,6 +215,26 @@ export default function RecipePage() {
                   }}
                 />
               </Link>
+            )}
+            {recipe.protein && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/icons/${recipe.protein}.png`}
+                alt={recipe.protein}
+                className="h-14 w-14 object-contain"
+                title={recipe.protein}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+            )}
+            {recipe.heat && (
+              <Image
+                src={HEAT_ICONS[recipe.heat]}
+                alt={HEAT_LABELS[recipe.heat]}
+                width={56}
+                height={56}
+                className="h-14 w-14 object-contain"
+                title={HEAT_LABELS[recipe.heat]}
+              />
             )}
           </div>
 
@@ -309,18 +347,13 @@ export default function RecipePage() {
           </div>
 
           <div className="col-span-2 flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30 sm:col-span-1">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-5 w-5 text-terracotta/70"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <Image
+              src={DIFFICULTY_ICONS[recipe.difficulty]}
+              alt={recipe.difficulty}
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
+            />
             <span className="font-sans text-xs text-slate">Difficulty</span>
             <span className="font-sans text-sm font-semibold text-charcoal">
               {recipe.difficulty}
@@ -332,9 +365,9 @@ export default function RecipePage() {
               <Image
                 src={HEAT_ICONS[recipe.heat]}
                 alt={HEAT_LABELS[recipe.heat]}
-                width={28}
-                height={28}
-                className="object-contain"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
               />
               <span className="font-sans text-xs text-slate">Heat</span>
               <span className="font-sans text-sm font-semibold text-charcoal">
