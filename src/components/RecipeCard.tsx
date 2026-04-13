@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Recipe, formatTime, getCategoryBySlug } from "@/lib/types";
+import { Recipe, formatTime, getCategoryBySlug, HEAT_ICONS, HEAT_LABELS } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 
 interface RecipeCardProps {
@@ -108,6 +108,21 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
           >
             {recipe.difficulty}
           </span>
+
+          {/* Heat */}
+          {recipe.heat && (
+            <>
+              <span className="text-cream-dark">|</span>
+              <Image
+                src={HEAT_ICONS[recipe.heat]}
+                alt={HEAT_LABELS[recipe.heat]}
+                width={20}
+                height={20}
+                className="object-contain"
+                title={HEAT_LABELS[recipe.heat]}
+              />
+            </>
+          )}
         </div>
 
         {/* Contributor & category icon */}

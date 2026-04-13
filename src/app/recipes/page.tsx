@@ -7,7 +7,7 @@ import {
   searchRecipes,
   getRecipesByCategory,
 } from "@/lib/firebase-recipes";
-import { CATEGORIES, type Recipe } from "@/lib/types";
+import { CATEGORIES, type Recipe, type Protein } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
 
 type Difficulty = "Easy" | "Medium" | "Hard";
@@ -30,6 +30,7 @@ function RecipesContent() {
   const [filterMaxTime, setFilterMaxTime] = useState<number | "">("");
   const [filterSort, setFilterSort] = useState<SortOption>("newest");
   const [filterIngredient, setFilterIngredient] = useState("");
+  const [filterProtein, setFilterProtein] = useState<Protein | "all">("all");
 
   // Derive unique contributors from all recipes
   const contributors = useMemo(() => {
@@ -43,6 +44,7 @@ function RecipesContent() {
     filterMaxTime !== "",
     filterSort !== "newest",
     filterIngredient.trim() !== "",
+    filterProtein !== "all",
     activeCategory !== "all",
   ].filter(Boolean).length;
 
@@ -115,6 +117,10 @@ function RecipesContent() {
       results = results.filter((r) => r.prepTime + r.cookTime <= filterMaxTime);
     }
 
+    if (filterProtein !== "all") {
+      results = results.filter((r) => r.protein === filterProtein);
+    }
+
     if (filterIngredient.trim()) {
       const term = filterIngredient.toLowerCase();
       results = results.filter((r) =>
@@ -136,7 +142,7 @@ function RecipesContent() {
     }
 
     return results;
-  }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient]);
+  }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein]);
 
   function clearAllFilters() {
     setSearchQuery("");
@@ -146,6 +152,7 @@ function RecipesContent() {
     setFilterMaxTime("");
     setFilterSort("newest");
     setFilterIngredient("");
+    setFilterProtein("all");
   }
 
   const selectClasses =
@@ -281,6 +288,29 @@ function RecipesContent() {
                   <option value="Easy">Easy</option>
                   <option value="Medium">Medium</option>
                   <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              {/* Protein */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Protein
+                </label>
+                <select
+                  value={filterProtein}
+                  onChange={(e) => setFilterProtein(e.target.value as Protein | "all")}
+                  className={selectClasses}
+                >
+                  <option value="all">Any protein</option>
+                  <option value="beef">Beef</option>
+                  <option value="poultry">Poultry</option>
+                  <option value="lamb">Lamb</option>
+                  <option value="pork">Pork</option>
+                  <option value="seafood">Seafood</option>
+                  <option value="eggs">Eggs</option>
+                  <option value="vegetarian">Vegetarian</option>
+                  <option value="vegan">Vegan</option>
+                  <option value="mixed">Mixed</option>
                 </select>
               </div>
 

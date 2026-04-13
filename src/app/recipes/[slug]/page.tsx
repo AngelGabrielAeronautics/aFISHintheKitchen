@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getRecipeBySlug } from "@/lib/firebase-recipes";
-import { getCategoryBySlug, formatTime } from "@/lib/types";
+import { getCategoryBySlug, formatTime, HEAT_ICONS, HEAT_LABELS } from "@/lib/types";
 import type { Recipe } from "@/lib/types";
+import Image from "next/image";
 import Avatar from "@/components/Avatar";
 import RecipePreferences from "@/components/RecipePreferences";
 import { useAuth } from "@/context/AuthContext";
@@ -213,6 +214,11 @@ export default function RecipePage() {
               <p className="font-sans text-base font-semibold text-charcoal">
                 {recipe.contributedBy}
               </p>
+              {recipe.originalSource && (
+                <p className="font-sans text-xs text-slate">
+                  Original recipe by <span className="font-medium text-charcoal">{recipe.originalSource}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -320,6 +326,22 @@ export default function RecipePage() {
               {recipe.difficulty}
             </span>
           </div>
+
+          {recipe.heat && (
+            <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
+              <Image
+                src={HEAT_ICONS[recipe.heat]}
+                alt={HEAT_LABELS[recipe.heat]}
+                width={28}
+                height={28}
+                className="object-contain"
+              />
+              <span className="font-sans text-xs text-slate">Heat</span>
+              <span className="font-sans text-sm font-semibold text-charcoal">
+                {HEAT_LABELS[recipe.heat]}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Two-column layout: Instructions & Ingredients */}

@@ -458,7 +458,7 @@ export default function EditRecipePage() {
                   <option value="">Select a category</option>
                   {CATEGORIES.map((cat) => (
                     <option key={cat.slug} value={cat.slug}>
-                      {cat.icon} {cat.name}
+                      {cat.name}
                     </option>
                   ))}
                 </select>

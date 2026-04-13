@@ -72,7 +72,7 @@ export const KOOKBOOK_RECIPES_1: Recipe[] = [
     title: "Chicken Soup",
     description:
       "The natural next step after a good stock. Use the darker meat from the chicken -- the breast is pretty much tasteless by this point.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 10,
     cookTime: 20,

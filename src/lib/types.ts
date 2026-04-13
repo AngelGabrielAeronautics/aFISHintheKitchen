@@ -1,6 +1,7 @@
 export type Category =
   | "starters-snacks"
-  | "soups-stews"
+  | "soups"
+  | "stews"
   | "mains"
   | "seafood"
   | "sides-salads"
@@ -8,6 +9,7 @@ export type Category =
   | "desserts"
   | "sauces-condiments"
   | "drinks"
+  | "braai"
   | "holiday-specials";
 
 export interface CategoryInfo {
@@ -17,6 +19,35 @@ export interface CategoryInfo {
   icon: string;
 }
 
+export type Protein =
+  | "beef"
+  | "poultry"
+  | "lamb"
+  | "pork"
+  | "seafood"
+  | "vegetarian"
+  | "vegan"
+  | "eggs"
+  | "mixed";
+
+export type HeatLevel = 1 | 2 | 3 | 4 | 5;
+
+export const HEAT_LABELS: Record<HeatLevel, string> = {
+  1: "Mild",
+  2: "Medium",
+  3: "Hot",
+  4: "Very Hot",
+  5: "Extreme",
+};
+
+export const HEAT_ICONS: Record<HeatLevel, string> = {
+  1: "/icons/heat/mild.png",
+  2: "/icons/heat/medium.png",
+  3: "/icons/heat/hot.png",
+  4: "/icons/heat/very-hot.png",
+  5: "/icons/heat/extreme.png",
+};
+
 export interface Recipe {
   id: string;
   slug: string;
@@ -24,14 +55,18 @@ export interface Recipe {
   description: string;
   category: Category;
   image: string;
+  images?: string[];
   prepTime: number;
   cookTime: number;
   servings: number;
   difficulty: "Easy" | "Medium" | "Hard";
+  protein?: Protein;
+  heat?: HeatLevel;
   ingredients: string[];
   instructions: string[];
   contributedBy: string;
   story?: string;
+  originalSource?: string;
   tags: string[];
   lovedBy?: string[];
   dislikedBy?: string[];
@@ -60,10 +95,16 @@ export const CATEGORIES: CategoryInfo[] = [
     icon: "🧀",
   },
   {
-    slug: "soups-stews",
-    name: "Soups & Stews",
+    slug: "soups",
+    name: "Soups",
     description: "Warm the soul, one bowl at a time",
     icon: "🍲",
+  },
+  {
+    slug: "stews",
+    name: "Stews",
+    description: "Low and slow, worth the wait",
+    icon: "🫕",
   },
   {
     slug: "mains",
@@ -103,9 +144,15 @@ export const CATEGORIES: CategoryInfo[] = [
   },
   {
     slug: "drinks",
-    name: "Drinks",
+    name: "Drinks & Shakes",
     description: "Something to sip on",
     icon: "🥤",
+  },
+  {
+    slug: "braai",
+    name: "Braai",
+    description: "Fire, meat, and good company",
+    icon: "🔥",
   },
   {
     slug: "holiday-specials",

@@ -288,7 +288,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "Cucumber Soup",
     description:
       "A cool, creamy cucumber soup with leeks and chicken noodle soup -- pure 70s nostalgia from Barbara's Friday night kitchen.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 15,
     cookTime: 20,
@@ -332,7 +332,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "Morganster Tomato Cappuccino Soup",
     description:
       "A ridiculously good roasted tomato soup with a frothy cappuccino-style spoom on top, from a now-dead restaurant in Somerset West.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 20,
     cookTime: 75,
@@ -393,7 +393,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "Gazpacho",
     description:
       "A classic tomato-based gazpacho with soaked bread, sherry vinegar and a hint of cumin -- in the family since Len first travelled to Spain.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 40,
     cookTime: 0,
@@ -442,7 +442,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "White Almond Gazpacho",
     description:
       "A subtle, elegant white gazpacho where almonds do the heavy work -- far more refined than its tomato cousin.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 20,
     cookTime: 0,
@@ -489,7 +489,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "Carrot Ginger Soup",
     description:
       "A velvety carrot and ginger soup with coconut cream -- born at Rhino Ridge for Gillian's 60th and now a firm winter go-to.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 15,
     cookTime: 40,
@@ -537,7 +537,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "Greek Lentil Soup",
     description:
       "A hearty red lentil soup with cumin, oregano and lemon, finished with crumbled feta -- stolen from Suzy Karadsheh and followed to the T.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 10,
     cookTime: 30,
@@ -593,7 +593,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "Green Pea and Ham Soup",
     description:
       "A two-part affair: a slow-simmered ham hock broth meets frozen peas, mint and creme fraiche -- from April Bloomfield's A Girl and Her Pig.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 20,
     cookTime: 240,
@@ -649,7 +649,7 @@ export const KOOKBOOK_RECIPES_2: Recipe[] = [
     title: "French Onion Soup",
     description:
       "Deep golden caramelised onions in rich beef stock, topped with toasted bread and bubbly Gruyere -- warm, hearty, and here because of the cheese.",
-    category: "soups-stews",
+    category: "soups",
     image: "",
     prepTime: 15,
     cookTime: 60,
