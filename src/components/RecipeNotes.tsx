@@ -19,6 +19,7 @@ export default function RecipeNotes({ recipeId, initialNotes, contributedBy }: R
   const [newNote, setNewNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [deleteNote, setDeleteNote] = useState<RecipeNote | null>(null);
 
   const authorName = user?.displayName || user?.email || "Unknown";
@@ -71,39 +72,57 @@ export default function RecipeNotes({ recipeId, initialNotes, contributedBy }: R
 
       {/* Notes list */}
       {notes.length > 0 ? (
-        <div className="mt-5 space-y-4">
-          {notes.map((note) => (
-            <div key={note.id} className="flex gap-3">
-              <Avatar name={note.author} size="md" ring />
-              <div className="flex-1 rounded-xl bg-white p-4 ring-1 ring-cream-dark/20">
-                <div className="flex items-center justify-between">
-                  <p className="font-sans text-sm font-semibold text-charcoal">
-                    {note.author}
-                    {note.author !== contributedBy && (
-                      <span className="ml-2 font-normal text-xs text-slate/60">
-                        on {contributedBy}&rsquo;s recipe
-                      </span>
-                    )}
+        <>
+          <div className="mt-5 space-y-4">
+            {(showAll ? notes : notes.slice(-3)).map((note) => (
+              <div key={note.id} className="flex gap-3">
+                <Avatar name={note.author} size="md" ring />
+                <div className="flex-1 rounded-xl bg-white p-4 ring-1 ring-cream-dark/20">
+                  <div className="flex items-center justify-between">
+                    <p className="font-sans text-sm font-semibold text-charcoal">
+                      {note.author}
+                      {note.author !== contributedBy && (
+                        <span className="ml-2 font-normal text-xs text-slate/60">
+                          on {contributedBy}&rsquo;s recipe
+                        </span>
+                      )}
+                    </p>
+                    <p className="font-sans text-[10px] text-slate/40">
+                      {new Date(note.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                  <p className="mt-1.5 font-sans text-sm leading-relaxed text-slate">
+                    {note.text}
                   </p>
-                  <p className="font-sans text-[10px] text-slate/40">
-                    {new Date(note.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
+                  {user && (
+                    <button
+                      onClick={() => setDeleteNote(note)}
+                      className="mt-2 font-sans text-[10px] text-slate/40 hover:text-red-500 transition-colors cursor-pointer"
+                    >
+                      Delete note
+                    </button>
+                  )}
                 </div>
-                <p className="mt-1.5 font-sans text-sm leading-relaxed text-slate">
-                  {note.text}
-                </p>
-                {user && (
-                  <button
-                    onClick={() => setDeleteNote(note)}
-                    className="mt-2 font-sans text-[10px] text-slate/40 hover:text-red-500 transition-colors cursor-pointer"
-                  >
-                    Delete note
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          {notes.length > 3 && !showAll && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="mt-3 font-sans text-xs font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
+            >
+              View all {notes.length} notes
+            </button>
+          )}
+          {showAll && notes.length > 3 && (
+            <button
+              onClick={() => setShowAll(false)}
+              className="mt-3 font-sans text-xs font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
+            >
+              Show less
+            </button>
+          )}
+        </>
       ) : !showForm ? (
         <p className="mt-4 font-sans text-xs italic text-slate/50">
           No notes yet. Be the first to add one.

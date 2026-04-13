@@ -16,21 +16,30 @@ type SortOption = "newest" | "quickest" | "longest" | "az";
 function RecipesContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") ?? "all";
+  const searchParam = searchParams.get("search") ?? "";
+  const cookParam = searchParams.get("cook") ?? "all";
+  const difficultyParam = searchParams.get("difficulty") ?? "all";
+  const proteinParam = searchParams.get("protein") ?? "all";
+  const ingredientParam = searchParams.get("ingredient") ?? "";
+  const maxTimeParam = searchParams.get("maxTime") ?? "";
+  const sortParam = searchParams.get("sort") ?? "newest";
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const hasUrlFilters = cookParam !== "all" || difficultyParam !== "all" || proteinParam !== "all" || ingredientParam !== "" || maxTimeParam !== "" || sortParam !== "newest";
+
+  const [searchQuery, setSearchQuery] = useState(searchParam);
   const [activeCategory, setActiveCategory] = useState(categoryParam);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Advanced filters
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterCook, setFilterCook] = useState("all");
-  const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | "all">("all");
-  const [filterMaxTime, setFilterMaxTime] = useState<number | "">("");
-  const [filterSort, setFilterSort] = useState<SortOption>("newest");
-  const [filterIngredient, setFilterIngredient] = useState("");
-  const [filterProtein, setFilterProtein] = useState<Protein | "all">("all");
+  const [filtersOpen, setFiltersOpen] = useState(hasUrlFilters);
+  const [filterCook, setFilterCook] = useState(cookParam);
+  const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | "all">(difficultyParam as Difficulty | "all");
+  const [filterMaxTime, setFilterMaxTime] = useState<number | "">(maxTimeParam ? Number(maxTimeParam) : "");
+  const [filterSort, setFilterSort] = useState<SortOption>(sortParam as SortOption);
+  const [filterIngredient, setFilterIngredient] = useState(ingredientParam);
+  const [filterProtein, setFilterProtein] = useState<Protein | "all">(proteinParam as Protein | "all");
 
   // Derive unique contributors from all recipes
   const contributors = useMemo(() => {
@@ -214,8 +223,20 @@ function RecipesContent() {
               placeholder="Search recipes, ingredients, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 pr-14 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+              className={`w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 ${searchQuery || activeFilterCount > 0 ? "pr-24" : "pr-14"}`}
             />
+            {(searchQuery || activeFilterCount > 0) && (
+              <button
+                onClick={clearAllFilters}
+                className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full px-2 py-1 font-sans text-[10px] font-medium text-slate/60 hover:text-charcoal hover:bg-cream-dark/30 transition-colors cursor-pointer"
+                title="Clear all"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+                Clear
+              </button>
+            )}
             <button
               onClick={() => setFiltersOpen(!filtersOpen)}
               className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full px-3 py-1.5 font-sans text-xs font-medium transition-colors cursor-pointer ${

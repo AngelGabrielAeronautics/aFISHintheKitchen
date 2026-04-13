@@ -177,8 +177,8 @@ export default function EditRecipePage() {
       setErrors((prev) => ({ ...prev, photo: "Please select an image file." }));
       return;
     }
-    if (totalPhotos >= 3) {
-      setErrors((prev) => ({ ...prev, photo: "Maximum 3 images allowed." }));
+    if (totalPhotos >= 5) {
+      setErrors((prev) => ({ ...prev, photo: "Maximum 5 images allowed." }));
       return;
     }
     setErrors((prev) => {
@@ -306,21 +306,19 @@ export default function EditRecipePage() {
       if (!isOriginalAuthor && coreChanged) {
         // Fork: create a new version of the recipe
         const versionTitle = `${recipe.title} — ${editor}'s Version`;
-        const forkedRecipe = await addRecipe({
+        const forkedData: Record<string, unknown> = {
           title: versionTitle,
           description,
-          category: category as Category,
-          difficulty: difficulty as "Easy" | "Medium" | "Hard",
-          protein: (protein as Protein) || undefined,
-          heat: (heat as HeatLevel) || undefined,
+          category,
+          difficulty,
           prepTime: Number(prepTime),
           cookTime: Number(cookTime),
           servings: Number(servings),
           image: allImages[0] || "",
-          images: allImages.length > 0 ? allImages : undefined,
+          images: allImages.length > 0 ? allImages : [],
           contributedBy: recipe.contributedBy,
-          story: story || undefined,
-          originalSource: originalSource || undefined,
+          story: story || "",
+          originalSource: originalSource || "",
           ingredients: ingredients.filter((i) => i.trim()),
           instructions: instructions.filter((i) => i.trim()),
           tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
@@ -328,7 +326,11 @@ export default function EditRecipePage() {
           forkedFrom: recipe.id,
           versionOf: recipe.title,
           versionAuthor: editor,
-        });
+        };
+        if (protein) forkedData.protein = protein;
+        if (heat) forkedData.heat = heat;
+
+        const forkedRecipe = await addRecipe(forkedData as Parameters<typeof addRecipe>[0]);
 
         // Log on the original recipe that a version was created
         await addEditLogEntry(recipe.id, {
@@ -865,7 +867,7 @@ export default function EditRecipePage() {
             <div>
               <label className={labelClasses}>
                 Recipe Photos{" "}
-                <span className="text-slate/50 font-normal">(up to 3)</span>
+                <span className="text-slate/50 font-normal">(up to 5)</span>
               </label>
 
               {/* Existing + new previews */}
@@ -904,7 +906,7 @@ export default function EditRecipePage() {
                 </div>
               )}
 
-              {totalPhotos < 3 && (
+              {totalPhotos < 5 && (
                 <label
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
@@ -920,7 +922,7 @@ export default function EditRecipePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
                   </svg>
                   <p className="text-xs text-slate/60">
-                    {totalPhotos === 0 ? "Add photos" : `Add another (${3 - totalPhotos} remaining)`}{" "}
+                    {totalPhotos === 0 ? "Add photos" : `Add another (${5 - totalPhotos} remaining)`}{" "}
                     — <span className="text-terracotta font-medium">browse</span>
                   </p>
                   <input type="file" accept="image/*" onChange={handleFileInput} className="hidden" />

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CATEGORIES, type Recipe } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import { CATEGORIES, type Recipe, type Protein, type HeatLevel, HEAT_LABELS } from "@/lib/types";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -11,6 +12,34 @@ import CategoryIcon from "@/components/CategoryIcon";
 export default function HomePage() {
   const [featuredRecipes, setFeaturedRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterCook, setFilterCook] = useState("all");
+  const [filterDifficulty, setFilterDifficulty] = useState("all");
+  const [filterProtein, setFilterProtein] = useState("all");
+  const [filterIngredient, setFilterIngredient] = useState("");
+  const [filterMaxTime, setFilterMaxTime] = useState("");
+  const [filterSort, setFilterSort] = useState("newest");
+  const router = useRouter();
+
+  const contributors = [...new Set(featuredRecipes.map(r => r.contributedBy))].sort();
+
+  function handleSearch(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    if (filterCategory !== "all") params.set("category", filterCategory);
+    if (filterCook !== "all") params.set("cook", filterCook);
+    if (filterDifficulty !== "all") params.set("difficulty", filterDifficulty);
+    if (filterProtein !== "all") params.set("protein", filterProtein);
+    if (filterIngredient.trim()) params.set("ingredient", filterIngredient.trim());
+    if (filterMaxTime) params.set("maxTime", filterMaxTime);
+    if (filterSort !== "newest") params.set("sort", filterSort);
+    router.push(`/recipes${params.toString() ? `?${params.toString()}` : ""}`);
+  }
+
+  const activeFilterCount = [filterCategory !== "all", filterCook !== "all", filterDifficulty !== "all", filterProtein !== "all", filterIngredient.trim() !== "", filterMaxTime !== "", filterSort !== "newest"].filter(Boolean).length;
 
   useEffect(() => {
     getAllRecipes()
@@ -75,6 +104,123 @@ export default function HomePage() {
               Submit a Recipe
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Search & Filter */}
+      <section className="bg-cream pt-12 pb-0">
+        <div className="mx-auto max-w-xl px-6">
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate/50">
+                <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search recipes, ingredients, tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 pr-24 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 font-sans text-xs font-medium transition-colors cursor-pointer ${
+                    filtersOpen || activeFilterCount > 0
+                      ? "bg-terracotta text-white"
+                      : "bg-cream-dark/30 text-slate hover:bg-cream-dark/50"
+                  }`}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                    <path fillRule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 0 1 .628.74v2.288a2.25 2.25 0 0 1-.659 1.59l-4.682 4.683a2.25 2.25 0 0 0-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 0 1 8 18.25v-5.757a2.25 2.25 0 0 0-.659-1.591L2.659 6.22A2.25 2.25 0 0 1 2 4.629V2.34a.75.75 0 0 1 .628-.74Z" clipRule="evenodd" />
+                  </svg>
+                  {activeFilterCount > 0 ? activeFilterCount : ""}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-full bg-terracotta px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-terracotta-dark transition-colors cursor-pointer"
+                >
+                  Go
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {filtersOpen && (
+            <div className="mt-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-charcoal/5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Category</label>
+                  <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                    <option value="all">All categories</option>
+                    {CATEGORIES.map((cat) => (<option key={cat.slug} value={cat.slug}>{cat.name}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Cook</label>
+                  <select value={filterCook} onChange={(e) => setFilterCook(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                    <option value="all">All cooks</option>
+                    {contributors.map((name) => (<option key={name} value={name}>{name}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Difficulty</label>
+                  <select value={filterDifficulty} onChange={(e) => setFilterDifficulty(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                    <option value="all">Any difficulty</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Protein</label>
+                  <select value={filterProtein} onChange={(e) => setFilterProtein(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                    <option value="all">Any protein</option>
+                    <option value="beef">Beef</option>
+                    <option value="poultry">Poultry</option>
+                    <option value="lamb">Lamb</option>
+                    <option value="pork">Pork</option>
+                    <option value="seafood">Seafood</option>
+                    <option value="eggs">Eggs</option>
+                    <option value="vegetarian">Vegetarian</option>
+                    <option value="vegan">Vegan</option>
+                    <option value="mixed">Mixed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Ingredient</label>
+                  <input type="text" value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)} placeholder="e.g. chicken, garlic, butter" className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Max total time</label>
+                  <select value={filterMaxTime} onChange={(e) => setFilterMaxTime(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                    <option value="">Any time</option>
+                    <option value="15">Under 15 min</option>
+                    <option value="30">Under 30 min</option>
+                    <option value="45">Under 45 min</option>
+                    <option value="60">Under 1 hour</option>
+                    <option value="90">Under 1.5 hours</option>
+                    <option value="120">Under 2 hours</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Sort by</label>
+                  <select value={filterSort} onChange={(e) => setFilterSort(e.target.value)} className="rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                    <option value="newest">Newest first</option>
+                    <option value="quickest">Quickest first</option>
+                    <option value="longest">Longest first</option>
+                    <option value="az">A - Z</option>
+                  </select>
+                </div>
+                <button type="button" onClick={handleSearch} className="rounded-full bg-terracotta px-6 py-2.5 font-sans text-sm font-medium text-white hover:bg-terracotta-dark transition-colors cursor-pointer">
+                  Search
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

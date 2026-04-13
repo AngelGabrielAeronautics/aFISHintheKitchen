@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { EditLogEntry } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 
@@ -7,7 +10,11 @@ interface EditHistoryProps {
 }
 
 export default function EditHistory({ entries, contributedBy }: EditHistoryProps) {
+  const [showAll, setShowAll] = useState(false);
+
   if (entries.length === 0) return null;
+
+  const visible = showAll ? entries : entries.slice(-3);
 
   return (
     <div className="mt-6 border-t border-cream-dark/30 pt-6">
@@ -15,7 +22,7 @@ export default function EditHistory({ entries, contributedBy }: EditHistoryProps
         Edit History
       </h3>
       <div className="mt-3 space-y-2">
-        {entries.map((entry, index) => (
+        {visible.map((entry, index) => (
           <div key={index} className="flex items-start gap-2.5">
             <Avatar name={entry.editor} size="sm" />
             <div className="flex-1">
@@ -36,6 +43,22 @@ export default function EditHistory({ entries, contributedBy }: EditHistoryProps
           </div>
         ))}
       </div>
+      {entries.length > 3 && !showAll && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="mt-3 font-sans text-xs font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
+        >
+          View all {entries.length} edits
+        </button>
+      )}
+      {showAll && entries.length > 3 && (
+        <button
+          onClick={() => setShowAll(false)}
+          className="mt-3 font-sans text-xs font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
+        >
+          Show less
+        </button>
+      )}
     </div>
   );
 }

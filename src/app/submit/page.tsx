@@ -125,8 +125,8 @@ export default function SubmitRecipePage() {
       setErrors((prev) => ({ ...prev, photo: "Please select an image file." }));
       return;
     }
-    if (photoFiles.length >= 3) {
-      setErrors((prev) => ({ ...prev, photo: "Maximum 3 images allowed." }));
+    if (photoFiles.length >= 5) {
+      setErrors((prev) => ({ ...prev, photo: "Maximum 5 images allowed." }));
       return;
     }
     setErrors((prev) => {
@@ -740,7 +740,7 @@ export default function SubmitRecipePage() {
             <div>
               <label className={labelClasses}>
                 Recipe Photos{" "}
-                <span className="text-slate/50 font-normal">(up to 3)</span>
+                <span className="text-slate/50 font-normal">(up to 5)</span>
               </label>
 
               {/* Existing previews */}
@@ -770,7 +770,7 @@ export default function SubmitRecipePage() {
               )}
 
               {/* Upload zone — show if under 3 photos */}
-              {photoFiles.length < 3 && (
+              {photoFiles.length < 5 && (
                 <label
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -789,7 +789,7 @@ export default function SubmitRecipePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
                   </svg>
                   <p className="text-xs text-slate/60">
-                    {photoFiles.length === 0 ? "Add photos" : `Add another (${3 - photoFiles.length} remaining)`}{" "}
+                    {photoFiles.length === 0 ? "Add photos" : `Add another (${5 - photoFiles.length} remaining)`}{" "}
                     — <span className="text-terracotta font-medium">browse</span>
                   </p>
                   <input
