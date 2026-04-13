@@ -141,8 +141,8 @@ export default function RecipePage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Recipe images or placeholder */}
+      {/* Recipe images — full width */}
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {recipe.images && recipe.images.length > 0 ? (
           <div className={`grid gap-3 ${recipe.images.length === 1 ? "grid-cols-1" : recipe.images.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
             {recipe.images.map((url, index) => (
@@ -151,7 +151,7 @@ export default function RecipePage() {
                 key={index}
                 src={url}
                 alt={`${recipe.title} — photo ${index + 1}`}
-                className={`w-full object-cover rounded-2xl shadow-md ${recipe.images!.length === 1 ? "aspect-[16/9]" : "aspect-square"}`}
+                className={`w-full object-cover rounded-2xl shadow-md ${recipe.images!.length === 1 ? "aspect-[2/1]" : "aspect-square"}`}
               />
             ))}
           </div>
@@ -160,10 +160,10 @@ export default function RecipePage() {
           <img
             src={recipe.image}
             alt={recipe.title}
-            className="w-full aspect-[16/9] object-cover rounded-2xl shadow-md"
+            className="w-full aspect-[2/1] object-cover rounded-2xl shadow-md"
           />
         ) : (
-          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 shadow-md">
+          <div className="relative aspect-[2/1] overflow-hidden rounded-2xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 shadow-md">
             <div className="absolute inset-0 flex items-center justify-center opacity-15">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +181,9 @@ export default function RecipePage() {
             </div>
           </div>
         )}
+      </div>
 
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Title & icons */}
         <div className="mt-8">
           <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
@@ -257,6 +259,9 @@ export default function RecipePage() {
                   Original recipe by <span className="font-medium text-charcoal">{recipe.originalSource}</span>
                 </p>
               )}
+              <p className="font-sans text-[10px] text-slate/50">
+                Added {new Date(recipe.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              </p>
             </div>
           </div>
 

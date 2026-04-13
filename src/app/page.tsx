@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { CATEGORIES, type Recipe } from "@/lib/types";
-import { getFeaturedRecipes } from "@/lib/firebase-recipes";
+import { getAllRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
 
@@ -13,8 +13,16 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getFeaturedRecipes()
-      .then(setFeaturedRecipes)
+    getAllRecipes()
+      .then((all) => {
+        const sorted = all.sort((a, b) => {
+          const aLoves = a.lovedBy?.length ?? 0;
+          const bLoves = b.lovedBy?.length ?? 0;
+          if (bLoves !== aLoves) return bLoves - aLoves;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        setFeaturedRecipes(sorted.slice(0, 6));
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -22,7 +30,7 @@ export default function HomePage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative isolate overflow-hidden -mt-[72px] pt-[96px] py-36 md:pt-[72px] md:py-48">
+      <section className="relative isolate overflow-hidden -mt-[72px] pt-[150px] py-44 md:pt-[150px] md:py-56">
         {/* Background image */}
         <Image
           src="/hero.jpg"
