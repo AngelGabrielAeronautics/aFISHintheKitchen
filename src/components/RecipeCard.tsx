@@ -10,11 +10,6 @@ interface RecipeCardProps {
   recipe: Recipe;
 }
 
-const difficultyColor: Record<Recipe["difficulty"], string> = {
-  Easy: "bg-sage-light text-sage-dark",
-  Medium: "bg-gold-light text-charcoal",
-  Hard: "bg-terracotta-light text-terracotta-dark",
-};
 
 export default function RecipeCard({ recipe }: RecipeCardProps) {
   const category = getCategoryBySlug(recipe.category);

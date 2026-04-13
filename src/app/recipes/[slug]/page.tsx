@@ -24,7 +24,6 @@ export default function RecipePage() {
   useEffect(() => {
     if (!slug) return;
 
-    setLoading(true);
     getRecipeBySlug(slug)
       .then((r) => {
         if (r) {

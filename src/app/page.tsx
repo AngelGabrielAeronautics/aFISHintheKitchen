@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, type Recipe, type Protein, type HeatLevel, HEAT_LABELS } from "@/lib/types";
+import { CATEGORIES, type Recipe } from "@/lib/types";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -63,7 +63,7 @@ export default function HomePage() {
         {/* Background image */}
         <Image
           src="/hero.jpg"
-          alt=""
+          alt="A Fish in the Kitchen — family cookbook"
           fill
           className="object-cover"
           priority

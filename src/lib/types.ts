@@ -111,6 +111,16 @@ export interface Member {
   favouriteNotInBook: string;
 }
 
+export const FAMILY_MEMBERS = [
+  "Poppie",
+  "Granny Gill",
+  "Dylan",
+  "Sam",
+  "Bella",
+  "Charlie",
+  "Quaid",
+] as const;
+
 export const CATEGORIES: CategoryInfo[] = [
   {
     slug: "starters-snacks",

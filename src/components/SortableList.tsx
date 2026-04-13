@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -128,15 +127,7 @@ export default function SortableList({
   multiline = false,
   inputClasses,
 }: SortableListProps) {
-  const [itemIds] = useState(() => items.map((_, i) => `item-${i}-${Date.now()}`));
-
-  // Keep IDs in sync with items length
-  while (itemIds.length < items.length) {
-    itemIds.push(`item-${itemIds.length}-${Date.now()}`);
-  }
-  while (itemIds.length > items.length) {
-    itemIds.pop();
-  }
+  const itemIds = items.map((_, i) => `item-${i}`);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -151,11 +142,7 @@ export default function SortableList({
     const oldIndex = itemIds.indexOf(active.id as string);
     const newIndex = itemIds.indexOf(over.id as string);
 
-    const newIds = arrayMove(itemIds, oldIndex, newIndex);
     const newItems = arrayMove(items, oldIndex, newIndex);
-
-    // Update IDs in place
-    itemIds.splice(0, itemIds.length, ...newIds);
     onReorder(newItems);
   }
 

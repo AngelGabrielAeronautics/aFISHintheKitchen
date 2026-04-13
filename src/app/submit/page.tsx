@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CATEGORIES } from "@/lib/types";
+import { CATEGORIES, FAMILY_MEMBERS } from "@/lib/types";
 import type { Category, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
@@ -31,7 +30,6 @@ const INITIAL_INSTRUCTIONS = ["", "", ""];
 
 export default function SubmitRecipePage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -84,16 +82,6 @@ export default function SubmitRecipePage() {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function moveIngredient(index: number, direction: -1 | 1) {
-    setIngredients((prev) => {
-      const arr = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= arr.length) return arr;
-      [arr[index], arr[target]] = [arr[target], arr[index]];
-      return arr;
-    });
-  }
-
   // --- Instruction helpers ---
   function updateInstruction(index: number, value: string) {
     setInstructions((prev) => prev.map((v, i) => (i === index ? value : v)));
@@ -106,16 +94,6 @@ export default function SubmitRecipePage() {
   function removeInstruction(index: number) {
     if (instructions.length <= 1) return;
     setInstructions((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function moveInstruction(index: number, direction: -1 | 1) {
-    setInstructions((prev) => {
-      const arr = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= arr.length) return arr;
-      [arr[index], arr[target]] = [arr[target], arr[index]];
-      return arr;
-    });
   }
 
   // --- Photo helpers ---
@@ -622,13 +600,9 @@ export default function SubmitRecipePage() {
                 className={`${inputClasses} appearance-none`}
               >
                 <option value="">Select family member</option>
-                <option value="Poppie">Poppie</option>
-                <option value="Granny Gill">Granny Gill</option>
-                <option value="Dylan">Dylan</option>
-                <option value="Sam">Sam</option>
-                <option value="Bella">Bella</option>
-                <option value="Charlie">Charlie</option>
-                <option value="Quaid">Quaid</option>
+                {FAMILY_MEMBERS.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
               </select>
               {errors.contributedBy && (
                 <p className={errorClasses}>{errors.contributedBy}</p>
