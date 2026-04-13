@@ -7,10 +7,15 @@ import { CATEGORIES } from "@/lib/types";
 import type { Category, Recipe, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
+import DeleteModal from "@/components/DeleteModal";
+import SortableList from "@/components/SortableList";
+import { useRouter } from "next/navigation";
 import {
   getRecipeBySlug,
   updateRecipe,
   uploadRecipeImage,
+  addEditLogEntry,
+  addRecipe,
 } from "@/lib/firebase-recipes";
 
 interface FormErrors {
@@ -32,6 +37,7 @@ interface FormErrors {
 export default function EditRecipePage() {
   const { slug } = useParams<{ slug: string }>();
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loadingRecipe, setLoadingRecipe] = useState(true);
@@ -62,6 +68,7 @@ export default function EditRecipePage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Fetch recipe on mount
   useEffect(() => {
@@ -127,6 +134,16 @@ export default function EditRecipePage() {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function moveIngredient(index: number, direction: -1 | 1) {
+    setIngredients((prev) => {
+      const arr = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
+  }
+
   // --- Instruction helpers ---
   function updateInstruction(index: number, value: string) {
     setInstructions((prev) => prev.map((v, i) => (i === index ? value : v)));
@@ -139,6 +156,16 @@ export default function EditRecipePage() {
   function removeInstruction(index: number) {
     if (instructions.length <= 1) return;
     setInstructions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveInstruction(index: number, direction: -1 | 1) {
+    setInstructions((prev) => {
+      const arr = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
   }
 
   // --- Photo helpers ---
@@ -212,6 +239,15 @@ export default function EditRecipePage() {
       newErrors.instructions = "Add at least one instruction step.";
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      // Scroll to first error field
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstErrorKey);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      }
+    }
     return Object.keys(newErrors).length === 0;
   }
 
@@ -259,8 +295,77 @@ export default function EditRecipePage() {
           .filter(Boolean),
       };
 
+      const editor = user?.displayName || user?.email || "Unknown";
+      const isOriginalAuthor = editor === recipe.contributedBy;
+
+      // Check if core recipe content changed
+      const ingredientsChanged = ingredients.filter(i => i.trim()).join() !== recipe.ingredients.join();
+      const instructionsChanged = instructions.filter(i => i.trim()).join() !== recipe.instructions.join();
+      const coreChanged = ingredientsChanged || instructionsChanged;
+
+      if (!isOriginalAuthor && coreChanged) {
+        // Fork: create a new version of the recipe
+        const versionTitle = `${recipe.title} — ${editor}'s Version`;
+        const forkedRecipe = await addRecipe({
+          title: versionTitle,
+          description,
+          category: category as Category,
+          difficulty: difficulty as "Easy" | "Medium" | "Hard",
+          protein: (protein as Protein) || undefined,
+          heat: (heat as HeatLevel) || undefined,
+          prepTime: Number(prepTime),
+          cookTime: Number(cookTime),
+          servings: Number(servings),
+          image: allImages[0] || "",
+          images: allImages.length > 0 ? allImages : undefined,
+          contributedBy: recipe.contributedBy,
+          story: story || undefined,
+          originalSource: originalSource || undefined,
+          ingredients: ingredients.filter((i) => i.trim()),
+          instructions: instructions.filter((i) => i.trim()),
+          tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+          featured: false,
+          forkedFrom: recipe.id,
+          versionOf: recipe.title,
+          versionAuthor: editor,
+        });
+
+        // Log on the original recipe that a version was created
+        await addEditLogEntry(recipe.id, {
+          editor,
+          date: new Date().toISOString(),
+          summary: `Created "${versionTitle}" with updated ${ingredientsChanged && instructionsChanged ? "ingredients and instructions" : ingredientsChanged ? "ingredients" : "instructions"}`,
+        });
+
+        // Redirect to the new version
+        router.push(`/recipes/${forkedRecipe.slug}`);
+        return;
+      }
+
+      // Normal update — same author or minor changes
       await updateRecipe(recipe.id, recipeData as Partial<Omit<Recipe, "id" | "slug" | "createdAt">>);
+
+      // Log the edit
+      const changedFields: string[] = [];
+      if (title !== recipe.title) changedFields.push("title");
+      if (description !== recipe.description) changedFields.push("description");
+      if (category !== recipe.category) changedFields.push("category");
+      if (difficulty !== recipe.difficulty) changedFields.push("difficulty");
+      if (ingredientsChanged) changedFields.push("ingredients");
+      if (instructionsChanged) changedFields.push("instructions");
+      if (allImages.join() !== (recipe.images || []).join()) changedFields.push("photos");
+      if (story !== (recipe.story || "")) changedFields.push("story");
+
+      if (changedFields.length > 0) {
+        await addEditLogEntry(recipe.id, {
+          editor,
+          date: new Date().toISOString(),
+          summary: `Updated ${changedFields.join(", ")}`,
+        });
+      }
+
       setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       console.error("Failed to update recipe:", error);
       setErrors((prev) => ({
@@ -356,8 +461,8 @@ export default function EditRecipePage() {
   // --- Success state ---
   if (submitted) {
     return (
-      <main className="min-h-screen bg-cream py-16 px-4">
-        <div className="max-w-md mx-auto">
+      <main className="flex min-h-screen items-center justify-center bg-cream px-4">
+        <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
             <div className="w-16 h-16 bg-sage-light rounded-full flex items-center justify-center mx-auto mb-6">
               <svg
@@ -477,11 +582,10 @@ export default function EditRecipePage() {
                 <select
                   id="difficulty"
                   value={difficulty}
-                  onChange={(e) =>
-                    setDifficulty(
-                      e.target.value as "Easy" | "Medium" | "Hard"
-                    )
-                  }
+                  onChange={(e) => {
+                    setDifficulty(e.target.value as "Easy" | "Medium" | "Hard");
+                    setErrors((prev) => { const next = { ...prev }; delete next.difficulty; return next; });
+                  }}
                   className={`${inputClasses} appearance-none`}
                 >
                   <option value="">Select difficulty</option>
@@ -501,7 +605,7 @@ export default function EditRecipePage() {
                 <select
                   id="category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as Category)}
+                  onChange={(e) => { setCategory(e.target.value as Category); setErrors((prev) => { const next = { ...prev }; delete next.category; return next; }); }}
                   className={`${inputClasses} appearance-none`}
                 >
                   <option value="">Select a category</option>
@@ -523,7 +627,7 @@ export default function EditRecipePage() {
                 <select
                   id="protein"
                   value={protein}
-                  onChange={(e) => setProtein(e.target.value as Protein)}
+                  onChange={(e) => { setProtein(e.target.value as Protein); setErrors((prev) => { const next = { ...prev }; delete next.protein; return next; }); }}
                   className={`${inputClasses} appearance-none`}
                 >
                   <option value="">Select protein</option>
@@ -639,7 +743,7 @@ export default function EditRecipePage() {
               <select
                 id="contributedBy"
                 value={contributedBy}
-                onChange={(e) => setContributedBy(e.target.value)}
+                onChange={(e) => { setContributedBy(e.target.value); setErrors((prev) => { const next = { ...prev }; delete next.contributedBy; return next; }); }}
                 className={`${inputClasses} appearance-none`}
               >
                 <option value="">Select family member</option>
@@ -693,66 +797,20 @@ export default function EditRecipePage() {
               Ingredients
             </h2>
 
-            <div className="space-y-3">
-              {ingredients.map((ingredient, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={ingredient}
-                    onChange={(e) => updateIngredient(index, e.target.value)}
-                    placeholder={`Ingredient ${index + 1}`}
-                    className={`${inputClasses} flex-1`}
-                  />
-                  {ingredients.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeIngredient(index)}
-                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-slate hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      aria-label={`Remove ingredient ${index + 1}`}
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+            <SortableList
+              items={ingredients}
+              onReorder={setIngredients}
+              onUpdate={updateIngredient}
+              onAdd={addIngredient}
+              onRemove={removeIngredient}
+              placeholderPrefix="Ingredient"
+              addLabel="Add Ingredient"
+              inputClasses={inputClasses}
+            />
 
             {errors.ingredients && (
               <p className={errorClasses}>{errors.ingredients}</p>
             )}
-
-            <button
-              type="button"
-              onClick={addIngredient}
-              className="inline-flex items-center gap-2 text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Ingredient
-            </button>
           </section>
 
           {/* ---- Section: Instructions ---- */}
@@ -761,69 +819,21 @@ export default function EditRecipePage() {
               Instructions
             </h2>
 
-            <div className="space-y-3">
-              {instructions.map((instruction, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-8 h-[46px] flex items-center justify-center text-sm font-medium text-slate/60">
-                    {index + 1}.
-                  </span>
-                  <textarea
-                    rows={2}
-                    value={instruction}
-                    onChange={(e) => updateInstruction(index, e.target.value)}
-                    placeholder={`Step ${index + 1}`}
-                    className={`${inputClasses} flex-1 resize-none`}
-                  />
-                  {instructions.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeInstruction(index)}
-                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-slate hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      aria-label={`Remove step ${index + 1}`}
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+            <SortableList
+              items={instructions}
+              onReorder={setInstructions}
+              onUpdate={updateInstruction}
+              onAdd={addInstruction}
+              onRemove={removeInstruction}
+              placeholderPrefix="Step"
+              addLabel="Add Step"
+              multiline
+              inputClasses={inputClasses}
+            />
 
             {errors.instructions && (
               <p className={errorClasses}>{errors.instructions}</p>
             )}
-
-            <button
-              type="button"
-              onClick={addInstruction}
-              className="inline-flex items-center gap-2 text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Step
-            </button>
           </section>
 
           {/* ---- Section: Extras ---- */}
@@ -928,6 +938,13 @@ export default function EditRecipePage() {
           )}
 
           {/* ---- Submit Button ---- */}
+          {/* Validation summary */}
+          {Object.keys(errors).filter(k => k !== "submit" && k !== "photo").length > 0 && (
+            <div className="mb-4 rounded-lg border border-red-300/30 bg-red-50 px-4 py-3 font-sans text-sm text-red-600">
+              Please fix the highlighted fields above before saving.
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={submitting}
@@ -936,6 +953,31 @@ export default function EditRecipePage() {
             {submitting ? "Saving..." : "Save Changes"}
           </button>
         </form>
+
+        {/* Delete recipe */}
+        <div className="mt-8 border-t border-cream-dark/30 pt-6">
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-500/10 px-4 py-2 font-sans text-sm font-medium text-red-600 transition-colors hover:bg-red-500/20 cursor-pointer"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+            </svg>
+            Delete Recipe
+          </button>
+        </div>
+
+        {showDeleteModal && recipe && (
+          <DeleteModal
+            title={recipe.title}
+            onConfirm={async () => {
+              const { deleteRecipe } = await import("@/lib/firebase-recipes");
+              await deleteRecipe(recipe.id);
+              router.push("/recipes");
+            }}
+            onCancel={() => setShowDeleteModal(false)}
+          />
+        )}
       </div>
     </main>
   );

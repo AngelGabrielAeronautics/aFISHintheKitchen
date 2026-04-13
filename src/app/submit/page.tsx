@@ -7,6 +7,7 @@ import { CATEGORIES } from "@/lib/types";
 import type { Category, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
+import SortableList from "@/components/SortableList";
 import { addRecipe, uploadRecipeImage } from "@/lib/firebase-recipes";
 
 interface FormErrors {
@@ -83,6 +84,16 @@ export default function SubmitRecipePage() {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function moveIngredient(index: number, direction: -1 | 1) {
+    setIngredients((prev) => {
+      const arr = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
+  }
+
   // --- Instruction helpers ---
   function updateInstruction(index: number, value: string) {
     setInstructions((prev) => prev.map((v, i) => (i === index ? value : v)));
@@ -95,6 +106,16 @@ export default function SubmitRecipePage() {
   function removeInstruction(index: number) {
     if (instructions.length <= 1) return;
     setInstructions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveInstruction(index: number, direction: -1 | 1) {
+    setInstructions((prev) => {
+      const arr = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
   }
 
   // --- Photo helpers ---
@@ -162,6 +183,14 @@ export default function SubmitRecipePage() {
       newErrors.instructions = "Add at least one instruction step.";
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorKey = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstErrorKey);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      }
+    }
     return Object.keys(newErrors).length === 0;
   }
 
@@ -643,66 +672,20 @@ export default function SubmitRecipePage() {
               Ingredients
             </h2>
 
-            <div className="space-y-3">
-              {ingredients.map((ingredient, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={ingredient}
-                    onChange={(e) => updateIngredient(index, e.target.value)}
-                    placeholder={`Ingredient ${index + 1}`}
-                    className={`${inputClasses} flex-1`}
-                  />
-                  {ingredients.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeIngredient(index)}
-                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-slate hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      aria-label={`Remove ingredient ${index + 1}`}
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+            <SortableList
+              items={ingredients}
+              onReorder={setIngredients}
+              onUpdate={updateIngredient}
+              onAdd={addIngredient}
+              onRemove={removeIngredient}
+              placeholderPrefix="Ingredient"
+              addLabel="Add Ingredient"
+              inputClasses={inputClasses}
+            />
 
             {errors.ingredients && (
               <p className={errorClasses}>{errors.ingredients}</p>
             )}
-
-            <button
-              type="button"
-              onClick={addIngredient}
-              className="inline-flex items-center gap-2 text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Ingredient
-            </button>
           </section>
 
           {/* ---- Section: Instructions ---- */}
@@ -711,69 +694,21 @@ export default function SubmitRecipePage() {
               Instructions
             </h2>
 
-            <div className="space-y-3">
-              {instructions.map((instruction, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-8 h-[46px] flex items-center justify-center text-sm font-medium text-slate/60">
-                    {index + 1}.
-                  </span>
-                  <textarea
-                    rows={2}
-                    value={instruction}
-                    onChange={(e) => updateInstruction(index, e.target.value)}
-                    placeholder={`Step ${index + 1}`}
-                    className={`${inputClasses} flex-1 resize-none`}
-                  />
-                  {instructions.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeInstruction(index)}
-                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-slate hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      aria-label={`Remove step ${index + 1}`}
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+            <SortableList
+              items={instructions}
+              onReorder={setInstructions}
+              onUpdate={updateInstruction}
+              onAdd={addInstruction}
+              onRemove={removeInstruction}
+              placeholderPrefix="Step"
+              addLabel="Add Step"
+              multiline
+              inputClasses={inputClasses}
+            />
 
             {errors.instructions && (
               <p className={errorClasses}>{errors.instructions}</p>
             )}
-
-            <button
-              type="button"
-              onClick={addInstruction}
-              className="inline-flex items-center gap-2 text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Step
-            </button>
           </section>
 
           {/* ---- Section: Extras ---- */}

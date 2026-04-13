@@ -54,6 +54,19 @@ export const HEAT_ICONS: Record<HeatLevel, string> = {
   5: "/icons/heat/extreme.png",
 };
 
+export interface RecipeNote {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface EditLogEntry {
+  editor: string;
+  date: string;
+  summary: string;
+}
+
 export interface Recipe {
   id: string;
   slug: string;
@@ -76,6 +89,11 @@ export interface Recipe {
   tags: string[];
   lovedBy?: string[];
   dislikedBy?: string[];
+  notes?: RecipeNote[];
+  editHistory?: EditLogEntry[];
+  forkedFrom?: string;
+  versionOf?: string;
+  versionAuthor?: string;
   featured?: boolean;
   createdAt: string;
 }

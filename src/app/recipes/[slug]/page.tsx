@@ -9,6 +9,8 @@ import type { Recipe } from "@/lib/types";
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
 import RecipePreferences from "@/components/RecipePreferences";
+import RecipeNotes from "@/components/RecipeNotes";
+import EditHistory from "@/components/EditHistory";
 import { useAuth } from "@/context/AuthContext";
 
 export default function RecipePage() {
@@ -254,6 +256,14 @@ export default function RecipePage() {
               <p className="font-sans text-base font-semibold text-charcoal">
                 {recipe.contributedBy}
               </p>
+              {recipe.versionOf && recipe.versionAuthor && (
+                <p className="font-sans text-xs text-terracotta">
+                  {recipe.versionAuthor}&rsquo;s version of{" "}
+                  <Link href={`/recipes`} className="underline hover:text-terracotta-dark">
+                    {recipe.versionOf}
+                  </Link>
+                </p>
+              )}
               {recipe.originalSource && (
                 <p className="font-sans text-xs text-slate">
                   Original recipe by <span className="font-medium text-charcoal">{recipe.originalSource}</span>
@@ -490,6 +500,19 @@ export default function RecipePage() {
             </div>
           </div>
         )}
+
+        {/* Family Notes */}
+        <RecipeNotes
+          recipeId={recipe.id}
+          initialNotes={recipe.notes ?? []}
+          contributedBy={recipe.contributedBy}
+        />
+
+        {/* Edit History */}
+        <EditHistory
+          entries={recipe.editHistory ?? []}
+          contributedBy={recipe.contributedBy}
+        />
       </div>
     </main>
   );

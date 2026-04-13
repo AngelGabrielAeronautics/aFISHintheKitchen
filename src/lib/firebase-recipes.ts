@@ -11,10 +11,11 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  deleteDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
-import type { Recipe, Member } from "./types";
+import type { Recipe, Member, RecipeNote, EditLogEntry } from "./types";
 
 function recipesCollection() {
   return collection(getDb(), "recipes");
@@ -149,6 +150,32 @@ export async function toggleDisliked(recipeId: string, name: string, add: boolea
 export async function getRecipeCount(): Promise<number> {
   const snapshot = await getCountFromServer(recipesCollection());
   return snapshot.data().count;
+}
+
+// --- Delete Recipe ---
+
+export async function deleteRecipe(recipeId: string): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  await deleteDoc(docRef);
+}
+
+// --- Notes ---
+
+export async function addRecipeNote(recipeId: string, note: RecipeNote): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  await updateDoc(docRef, { notes: arrayUnion(note) });
+}
+
+export async function removeRecipeNote(recipeId: string, note: RecipeNote): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  await updateDoc(docRef, { notes: arrayRemove(note) });
+}
+
+// --- Edit History ---
+
+export async function addEditLogEntry(recipeId: string, entry: EditLogEntry): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  await updateDoc(docRef, { editHistory: arrayUnion(entry) });
 }
 
 // --- Members ---
