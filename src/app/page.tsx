@@ -22,7 +22,7 @@ export default function HomePage() {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative isolate overflow-hidden -mt-[72px] pt-[72px] py-32 md:py-48">
+      <section className="relative isolate overflow-hidden -mt-[72px] pt-[96px] py-36 md:pt-[72px] md:py-48">
         {/* Background image */}
         <Image
           src="/hero.jpg"

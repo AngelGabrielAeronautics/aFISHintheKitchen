@@ -277,7 +277,7 @@ export default function RecipePage() {
         />
 
         {/* Info bar */}
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -346,7 +346,7 @@ export default function RecipePage() {
             </span>
           </div>
 
-          <div className="col-span-2 flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30 sm:col-span-1">
+          <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
             <Image
               src={DIFFICULTY_ICONS[recipe.difficulty]}
               alt={recipe.difficulty}
