@@ -293,7 +293,7 @@ function ShoppingListContent() {
                         </span>
 
                         {/* Avatar */}
-                        <Avatar name={recipe.contributedBy} size="sm" />
+                        <Avatar name={recipe.contributedBy} size="sm" ring />
 
                         {/* Title & contributor */}
                         <div className="min-w-0 flex-1">
@@ -405,6 +405,7 @@ function ShoppingListContent() {
                             <Avatar
                               name={recipe.contributedBy}
                               size="sm"
+                              ring
                             />
                             <h3 className="font-serif text-base text-charcoal font-semibold">
                               {recipe.title}

@@ -355,6 +355,8 @@ export default function RecipePage() {
           recipeId={recipe.id}
           initialLovedBy={recipe.lovedBy ?? []}
           initialDislikedBy={recipe.dislikedBy ?? []}
+          initialMustTry={recipe.mustTry ?? []}
+          initialTriedBy={recipe.triedBy ?? []}
         />
 
         {/* Info bar */}

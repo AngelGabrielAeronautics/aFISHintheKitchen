@@ -24,7 +24,7 @@ export default function EditHistory({ entries, contributedBy }: EditHistoryProps
       <div className="mt-3 space-y-2">
         {visible.map((entry, index) => (
           <div key={index} className="flex items-start gap-2.5">
-            <Avatar name={entry.editor} size="sm" />
+            <Avatar name={entry.editor} size="sm" ring />
             <div className="flex-1">
               <p className="font-sans text-xs text-slate">
                 <span className="font-semibold text-charcoal">{entry.editor}</span>

@@ -39,13 +39,15 @@ export default function HomePage() {
 
   const recipeOfTheWeek = useMemo(() => {
     if (allRecipes.length === 0) return null;
+    // Sort by ID for a stable order regardless of Firestore fetch order
+    const stable = [...allRecipes].sort((a, b) => a.id.localeCompare(b.id));
     const weekNumber = Math.floor(
       (Date.now() - new Date("2026-01-01").getTime()) / (7 * 24 * 60 * 60 * 1000)
     );
-    const withImages = allRecipes.filter(
+    const withImages = stable.filter(
       (r) => (r.images && r.images.length > 0) || r.image
     );
-    const pool = withImages.length > 0 ? withImages : allRecipes;
+    const pool = withImages.length > 0 ? withImages : stable;
     return pool[Math.abs(weekNumber) % pool.length];
   }, [allRecipes]);
 
@@ -124,7 +126,7 @@ export default function HomePage() {
       </section>
 
       {/* Search & Filter */}
-      <section className="bg-cream pt-12 pb-0">
+      <section className="bg-cream py-8">
         <div className="mx-auto max-w-xl px-6">
           <form onSubmit={handleSearch}>
             <div className="relative">
@@ -298,7 +300,7 @@ export default function HomePage() {
 
                   {/* Contributor */}
                   <div className="flex items-center gap-3">
-                    <Avatar name={recipeOfTheWeek.contributedBy} size="md" />
+                    <Avatar name={recipeOfTheWeek.contributedBy} size="md" ring />
                     <span className="font-sans text-sm font-semibold text-charcoal">
                       {recipeOfTheWeek.contributedBy}
                     </span>

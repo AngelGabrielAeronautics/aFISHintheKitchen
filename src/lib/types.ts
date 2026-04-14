@@ -89,6 +89,9 @@ export interface Recipe {
   tags: string[];
   lovedBy?: string[];
   dislikedBy?: string[];
+  seasons?: Season[];
+  mustTry?: string[];
+  triedBy?: string[];
   notes?: RecipeNote[];
   editHistory?: EditLogEntry[];
   forkedFrom?: string;
@@ -110,6 +113,16 @@ export interface Member {
   favouriteFromBook: string;
   favouriteNotInBook: string;
 }
+
+export type Season = "summer" | "autumn" | "winter" | "spring" | "all-year";
+
+export const SEASONS: { value: Season; label: string }[] = [
+  { value: "summer", label: "Summer" },
+  { value: "autumn", label: "Autumn" },
+  { value: "winter", label: "Winter" },
+  { value: "spring", label: "Spring" },
+  { value: "all-year", label: "All Year" },
+];
 
 export const FAMILY_MEMBERS = [
   "Poppie",

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import Link from "next/link";
-import { CATEGORIES, FAMILY_MEMBERS } from "@/lib/types";
+import { CATEGORIES, FAMILY_MEMBERS, SEASONS, type Season } from "@/lib/types";
 import type { Category, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
@@ -41,6 +41,7 @@ export default function SubmitRecipePage() {
   >("");
   const [protein, setProtein] = useState<Protein | "">("");
   const [heat, setHeat] = useState<HeatLevel | "">("");
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [prepTime, setPrepTime] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [servings, setServings] = useState("");
@@ -220,6 +221,7 @@ export default function SubmitRecipePage() {
         difficulty: difficulty as "Easy" | "Medium" | "Hard",
         protein: protein as Protein,
         heat: heat || undefined,
+        seasons: seasons.length > 0 ? seasons : undefined,
         prepTime: Number(prepTime),
         cookTime: Number(cookTime),
         servings: Number(servings),
@@ -260,6 +262,7 @@ export default function SubmitRecipePage() {
     setDifficulty("");
     setProtein("");
     setHeat("");
+    setSeasons([]);
     setPrepTime("");
     setCookTime("");
     setServings("");
@@ -528,6 +531,32 @@ export default function SubmitRecipePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {/* Seasons */}
+            <div>
+              <label className={labelClasses}>
+                Season <span className="text-slate/50 font-normal">(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-3 mt-1">
+                {SEASONS.map((s) => (
+                  <label key={s.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={seasons.includes(s.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSeasons((prev) => [...prev, s.value]);
+                        } else {
+                          setSeasons((prev) => prev.filter((v) => v !== s.value));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gold-light text-terracotta focus:ring-terracotta/20 accent-terracotta"
+                    />
+                    <span className="font-sans text-sm text-charcoal">{s.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
           </section>

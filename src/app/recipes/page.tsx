@@ -7,13 +7,15 @@ import {
   searchRecipes,
   getRecipesByCategory,
 } from "@/lib/firebase-recipes";
-import { CATEGORIES, type Recipe, type Protein } from "@/lib/types";
+import { CATEGORIES, SEASONS, type Recipe, type Protein, type Season } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
+import { useAuth } from "@/context/AuthContext";
 
 type Difficulty = "Easy" | "Medium" | "Hard";
 type SortOption = "newest" | "quickest" | "longest" | "az";
 
 function RecipesContent() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") ?? "all";
   const searchParam = searchParams.get("search") ?? "";
@@ -40,6 +42,8 @@ function RecipesContent() {
   const [filterSort, setFilterSort] = useState<SortOption>(sortParam as SortOption);
   const [filterIngredient, setFilterIngredient] = useState(ingredientParam);
   const [filterProtein, setFilterProtein] = useState<Protein | "all">(proteinParam as Protein | "all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "must-try" | "tried" | "not-tried">("all");
+  const [filterSeason, setFilterSeason] = useState<Season | "all">("all");
 
   // Derive unique contributors from all recipes
   const contributors = useMemo(() => {
@@ -54,6 +58,8 @@ function RecipesContent() {
     filterSort !== "newest",
     filterIngredient.trim() !== "",
     filterProtein !== "all",
+    filterStatus !== "all",
+    filterSeason !== "all",
     activeCategory !== "all",
   ].filter(Boolean).length;
 
@@ -130,6 +136,21 @@ function RecipesContent() {
       results = results.filter((r) => r.protein === filterProtein);
     }
 
+    if (filterStatus !== "all" && user?.displayName) {
+      const name = user.displayName;
+      if (filterStatus === "must-try") {
+        results = results.filter((r) => r.mustTry?.includes(name));
+      } else if (filterStatus === "tried") {
+        results = results.filter((r) => r.triedBy?.includes(name));
+      } else if (filterStatus === "not-tried") {
+        results = results.filter((r) => !r.triedBy?.includes(name));
+      }
+    }
+
+    if (filterSeason !== "all") {
+      results = results.filter((r) => r.seasons?.includes(filterSeason));
+    }
+
     if (filterIngredient.trim()) {
       const term = filterIngredient.toLowerCase();
       results = results.filter((r) =>
@@ -151,7 +172,7 @@ function RecipesContent() {
     }
 
     return results;
-  }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein]);
+  }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein, filterStatus, filterSeason, user]);
 
   function clearAllFilters() {
     setSearchQuery("");
@@ -162,6 +183,8 @@ function RecipesContent() {
     setFilterSort("newest");
     setFilterIngredient("");
     setFilterProtein("all");
+    setFilterStatus("all");
+    setFilterSeason("all");
   }
 
   const selectClasses =
@@ -383,6 +406,42 @@ function RecipesContent() {
                   <option value="quickest">Quickest first</option>
                   <option value="longest">Longest first</option>
                   <option value="az">A &ndash; Z</option>
+                </select>
+              </div>
+
+              {/* My Status */}
+              {user && (
+                <div>
+                  <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                    My status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as "all" | "must-try" | "tried" | "not-tried")}
+                    className={selectClasses}
+                  >
+                    <option value="all">All recipes</option>
+                    <option value="must-try">My must-try list</option>
+                    <option value="tried">Recipes I&apos;ve tried</option>
+                    <option value="not-tried">Not tried yet</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Season */}
+              <div>
+                <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">
+                  Season
+                </label>
+                <select
+                  value={filterSeason}
+                  onChange={(e) => setFilterSeason(e.target.value as Season | "all")}
+                  className={selectClasses}
+                >
+                  <option value="all">Any season</option>
+                  {SEASONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
             </div>

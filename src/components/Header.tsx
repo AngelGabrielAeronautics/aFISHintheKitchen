@@ -78,7 +78,7 @@ export default function Header() {
               <>
                 {user ? (
                   <div className="flex items-center gap-3 ml-2 pl-3 border-l border-gold-light">
-                    <Avatar name={user.displayName || user.email || "?"} size="sm" />
+                    <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
                     <span className="text-xs text-slate">
                       {user.displayName || user.email}
                     </span>
@@ -164,7 +164,7 @@ export default function Header() {
                 {user ? (
                   <>
                     <div className="flex items-center gap-2 px-4 py-1">
-                      <Avatar name={user.displayName || user.email || "?"} size="sm" />
+                      <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
                       <p className="text-xs text-slate">
                         {user.displayName || user.email}
                       </p>

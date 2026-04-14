@@ -147,6 +147,27 @@ export async function toggleDisliked(recipeId: string, name: string, add: boolea
   }
 }
 
+export async function toggleMustTry(recipeId: string, name: string, add: boolean): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  if (add) {
+    await updateDoc(docRef, { mustTry: arrayUnion(name) });
+  } else {
+    await updateDoc(docRef, { mustTry: arrayRemove(name) });
+  }
+}
+
+export async function toggleTried(recipeId: string, name: string, add: boolean): Promise<void> {
+  const docRef = doc(getDb(), "recipes", recipeId);
+  if (add) {
+    await updateDoc(docRef, {
+      triedBy: arrayUnion(name),
+      mustTry: arrayRemove(name),
+    });
+  } else {
+    await updateDoc(docRef, { triedBy: arrayRemove(name) });
+  }
+}
+
 export async function getRecipeCount(): Promise<number> {
   const snapshot = await getCountFromServer(recipesCollection());
   return snapshot.data().count;
