@@ -13,7 +13,9 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/recipes", label: "Recipes" },
   { href: "/shopping-list", label: "Shopping List" },
+  { href: "/meal-planner", label: "Meal Planner" },
   { href: "/members", label: "The Family" },
+  { href: "/collections", label: "Collections" },
   { href: "/submit", label: "Submit a Recipe" },
 ];
 

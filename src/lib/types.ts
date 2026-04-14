@@ -196,6 +196,15 @@ export const CATEGORIES: CategoryInfo[] = [
   },
 ];
 
+export interface RecipeCollection {
+  id: string;
+  name: string;
+  description: string;
+  createdBy: string;
+  recipeIds: string[];
+  createdAt: string;
+}
+
 export function getCategoryBySlug(slug: string): CategoryInfo | undefined {
   return CATEGORIES.find((c) => c.slug === slug);
 }

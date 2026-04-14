@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
-import type { Recipe, Member, RecipeNote, EditLogEntry } from "./types";
+import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection } from "./types";
 
 function recipesCollection() {
   return collection(getDb(), "recipes");
@@ -219,4 +219,38 @@ export async function updateMember(
 export async function getMemberCount(): Promise<number> {
   const snapshot = await getCountFromServer(membersCollection());
   return snapshot.data().count;
+}
+
+// --- Collections ---
+
+function collectionsCollection() {
+  return collection(getDb(), "collections");
+}
+
+export async function getAllCollections(): Promise<RecipeCollection[]> {
+  const q = query(collectionsCollection(), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as RecipeCollection));
+}
+
+export async function addCollection(
+  data: Omit<RecipeCollection, "id" | "createdAt">
+): Promise<RecipeCollection> {
+  const createdAt = new Date().toISOString();
+  const payload = { ...data, createdAt };
+  const docRef = await addDoc(collectionsCollection(), payload);
+  return { ...payload, id: docRef.id } as RecipeCollection;
+}
+
+export async function updateCollection(
+  id: string,
+  data: Partial<Omit<RecipeCollection, "id" | "createdAt">>
+): Promise<void> {
+  const docRef = doc(getDb(), "collections", id);
+  await updateDoc(docRef, data);
+}
+
+export async function deleteCollection(id: string): Promise<void> {
+  const docRef = doc(getDb(), "collections", id);
+  await deleteDoc(docRef);
 }

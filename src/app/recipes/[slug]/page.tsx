@@ -284,6 +284,30 @@ export default function RecipePage() {
             )}
           </div>
 
+          {/* Start Cooking button */}
+          <Link
+            href={`/recipes/${recipe.slug}/cook`}
+            className="print-hide mt-6 flex w-full items-center justify-center gap-2.5 rounded-xl bg-terracotta px-6 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-dark active:bg-terracotta-dark sm:w-auto sm:px-8"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+            >
+              <path d="M15 11h.01" />
+              <path d="M11 15h.01" />
+              <path d="M16 16h.01" />
+              <path d="M2 16l20 6-6-20A20 20 0 0 0 2 16" />
+              <path d="M5.71 17.11a17.04 17.04 0 0 1 11.4-11.4" />
+            </svg>
+            Start Cooking
+          </Link>
+
           <p className="mt-4 font-sans text-base leading-relaxed text-slate">
             {recipe.description}
           </p>
