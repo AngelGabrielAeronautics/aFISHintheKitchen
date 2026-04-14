@@ -47,7 +47,7 @@ export default function RecipeNotes({ recipeId, initialNotes, contributedBy }: R
   }
 
   return (
-    <div className="mt-8 rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30">
+    <div data-component="recipe-notes" className="mt-8 rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-serif text-lg font-bold text-charcoal">

@@ -17,7 +17,7 @@ export default function EditHistory({ entries, contributedBy }: EditHistoryProps
   const visible = showAll ? entries : entries.slice(-3);
 
   return (
-    <div className="mt-6 border-t border-cream-dark/30 pt-6">
+    <div data-component="edit-history" className="mt-6 border-t border-cream-dark/30 pt-6">
       <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-slate/50">
         Edit History
       </h3>

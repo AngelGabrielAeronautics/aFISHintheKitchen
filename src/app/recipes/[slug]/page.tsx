@@ -19,6 +19,7 @@ export default function RecipePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -158,8 +159,8 @@ export default function RecipePage() {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        {/* Back + Edit buttons */}
-        <div className="flex items-center justify-between py-4">
+        {/* Back + Print/Share/Edit buttons */}
+        <div className="print-hide flex items-center justify-between py-4">
           <Link
             href="/recipes"
             className="inline-flex items-center gap-2 font-sans text-sm font-medium text-slate transition-colors hover:text-terracotta"
@@ -169,18 +170,62 @@ export default function RecipePage() {
             </svg>
             Back to recipes
           </Link>
-          {user && (
-            <Link
-              href={`/recipes/${recipe.slug}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-terracotta/10 px-4 py-2 font-sans text-sm font-medium text-terracotta transition-colors hover:bg-terracotta/20"
+          <div className="flex items-center gap-2">
+            {/* Print */}
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate/10 px-4 py-2 font-sans text-sm font-medium text-slate transition-colors hover:bg-slate/20 cursor-pointer"
             >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M5 2.75C5 1.784 5.784 1 6.75 1h6.5c.966 0 1.75.784 1.75 1.75v3.552c.377.046.752.097 1.126.153A2.212 2.212 0 0 1 18 8.653v4.097A2.25 2.25 0 0 1 15.75 15h-.241l.305 1.984A1.75 1.75 0 0 1 14.084 19H5.916a1.75 1.75 0 0 1-1.73-2.016L4.492 15H4.25A2.25 2.25 0 0 1 2 12.75V8.653c0-1.082.775-2.034 1.874-2.198.374-.056.75-.107 1.126-.153V2.75ZM13.5 4V2.75a.25.25 0 0 0-.25-.25h-6.5a.25.25 0 0 0-.25.25V4c1.152-.076 2.318-.115 3.5-.115s2.348.039 3.5.115ZM6.427 15l-.394 2.562a.25.25 0 0 0 .247.288h7.44a.25.25 0 0 0 .247-.288L13.573 15H6.427Zm7.406-1.5a.75.75 0 0 0 .167-.019h1.75a.75.75 0 0 0 .75-.75V8.653a.712.712 0 0 0-.603-.706c-1.36-.204-2.74-.347-4.136-.427a.75.75 0 0 0-.028-.002 67.77 67.77 0 0 0-3.466 0 .75.75 0 0 0-.028.002 62.142 62.142 0 0 0-4.136.427.712.712 0 0 0-.603.706v4.078c0 .414.336.75.75.75H6a.75.75 0 0 0 .167.019h7.666Z" clipRule="evenodd" />
               </svg>
-              Edit
-            </Link>
-          )}
+              Print
+            </button>
+            {/* Share */}
+            <div className="relative">
+              <button
+                onClick={async () => {
+                  const url = window.location.href;
+                  const title = recipe.title;
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ title, url });
+                    } catch {
+                      // User cancelled or share failed — ignore
+                    }
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    setShareCopied(true);
+                    setTimeout(() => setShareCopied(false), 2000);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-terracotta/10 px-4 py-2 font-sans text-sm font-medium text-terracotta transition-colors hover:bg-terracotta/20 cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path d="M13 4.5a2.5 2.5 0 1 1 .702 1.737L6.97 9.604a2.518 2.518 0 0 1 0 .799l6.733 3.366a2.5 2.5 0 1 1-.671 1.341l-6.733-3.366a2.5 2.5 0 1 1 0-3.482l6.733-3.366A2.52 2.52 0 0 1 13 4.5Z" />
+                </svg>
+                Share
+              </button>
+              {shareCopied && (
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-charcoal px-2 py-1 font-sans text-xs text-white shadow-md">
+                  Link copied!
+                </span>
+              )}
+            </div>
+            {/* Edit */}
+            {user && (
+              <Link
+                href={`/recipes/${recipe.slug}/edit`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-terracotta/10 px-4 py-2 font-sans text-sm font-medium text-terracotta transition-colors hover:bg-terracotta/20"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                </svg>
+                Edit
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Title & icons */}
@@ -481,7 +526,7 @@ export default function RecipePage() {
 
         {/* Tags */}
         {recipe.tags.length > 0 && (
-          <div className="mt-12 border-t border-cream-dark/30 pt-8">
+          <div className="print-hide mt-12 border-t border-cream-dark/30 pt-8">
             <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-slate/60">
               Tags
             </h3>

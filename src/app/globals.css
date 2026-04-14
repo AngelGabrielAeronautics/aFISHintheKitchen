@@ -63,6 +63,159 @@ html {
   scrollbar-color: var(--color-sage-light) transparent;
 }
 
+/* ─── Print styles ─── */
+@media print {
+  /* Use recipe title as page header */
+  @page {
+    margin: 1.5cm;
+  }
+
+  /* Reset backgrounds & colors */
+  html, body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  /* Hide non-essential sections */
+  header,
+  footer,
+  nav,
+  .print-hide,
+  [data-component="family-verdict"],
+  [data-component="recipe-notes"],
+  [data-component="edit-history"] {
+    display: none !important;
+  }
+
+  /* Hide tags section */
+  .mt-12.border-t {
+    display: none !important;
+  }
+
+  /* Hide recipe images */
+  .snap-x,
+  .aspect-\[16\/9\] {
+    display: none !important;
+  }
+
+  /* Hide icon row (difficulty/category/protein/heat images) */
+  .mt-4.flex.items-center.gap-3 {
+    display: none !important;
+  }
+
+  /* Hide ingredient copy/download buttons */
+  .flex.gap-1\.5 button {
+    display: none !important;
+  }
+
+  /* Hide ingredient checkboxes */
+  .rounded.border.border-cream-dark\/50 {
+    display: none !important;
+  }
+
+  /* Remove all decorative styling */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg,
+  .rounded-r-lg {
+    border-radius: 0 !important;
+  }
+
+  [class*="ring-"] {
+    --tw-ring-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  [class*="bg-warm-white"],
+  [class*="bg-cream"],
+  [class*="bg-terracotta"] {
+    background: transparent !important;
+  }
+
+  /* Keep the step numbers visible */
+  .recipe-instructions ol li::before {
+    background: black !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Clean typography */
+  h1 {
+    font-size: 22pt !important;
+    color: black !important;
+    margin-bottom: 4pt;
+  }
+
+  h2 {
+    font-size: 16pt !important;
+    color: black !important;
+    margin-top: 16pt;
+  }
+
+  p, li, span {
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  /* Info bar — keep inline for print */
+  .grid.grid-cols-3 {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 12pt;
+  }
+
+  .grid.grid-cols-3 > div {
+    background: transparent !important;
+    padding: 4pt 0 !important;
+    border: none !important;
+  }
+
+  /* Contributor section */
+  blockquote {
+    border-left: 2pt solid #999 !important;
+    background: transparent !important;
+    padding-left: 8pt !important;
+  }
+
+  /* Two-column layout — stack for print */
+  .lg\:col-span-2,
+  .lg\:col-span-1 {
+    grid-column: span 3 / span 3 !important;
+  }
+
+  /* Remove sticky positioning */
+  .lg\:sticky {
+    position: static !important;
+  }
+
+  /* Ensure ingredients panel has a subtle top border */
+  .lg\:col-span-1 .rounded-2xl {
+    border-top: 1pt solid #ccc !important;
+    padding-top: 12pt;
+  }
+
+  /* Bottom spacing removal */
+  .h-16 {
+    display: none !important;
+  }
+
+  /* Avoid page breaks inside steps/ingredients */
+  li {
+    page-break-inside: avoid;
+  }
+
+  h2 {
+    page-break-after: avoid;
+  }
+}
+
 /* Recipe content styling */
 .recipe-instructions ol {
   list-style: none;

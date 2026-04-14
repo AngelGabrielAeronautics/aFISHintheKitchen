@@ -62,7 +62,7 @@ export default function RecipePreferences({
   }
 
   return (
-    <div className="mt-8 rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30">
+    <div data-component="family-verdict" className="mt-8 rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30">
       <h3 className="font-serif text-lg font-bold text-charcoal">
         Family Verdict
       </h3>

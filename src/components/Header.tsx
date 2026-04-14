@@ -12,6 +12,7 @@ import Avatar from "@/components/Avatar";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/recipes", label: "Recipes" },
+  { href: "/shopping-list", label: "Shopping List" },
   { href: "/members", label: "The Family" },
   { href: "/submit", label: "Submit a Recipe" },
 ];

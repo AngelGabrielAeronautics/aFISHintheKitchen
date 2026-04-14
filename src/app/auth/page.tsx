@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   updateProfile,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
-type AuthMode = "signin" | "signup";
+type AuthMode = "signin" | "signup" | "reset";
 
 function getErrorMessage(code: string): string {
   switch (code) {
@@ -43,6 +44,7 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -54,7 +56,10 @@ export default function AuthPage() {
   function switchMode(newMode: AuthMode) {
     setMode(newMode);
     setError("");
-    setEmail("");
+    setSuccessMessage("");
+    if (newMode !== "reset") {
+      setEmail("");
+    }
     setPassword("");
     setConfirmPassword("");
     setDisplayName("");
@@ -110,6 +115,23 @@ export default function AuthPage() {
     }
   }
 
+  async function handlePasswordReset(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccessMessage("");
+    setSubmitting(true);
+
+    try {
+      await sendPasswordResetEmail(getFirebaseAuth(), email);
+      setSuccessMessage("Check your email for a password reset link.");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? "";
+      setError(getErrorMessage(code));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (loading || user) {
     return null;
   }
@@ -125,36 +147,52 @@ export default function AuthPage() {
         </h1>
 
         <div className="rounded-2xl bg-white p-8 shadow-lg">
-          {/* Tabs */}
-          <div className="mb-6 flex border-b border-gold-light">
-            <button
-              type="button"
-              onClick={() => switchMode("signin")}
-              className={`flex-1 pb-3 font-sans text-sm font-medium transition-colors ${
-                mode === "signin"
-                  ? "border-b-2 border-terracotta text-terracotta"
-                  : "text-slate hover:text-charcoal"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("signup")}
-              className={`flex-1 pb-3 font-sans text-sm font-medium transition-colors ${
-                mode === "signup"
-                  ? "border-b-2 border-terracotta text-terracotta"
-                  : "text-slate hover:text-charcoal"
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
+          {/* Tabs — hidden during password reset */}
+          {mode !== "reset" && (
+            <div className="mb-6 flex border-b border-gold-light">
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                className={`flex-1 pb-3 font-sans text-sm font-medium transition-colors ${
+                  mode === "signin"
+                    ? "border-b-2 border-terracotta text-terracotta"
+                    : "text-slate hover:text-charcoal"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("signup")}
+                className={`flex-1 pb-3 font-sans text-sm font-medium transition-colors ${
+                  mode === "signup"
+                    ? "border-b-2 border-terracotta text-terracotta"
+                    : "text-slate hover:text-charcoal"
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
+
+          {/* Reset heading */}
+          {mode === "reset" && (
+            <h2 className="mb-6 font-serif text-xl font-semibold text-charcoal">
+              Reset your password
+            </h2>
+          )}
 
           {/* Error */}
           {error && (
             <div className="mb-4 rounded-lg border border-terracotta-light/30 bg-terracotta-light/10 px-4 py-3 font-sans text-sm text-terracotta-dark">
               {error}
+            </div>
+          )}
+
+          {/* Success */}
+          {successMessage && (
+            <div className="mb-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 font-sans text-sm text-green-800">
+              {successMessage}
             </div>
           )}
 
@@ -195,6 +233,13 @@ export default function AuthPage() {
                   placeholder="Your password"
                   className={inputClasses}
                 />
+                <button
+                  type="button"
+                  onClick={() => switchMode("reset")}
+                  className="mt-1 font-sans text-xs font-medium text-terracotta hover:text-terracotta-dark transition-colors"
+                >
+                  Forgot password?
+                </button>
               </div>
 
               <button
@@ -292,9 +337,40 @@ export default function AuthPage() {
             </form>
           )}
 
+          {/* Password Reset Form */}
+          {mode === "reset" && (
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="reset-email"
+                  className="mb-1 block font-sans text-sm font-medium text-charcoal"
+                >
+                  Email
+                </label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className={inputClasses}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-lg bg-terracotta px-4 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark focus:outline-none focus:ring-2 focus:ring-terracotta/50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Sending..." : "Send Reset Email"}
+              </button>
+            </form>
+          )}
+
           {/* Toggle link */}
           <p className="mt-6 text-center font-sans text-sm text-slate">
-            {mode === "signin" ? (
+            {mode === "signin" && (
               <>
                 Don&apos;t have an account?{" "}
                 <button
@@ -305,7 +381,8 @@ export default function AuthPage() {
                   Sign up
                 </button>
               </>
-            ) : (
+            )}
+            {mode === "signup" && (
               <>
                 Already have an account?{" "}
                 <button
@@ -316,6 +393,15 @@ export default function AuthPage() {
                   Sign in
                 </button>
               </>
+            )}
+            {mode === "reset" && (
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                className="font-medium text-terracotta hover:text-terracotta-dark transition-colors"
+              >
+                Back to sign in
+              </button>
             )}
           </p>
         </div>
