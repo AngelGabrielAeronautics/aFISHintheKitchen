@@ -619,6 +619,21 @@ export default function MealPlannerPage() {
                 );
               })}
             </div>
+
+            {/* Shopping list link */}
+            {mealPlan && Object.keys(mealPlan.meals).length > 0 && (
+              <div className="mt-6 text-center">
+                <Link
+                  href={`/shopping-list?recipes=${Object.values(mealPlan.meals).map((m) => m!.recipeId).join(",")}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-dark"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                    <path fillRule="evenodd" d="M6 5v1H4.667a1.75 1.75 0 0 0-1.743 1.598l-.826 9.5A1.75 1.75 0 0 0 3.84 19H16.16a1.75 1.75 0 0 0 1.743-1.902l-.826-9.5A1.75 1.75 0 0 0 15.333 6H14V5a4 4 0 0 0-8 0Zm4-2.5A2.5 2.5 0 0 0 7.5 5v1h5V5A2.5 2.5 0 0 0 10 2.5ZM7.5 10a2.5 2.5 0 0 0 5 0V8.75a.75.75 0 0 1 1.5 0V10a4 4 0 0 1-8 0V8.75a.75.75 0 0 1 1.5 0V10Z" clipRule="evenodd" />
+                  </svg>
+                  Generate Shopping List for This Week
+                </Link>
+              </div>
+            )}
           </>
         )}
       </div>

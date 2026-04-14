@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import type { Recipe } from "@/lib/types";
@@ -9,13 +11,15 @@ import Avatar from "@/components/Avatar";
 
 type ViewMode = "by-recipe" | "combined";
 
-export default function ShoppingListPage() {
+function ShoppingListContent() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const preselectedIds = searchParams.get("recipes")?.split(",").filter(Boolean) ?? [];
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preselectedIds));
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(
     new Set()
   );
@@ -26,9 +30,15 @@ export default function ShoppingListPage() {
   useEffect(() => {
     if (!user) return;
     getAllRecipes()
-      .then(setRecipes)
+      .then((all) => {
+        setRecipes(all);
+        // Auto-generate list if recipes were pre-selected from meal planner
+        if (preselectedIds.length > 0) {
+          setListGenerated(true);
+        }
+      })
       .finally(() => setLoadingRecipes(false));
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredRecipes = useMemo(() => {
     if (!search.trim()) return recipes;
@@ -547,5 +557,17 @@ export default function ShoppingListPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ShoppingListPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-cream">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+      </main>
+    }>
+      <ShoppingListContent />
+    </Suspense>
   );
 }
