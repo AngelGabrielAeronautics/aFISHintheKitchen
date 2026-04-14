@@ -83,6 +83,7 @@ export interface Recipe {
   heat?: HeatLevel;
   ingredients: string[];
   instructions: string[];
+  instructionImages?: Record<string, string>;
   contributedBy: string;
   story?: string;
   originalSource?: string;

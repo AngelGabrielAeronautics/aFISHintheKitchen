@@ -429,6 +429,34 @@ export default function RecipePage() {
             </span>
           </div>
 
+          {/* Seasons */}
+          <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {[
+                { value: "spring", label: "🌱", name: "Spring" },
+                { value: "summer", label: "☀️", name: "Summer" },
+                { value: "autumn", label: "🍂", name: "Autumn" },
+                { value: "winter", label: "❄️", name: "Winter" },
+              ].map((s) => (
+                <span
+                  key={s.value}
+                  title={s.name}
+                  className={`text-base ${
+                    recipe.seasons?.includes(s.value as "spring" | "summer" | "autumn" | "winter")
+                      ? "opacity-100"
+                      : "opacity-20"
+                  }`}
+                >
+                  {s.label}
+                </span>
+              ))}
+            </div>
+            <span className="font-sans text-xs text-slate">Season</span>
+            {recipe.seasons?.includes("all-year") && (
+              <span className="font-sans text-[10px] font-medium text-sage">All Year</span>
+            )}
+          </div>
+
           <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
             <Image
               src={DIFFICULTY_ICONS[recipe.difficulty]}
@@ -473,9 +501,19 @@ export default function RecipePage() {
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-terracotta font-sans text-sm font-bold text-white">
                     {index + 1}
                   </span>
-                  <p className="pt-1 font-sans text-sm leading-relaxed text-slate">
-                    {step}
-                  </p>
+                  <div className="pt-1 flex-1">
+                    <p className="font-sans text-sm leading-relaxed text-slate">
+                      {step}
+                    </p>
+                    {recipe.instructionImages?.[String(index)] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={recipe.instructionImages[String(index)]}
+                        alt={`Step ${index + 1}`}
+                        className="mt-3 rounded-xl shadow-sm max-h-64 object-cover"
+                      />
+                    )}
+                  </div>
                 </li>
               ))}
             </ol>

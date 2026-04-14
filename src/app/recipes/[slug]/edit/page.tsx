@@ -63,6 +63,8 @@ export default function EditRecipePage() {
   const [ingredients, setIngredients] = useState<string[]>([""]);
   const [instructions, setInstructions] = useState<string[]>([""]);
   const [tags, setTags] = useState("");
+  const [stepImages, setStepImages] = useState<Record<string, string>>({});
+  const [stepImageFiles, setStepImageFiles] = useState<Record<string, File>>({});
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -108,6 +110,7 @@ export default function EditRecipePage() {
         setProtein(fetched.protein || "");
         setHeat(fetched.heat || "");
         setSeasons(fetched.seasons || []);
+        setStepImages(fetched.instructionImages || {});
         setPrepTime(String(fetched.prepTime));
         setCookTime(String(fetched.cookTime));
         setServings(String(fetched.servings));
@@ -163,6 +166,21 @@ export default function EditRecipePage() {
   function removeInstruction(index: number) {
     if (instructions.length <= 1) return;
     setInstructions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // --- Step image helpers ---
+  function handleStepImageSelect(index: number, file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setStepImages((prev) => ({ ...prev, [String(index)]: e.target?.result as string }));
+      setStepImageFiles((prev) => ({ ...prev, [String(index)]: file }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleStepImageRemove(index: number) {
+    setStepImages((prev) => { const n = { ...prev }; delete n[String(index)]; return n; });
+    setStepImageFiles((prev) => { const n = { ...prev }; delete n[String(index)]; return n; });
   }
 
   // --- Photo helpers ---
@@ -292,6 +310,23 @@ export default function EditRecipePage() {
           .map((t) => t.trim())
           .filter(Boolean),
       };
+
+      // Upload new step images
+      const finalStepImages: Record<string, string> = {};
+      for (const [idx, url] of Object.entries(stepImages)) {
+        if (stepImageFiles[idx]) {
+          // New file to upload
+          finalStepImages[idx] = await uploadRecipeImage(stepImageFiles[idx], `${recipe.slug}/steps`);
+        } else {
+          // Existing URL
+          finalStepImages[idx] = url;
+        }
+      }
+      if (Object.keys(finalStepImages).length > 0) {
+        recipeData.instructionImages = finalStepImages;
+      } else {
+        recipeData.instructionImages = {};
+      }
 
       const editor = user?.displayName || user?.email || "Unknown";
       const isOriginalAuthor = editor === recipe.contributedBy;
@@ -852,6 +887,9 @@ export default function EditRecipePage() {
               addLabel="Add Step"
               multiline
               inputClasses={inputClasses}
+              images={stepImages}
+              onImageSelect={handleStepImageSelect}
+              onImageRemove={handleStepImageRemove}
             />
 
             {errors.instructions && (

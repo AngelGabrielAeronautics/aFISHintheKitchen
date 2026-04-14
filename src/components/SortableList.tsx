@@ -29,9 +29,12 @@ interface SortableItemProps {
   placeholder: string;
   multiline?: boolean;
   inputClasses: string;
+  imageUrl?: string;
+  onImageSelect?: (file: File) => void;
+  onImageRemove?: () => void;
 }
 
-function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeholder, multiline, inputClasses }: SortableItemProps) {
+function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeholder, multiline, inputClasses, imageUrl, onImageSelect, onImageRemove }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -69,24 +72,57 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
         </span>
       )}
 
-      {/* Input */}
-      {multiline ? (
-        <textarea
-          rows={2}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`${inputClasses} flex-1 resize-none`}
-        />
-      ) : (
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`${inputClasses} flex-1`}
-        />
-      )}
+      {/* Input + optional image */}
+      <div className="flex-1">
+        {multiline ? (
+          <textarea
+            rows={2}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`${inputClasses} w-full resize-none`}
+          />
+        ) : (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`${inputClasses} w-full`}
+          />
+        )}
+
+        {/* Step image */}
+        {multiline && onImageSelect && (
+          <div className="mt-1.5">
+            {imageUrl ? (
+              <div className="relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt={`Step ${index + 1}`} className="h-16 w-24 rounded-lg object-cover ring-1 ring-cream-dark/30" />
+                {onImageRemove && (
+                  <button
+                    type="button"
+                    onClick={onImageRemove}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white cursor-pointer"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <label className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-medium text-slate/40 hover:text-slate/70 hover:bg-cream-dark/20 transition-colors cursor-pointer">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                  <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clipRule="evenodd" />
+                </svg>
+                Add photo
+                <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) onImageSelect(e.target.files[0]); }} className="hidden" />
+              </label>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Remove */}
       {canRemove && (
@@ -114,6 +150,9 @@ interface SortableListProps {
   addLabel: string;
   multiline?: boolean;
   inputClasses: string;
+  images?: Record<string, string>;
+  onImageSelect?: (index: number, file: File) => void;
+  onImageRemove?: (index: number) => void;
 }
 
 export default function SortableList({
@@ -126,6 +165,9 @@ export default function SortableList({
   addLabel,
   multiline = false,
   inputClasses,
+  images,
+  onImageSelect,
+  onImageRemove,
 }: SortableListProps) {
   const itemIds = items.map((_, i) => `item-${i}`);
 
@@ -163,6 +205,9 @@ export default function SortableList({
                 placeholder={`${placeholderPrefix} ${index + 1}`}
                 multiline={multiline}
                 inputClasses={inputClasses}
+                imageUrl={images?.[String(index)]}
+                onImageSelect={onImageSelect ? (file) => onImageSelect(index, file) : undefined}
+                onImageRemove={onImageRemove ? () => onImageRemove(index) : undefined}
               />
             ))}
           </div>

@@ -400,6 +400,16 @@ export default function CookModePage() {
             <p className="mt-8 font-sans text-xl leading-relaxed text-[#F0EBD8] sm:text-2xl">
               {recipe.instructions[instructionIndex]}
             </p>
+
+            {/* Step image */}
+            {recipe.instructionImages?.[String(instructionIndex)] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={recipe.instructionImages[String(instructionIndex)]}
+                alt={`Step ${instructionIndex + 1}`}
+                className="mt-6 max-h-64 rounded-xl object-cover shadow-lg sm:max-h-80"
+              />
+            )}
           </div>
         )}
 

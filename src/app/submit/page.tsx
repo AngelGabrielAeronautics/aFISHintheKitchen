@@ -55,6 +55,7 @@ export default function SubmitRecipePage() {
     ...INITIAL_INSTRUCTIONS,
   ]);
   const [tags, setTags] = useState("");
+  const [stepImages, setStepImages] = useState<Record<string, { file: File; preview: string }>>({});
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -107,6 +108,23 @@ export default function SubmitRecipePage() {
   function removeInstruction(index: number) {
     if (instructions.length <= 1) return;
     setInstructions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // --- Step image helpers ---
+  function handleStepImageSelect(index: number, file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setStepImages((prev) => ({ ...prev, [String(index)]: { file, preview: e.target?.result as string } }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleStepImageRemove(index: number) {
+    setStepImages((prev) => {
+      const next = { ...prev };
+      delete next[String(index)];
+      return next;
+    });
   }
 
   // --- Photo helpers ---
@@ -213,6 +231,13 @@ export default function SubmitRecipePage() {
         imageUrls.push(url);
       }
 
+      // Upload step images
+      const uploadedStepImages: Record<string, string> = {};
+      for (const [idx, { file }] of Object.entries(stepImages)) {
+        const url = await uploadRecipeImage(file, `${slugFromTitle}/steps`);
+        uploadedStepImages[idx] = url;
+      }
+
       // Build recipe data
       const recipeData: Parameters<typeof addRecipe>[0] = {
         title,
@@ -232,6 +257,7 @@ export default function SubmitRecipePage() {
         originalSource: originalSource || undefined,
         ingredients: ingredients.filter((i) => i.trim()),
         instructions: instructions.filter((i) => i.trim()),
+        instructionImages: Object.keys(uploadedStepImages).length > 0 ? uploadedStepImages : undefined,
         tags: tags
           .split(",")
           .map((t) => t.trim())
@@ -263,6 +289,7 @@ export default function SubmitRecipePage() {
     setProtein("");
     setHeat("");
     setSeasons([]);
+    setStepImages({});
     setPrepTime("");
     setCookTime("");
     setServings("");
@@ -719,6 +746,9 @@ export default function SubmitRecipePage() {
               addLabel="Add Step"
               multiline
               inputClasses={inputClasses}
+              images={Object.fromEntries(Object.entries(stepImages).map(([k, v]) => [k, v.preview]))}
+              onImageSelect={handleStepImageSelect}
+              onImageRemove={handleStepImageRemove}
             />
 
             {errors.instructions && (
