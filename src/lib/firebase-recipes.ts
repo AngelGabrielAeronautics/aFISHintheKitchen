@@ -208,6 +208,14 @@ export async function seedMembers(members: Member[]): Promise<void> {
   await batch.commit();
 }
 
+export async function updateMember(
+  memberId: string,
+  data: Partial<Omit<Member, "id">>
+): Promise<void> {
+  const docRef = doc(getDb(), "members", memberId);
+  await updateDoc(docRef, data);
+}
+
 export async function getMemberCount(): Promise<number> {
   const snapshot = await getCountFromServer(membersCollection());
   return snapshot.data().count;

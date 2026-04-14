@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, type Recipe } from "@/lib/types";
+import { CATEGORIES, DIFFICULTY_ICONS, type Recipe, formatTime, getCategoryBySlug } from "@/lib/types";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
+import Avatar from "@/components/Avatar";
 
 export default function HomePage() {
-  const [featuredRecipes, setFeaturedRecipes] = useState<Recipe[]>([]);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -21,9 +22,32 @@ export default function HomePage() {
   const [filterIngredient, setFilterIngredient] = useState("");
   const [filterMaxTime, setFilterMaxTime] = useState("");
   const [filterSort, setFilterSort] = useState("newest");
+  const [rotwIconError, setRotwIconError] = useState(false);
   const router = useRouter();
 
-  const contributors = [...new Set(featuredRecipes.map(r => r.contributedBy))].sort();
+  const contributors = [...new Set(allRecipes.map(r => r.contributedBy))].sort();
+
+  const featuredRecipes = useMemo(() => {
+    const sorted = [...allRecipes].sort((a, b) => {
+      const aLoves = a.lovedBy?.length ?? 0;
+      const bLoves = b.lovedBy?.length ?? 0;
+      if (bLoves !== aLoves) return bLoves - aLoves;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    return sorted.slice(0, 6);
+  }, [allRecipes]);
+
+  const recipeOfTheWeek = useMemo(() => {
+    if (allRecipes.length === 0) return null;
+    const weekNumber = Math.floor(
+      (Date.now() - new Date("2026-01-01").getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+    const withImages = allRecipes.filter(
+      (r) => (r.images && r.images.length > 0) || r.image
+    );
+    const pool = withImages.length > 0 ? withImages : allRecipes;
+    return pool[Math.abs(weekNumber) % pool.length];
+  }, [allRecipes]);
 
   function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();
@@ -43,15 +67,7 @@ export default function HomePage() {
 
   useEffect(() => {
     getAllRecipes()
-      .then((all) => {
-        const sorted = all.sort((a, b) => {
-          const aLoves = a.lovedBy?.length ?? 0;
-          const bLoves = b.lovedBy?.length ?? 0;
-          if (bLoves !== aLoves) return bLoves - aLoves;
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
-        setFeaturedRecipes(sorted.slice(0, 6));
-      })
+      .then((all) => setAllRecipes(all))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -223,6 +239,135 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Recipe of the Week */}
+      {recipeOfTheWeek && (
+        <section className="bg-warm-white py-16 md:py-24">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="text-center mb-10">
+              <h2 className="font-serif text-3xl font-bold text-charcoal md:text-4xl inline-flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7 text-gold-light">
+                  <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
+                </svg>
+                Recipe of the Week
+              </h2>
+              <p className="mt-3 font-sans text-base text-slate md:text-lg">
+                A fresh pick every Monday
+              </p>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-charcoal/5">
+              <div className="flex flex-col md:flex-row">
+                {/* Image */}
+                {(recipeOfTheWeek.images?.[0] || recipeOfTheWeek.image) ? (
+                  <div className="relative aspect-[4/3] md:aspect-auto md:w-1/2 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={recipeOfTheWeek.images?.[0] || recipeOfTheWeek.image}
+                      alt={recipeOfTheWeek.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative aspect-[4/3] md:aspect-auto md:w-1/2 shrink-0 bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 flex items-center justify-center">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 64 64"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-24 w-24 text-terracotta opacity-20"
+                    >
+                      <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
+                      <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Details */}
+                <div className="flex flex-col justify-center gap-4 p-6 md:p-10 md:w-1/2">
+                  <h3 className="font-serif text-2xl font-bold text-charcoal md:text-3xl">
+                    {recipeOfTheWeek.title}
+                  </h3>
+
+                  <p className="font-sans text-sm leading-relaxed text-slate md:text-base line-clamp-3">
+                    {recipeOfTheWeek.description}
+                  </p>
+
+                  {/* Contributor */}
+                  <div className="flex items-center gap-3">
+                    <Avatar name={recipeOfTheWeek.contributedBy} size="md" />
+                    <span className="font-sans text-sm font-semibold text-charcoal">
+                      {recipeOfTheWeek.contributedBy}
+                    </span>
+                  </div>
+
+                  {/* Icons row: difficulty, category, protein */}
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src={DIFFICULTY_ICONS[recipeOfTheWeek.difficulty]}
+                      alt={recipeOfTheWeek.difficulty}
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 object-contain"
+                      title={recipeOfTheWeek.difficulty}
+                    />
+                    {!rotwIconError && (
+                      <Image
+                        src={`/icons/${recipeOfTheWeek.category}.png`}
+                        alt={getCategoryBySlug(recipeOfTheWeek.category)?.name || ""}
+                        width={40}
+                        height={40}
+                        className="h-10 w-10 object-contain"
+                        onError={() => setRotwIconError(true)}
+                      />
+                    )}
+                    {recipeOfTheWeek.protein && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/icons/${recipeOfTheWeek.protein}.png`}
+                        alt={recipeOfTheWeek.protein}
+                        className="h-10 w-10 object-contain"
+                        title={recipeOfTheWeek.protein}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Prep + Cook time */}
+                  <div className="flex items-center gap-4 font-sans text-xs text-slate">
+                    <div className="flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-terracotta/70">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
+                      </svg>
+                      <span>Prep: {formatTime(recipeOfTheWeek.prepTime)}</span>
+                    </div>
+                    <span className="text-cream-dark">|</span>
+                    <div className="flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-terracotta/70">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z" clipRule="evenodd" />
+                      </svg>
+                      <span>Cook: {formatTime(recipeOfTheWeek.cookTime)}</span>
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <div className="mt-2">
+                    <Link
+                      href={`/recipes/${recipeOfTheWeek.slug}`}
+                      className="inline-flex items-center rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold tracking-wide text-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
+                    >
+                      View Recipe
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Recipes */}
       <section className="bg-cream py-20 md:py-28">
