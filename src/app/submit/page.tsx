@@ -7,6 +7,8 @@ import type { Category, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import SortableList from "@/components/SortableList";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import UnsavedChangesModal from "@/components/UnsavedChangesModal";
 import { addRecipe, uploadRecipeImage } from "@/lib/firebase-recipes";
 
 interface FormErrors {
@@ -60,6 +62,16 @@ export default function SubmitRecipePage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
+
+  // Warn on unsaved changes
+  const isDirty = !submitted && (
+    title.trim() !== "" ||
+    description.trim() !== "" ||
+    ingredients.some((i) => i.trim()) ||
+    instructions.some((i) => i.trim()) ||
+    photoFiles.length > 0
+  );
+  const { showPrompt, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   // Auto-fill contributedBy from user displayName
   useEffect(() => {
@@ -795,6 +807,7 @@ export default function SubmitRecipePage() {
           </button>
         </form>
       </div>
+      {showPrompt && <UnsavedChangesModal onLeave={confirmLeave} onStay={cancelLeave} />}
     </main>
   );
 }

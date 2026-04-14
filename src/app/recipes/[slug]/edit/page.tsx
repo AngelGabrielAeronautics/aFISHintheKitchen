@@ -9,6 +9,8 @@ import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import DeleteModal from "@/components/DeleteModal";
 import SortableList from "@/components/SortableList";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import UnsavedChangesModal from "@/components/UnsavedChangesModal";
 import { useRouter } from "next/navigation";
 import {
   getRecipeBySlug,
@@ -69,6 +71,19 @@ export default function EditRecipePage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Warn on unsaved changes
+  const isDirty = !submitted && recipe !== null && (
+    title !== recipe.title ||
+    description !== recipe.description ||
+    category !== recipe.category ||
+    difficulty !== recipe.difficulty ||
+    ingredients.filter(i => i.trim()).join() !== recipe.ingredients.join() ||
+    instructions.filter(i => i.trim()).join() !== recipe.instructions.join() ||
+    story !== (recipe.story || "") ||
+    photoFiles.length > 0
+  );
+  const { showPrompt, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
   // Fetch recipe on mount
   useEffect(() => {
@@ -956,6 +971,7 @@ export default function EditRecipePage() {
             onCancel={() => setShowDeleteModal(false)}
           />
         )}
+        {showPrompt && <UnsavedChangesModal onLeave={confirmLeave} onStay={cancelLeave} />}
       </div>
     </main>
   );
