@@ -180,20 +180,21 @@ export default function CookModePage() {
           setTimers(saved.timers ?? {});
         }
       }
-      // Migrate old single-session format
-      const oldRaw = localStorage.getItem("cookingState");
-      if (oldRaw) {
-        const old = JSON.parse(oldRaw);
-        if (old.slug === slug) {
-          setCurrentStep(old.currentStep ?? 0);
-          setCheckedIngredients(new Set(old.checkedIngredients ?? []));
-          setTimers(old.timers ?? {});
-        }
-        localStorage.removeItem("cookingState");
-      }
     } catch { /* ignore */ }
     setRestoredState(true);
   }, [slug]);
+
+  // Check for jump-to-step request (from alarm banner) — polls frequently
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const jumpTo = localStorage.getItem("cookJumpToStep");
+      if (jumpTo) {
+        localStorage.removeItem("cookJumpToStep");
+        setCurrentStep(Number(jumpTo));
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
   const [settingTimerFor, setSettingTimerFor] = useState<number | null>(null);
   const timersRef = useRef(timers);
   timersRef.current = timers;
@@ -568,22 +569,26 @@ export default function CookModePage() {
 
             {/* Timer for this step */}
             {timers[instructionIndex] ? (
-              <div className={`mt-8 flex items-center gap-4 rounded-xl px-6 py-4 ${timers[instructionIndex].done ? "bg-red-500/20 animate-pulse" : "bg-[#3D5A3E]/30"}`}>
-                <span className={`font-sans text-3xl font-bold tabular-nums ${timers[instructionIndex].done ? "text-red-400" : "text-[#F0EBD8]"}`}>
+              <button
+                onClick={() => clearStepTimer(instructionIndex)}
+                className={`relative z-10 mt-8 flex w-full items-center gap-4 rounded-xl px-6 py-4 cursor-pointer transition-colors ${
+                  timers[instructionIndex].done
+                    ? "bg-red-600 shadow-lg shadow-red-500/30"
+                    : "bg-[#3D5A3E]/30 hover:bg-[#3D5A3E]/50"
+                }`}
+              >
+                <span className={`font-sans text-3xl font-bold tabular-nums ${timers[instructionIndex].done ? "text-white" : "text-[#F0EBD8]"}`}>
                   {formatSeconds(getSecondsLeft(timers[instructionIndex]))}
                 </span>
-                {timers[instructionIndex].done && (
-                  <span className="font-sans text-sm font-semibold text-red-400">Time&rsquo;s up!</span>
+                {timers[instructionIndex].done ? (
+                  <span className="font-sans text-sm font-bold text-white">Tap to dismiss</span>
+                ) : (
+                  <span className="font-sans text-xs text-[#F0EBD8]/40">Tap to cancel</span>
                 )}
-                <button
-                  onClick={() => clearStepTimer(instructionIndex)}
-                  className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-[#F0EBD8]/40 hover:text-[#F0EBD8] hover:bg-[#F0EBD8]/10 transition-colors cursor-pointer"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+                <svg className={`ml-auto h-5 w-5 ${timers[instructionIndex].done ? "text-white" : "text-[#F0EBD8]/40"}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             ) : (
               <button
                 onClick={() => setSettingTimerFor(instructionIndex)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -21,38 +21,6 @@ interface CookingSession {
 
 const EXPIRY_MS = 48 * 60 * 60 * 1000;
 
-// Alarm sound
-let alarmInterval: ReturnType<typeof setInterval> | null = null;
-
-function playAlarm() {
-  if (alarmInterval) return;
-  try {
-    const ctx = new AudioContext();
-    function beep() {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = "square";
-      gain.gain.value = 0.15;
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.stop(ctx.currentTime + 0.3);
-    }
-    beep();
-    alarmInterval = setInterval(beep, 600);
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
-  } catch { /* ignore */ }
-}
-
-function stopAlarm() {
-  if (alarmInterval) {
-    clearInterval(alarmInterval);
-    alarmInterval = null;
-  }
-}
-
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -66,7 +34,44 @@ export default function ContinueCooking() {
   const [endingSlug, setEndingSlug] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const [alarming, setAlarming] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const alarmRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const pathname = usePathname();
+
+  // Play alarm — only works after user interaction
+  const startAlarm = useCallback(() => {
+    if (alarmRef.current) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      function beep() {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = "square";
+        gain.gain.value = 0.15;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.stop(ctx.currentTime + 0.3);
+      }
+      beep();
+      alarmRef.current = setInterval(beep, 600);
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      setAudioUnlocked(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  function stopAlarm() {
+    if (alarmRef.current) {
+      clearInterval(alarmRef.current);
+      alarmRef.current = null;
+    }
+  }
 
   // Load sessions
   useEffect(() => {
@@ -92,7 +97,6 @@ export default function ContinueCooking() {
     const interval = setInterval(() => {
       setTick((t) => t + 1);
 
-      // Check for expired timers across all sessions
       let anyExpired = false;
       try {
         const raw = localStorage.getItem("cookingSessions");
@@ -112,11 +116,22 @@ export default function ContinueCooking() {
 
       if (anyExpired && !alarming) {
         setAlarming(true);
-        playAlarm();
+        // Try to play — will only work if audio is unlocked
+        if (audioUnlocked) {
+          startAlarm();
+        }
+      } else if (!anyExpired && alarming) {
+        setAlarming(false);
+        stopAlarm();
       }
     }, 1000);
     return () => { clearInterval(interval); stopAlarm(); };
-  }, [alarming]);
+  }, [alarming, audioUnlocked, startAlarm]);
+
+  // User taps the alarm banner to unlock audio and start sound
+  function handleAlarmTap() {
+    startAlarm();
+  }
 
   function dismissAlarm() {
     stopAlarm();
@@ -143,9 +158,12 @@ export default function ContinueCooking() {
     return Object.values(session.timers).filter((t) => !t.done && Date.now() >= t.endsAt).length;
   }
 
-  function getActiveTimerCount(session: CookingSession): number {
-    if (!session.timers) return 0;
-    return Object.values(session.timers).filter((t) => !t.done && Date.now() < t.endsAt).length;
+  function getFirstExpiredStep(session: CookingSession): number | null {
+    if (!session.timers) return null;
+    const expired = Object.values(session.timers)
+      .filter((t) => !t.done && Date.now() >= t.endsAt)
+      .sort((a, b) => a.endsAt - b.endsAt);
+    return expired.length > 0 ? expired[0].stepIndex : null;
   }
 
   function getNextTimer(session: CookingSession): StepTimer | null {
@@ -155,7 +173,6 @@ export default function ContinueCooking() {
     return active.sort((a, b) => a.endsAt - b.endsAt)[0];
   }
 
-  // Don't show on cooking pages
   const activeSessions = sessions.filter((s) => !pathname.includes(`/recipes/${s.slug}/cook`));
   if (activeSessions.length === 0) return null;
 
@@ -164,51 +181,69 @@ export default function ContinueCooking() {
       <div className="fixed bottom-6 right-4 z-[90] w-80 space-y-2 animate-[slideUp_0.3s_ease-out]">
         {activeSessions.map((session) => {
           const expired = getExpiredTimerCount(session);
-          const activeCount = getActiveTimerCount(session);
+          const expiredStep = getFirstExpiredStep(session);
           const nextTimer = getNextTimer(session);
           const nextSecondsLeft = nextTimer ? Math.max(0, Math.ceil((nextTimer.endsAt - Date.now()) / 1000)) : 0;
+          const resumeHref = `/recipes/${session.slug}/cook`;
 
           return (
-            <div
-              key={session.slug}
-              className={`flex items-center gap-3 rounded-xl p-3 shadow-lg ring-1 ${
-                expired > 0
-                  ? "bg-red-900 ring-red-500/30 animate-pulse"
-                  : "bg-charcoal ring-white/10"
-              }`}
-            >
-              {session.recipeImage && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={session.recipeImage} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+            <div key={session.slug}>
+              {/* Alarm tap banner — shows when timer expired and audio not yet unlocked */}
+              {expired > 0 && alarming && !audioUnlocked && (
+                <button
+                  onClick={handleAlarmTap}
+                  className="mb-2 w-full rounded-xl bg-red-600 px-4 py-3 text-center font-sans text-sm font-bold text-white animate-pulse cursor-pointer"
+                >
+                  Tap to hear alarm!
+                </button>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="font-sans text-xs text-white/50">
-                  {expired > 0 ? `${expired} timer${expired > 1 ? "s" : ""} done!` : "Continue cooking"}
-                </p>
-                <p className="font-sans text-sm font-semibold text-white truncate">
-                  {session.recipeTitle}
-                </p>
-                {activeCount > 0 && nextTimer && !expired && (
-                  <p className="font-sans text-xs text-white/40 tabular-nums">
-                    Next timer: {formatSeconds(nextSecondsLeft)}
-                  </p>
+
+              <div
+                className={`flex items-center gap-3 rounded-xl p-3 shadow-lg ring-1 ${
+                  expired > 0
+                    ? "bg-red-900 ring-red-500/30 animate-pulse"
+                    : "bg-charcoal ring-white/10"
+                }`}
+              >
+                {session.recipeImage && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.recipeImage} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                 )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-sans text-xs text-white/50">
+                    {expired > 0 ? `${expired} timer${expired > 1 ? "s" : ""} done!` : "Continue cooking"}
+                  </p>
+                  <p className="font-sans text-sm font-semibold text-white truncate">
+                    {session.recipeTitle}
+                  </p>
+                  {nextTimer && !expired && (
+                    <p className="font-sans text-xs text-white/40 tabular-nums">
+                      Next timer: {formatSeconds(nextSecondsLeft)}
+                    </p>
+                  )}
+                </div>
+                <Link
+                  href={resumeHref}
+                  onClick={() => {
+                    dismissAlarm();
+                    // If alarm is active, tell the cook page to jump to the expired step
+                    if (expired > 0 && expiredStep !== null) {
+                      localStorage.setItem("cookJumpToStep", String(expiredStep + 1));
+                    }
+                  }}
+                  className="shrink-0 rounded-lg bg-terracotta px-3 py-2 font-sans text-xs font-semibold text-white hover:bg-terracotta-dark transition-colors"
+                >
+                  Resume
+                </Link>
+                <button
+                  onClick={() => setEndingSlug(session.slug)}
+                  className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <Link
-                href={`/recipes/${session.slug}/cook`}
-                onClick={dismissAlarm}
-                className="shrink-0 rounded-lg bg-terracotta px-3 py-2 font-sans text-xs font-semibold text-white hover:bg-terracotta-dark transition-colors"
-              >
-                Resume
-              </Link>
-              <button
-                onClick={() => setEndingSlug(session.slug)}
-                className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
           );
         })}
