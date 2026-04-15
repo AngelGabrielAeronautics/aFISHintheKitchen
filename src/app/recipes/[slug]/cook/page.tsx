@@ -7,104 +7,138 @@ import { getRecipeBySlug } from "@/lib/firebase-recipes";
 import type { Recipe } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Timer overlay component
+// Alarm sound using Web Audio API
 // ---------------------------------------------------------------------------
-function TimerOverlay({ onClose }: { onClose: () => void }) {
+let alarmInterval: ReturnType<typeof setInterval> | null = null;
+
+function playAlarm() {
+  if (alarmInterval) return; // already playing
+  try {
+    const ctx = new AudioContext();
+    function beep() {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = "square";
+      gain.gain.value = 0.15;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.stop(ctx.currentTime + 0.3);
+    }
+    beep();
+    alarmInterval = setInterval(beep, 600);
+    // Vibrate on mobile
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+  } catch {
+    // Web Audio not supported
+  }
+}
+
+function stopAlarm() {
+  if (alarmInterval) {
+    clearInterval(alarmInterval);
+    alarmInterval = null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Timer types
+// ---------------------------------------------------------------------------
+interface StepTimer {
+  stepIndex: number;
+  secondsLeft: number;
+  running: boolean;
+  done: boolean;
+}
+
+function formatTimer(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// ---------------------------------------------------------------------------
+// Timer setup overlay
+// ---------------------------------------------------------------------------
+function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStart: (stepIndex: number, seconds: number) => void; onClose: () => void }) {
+  const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(5);
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  function startTimer() {
-    setSecondsLeft(minutes * 60);
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }
-
-  function resetTimer() {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setSecondsLeft(null);
-  }
-
-  const displayMins = secondsLeft !== null ? Math.floor(secondsLeft / 60) : 0;
-  const displaySecs = secondsLeft !== null ? secondsLeft % 60 : 0;
-  const done = secondsLeft === 0;
+  const totalSeconds = hours * 3600 + minutes * 60;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-sm rounded-2xl bg-[#1e2d1e] p-8 text-center shadow-2xl">
-        <h3 className="font-serif text-2xl font-bold text-[#F0EBD8]">Timer</h3>
-
-        {secondsLeft === null ? (
-          <>
-            <div className="mt-6 flex items-center justify-center gap-4">
+      <div className="mx-4 w-full max-w-md rounded-2xl bg-[#1e2d1e] px-10 py-10 text-center shadow-2xl">
+        <h3 className="font-serif text-2xl font-bold text-[#F0EBD8]">
+          Step {stepIndex + 1} Timer
+        </h3>
+        <div className="mt-8 flex items-center justify-center gap-8">
+          {/* Hours */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-4">
               <button
-                onClick={() => setMinutes((m) => Math.max(1, m - 1))}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-[#3D5A3E] text-2xl font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+                onClick={() => setHours((h) => Math.max(0, h - 1))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 -
               </button>
-              <span className="font-sans text-5xl font-bold text-[#F0EBD8] tabular-nums">
-                {minutes}
+              <span className="w-14 font-sans text-5xl font-bold text-[#F0EBD8] tabular-nums text-center">
+                {hours}
               </span>
               <button
-                onClick={() => setMinutes((m) => Math.min(180, m + 1))}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-[#3D5A3E] text-2xl font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+                onClick={() => setHours((h) => Math.min(12, h + 1))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 +
               </button>
             </div>
-            <p className="mt-2 font-sans text-sm text-[#F0EBD8]/60">minutes</p>
-            <button
-              onClick={startTimer}
-              className="mt-6 w-full rounded-xl bg-[#3D5A3E] px-6 py-4 font-sans text-lg font-semibold text-white active:bg-[#2D4A2E] cursor-pointer"
-            >
-              Start
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="mt-6">
-              <span
-                className={`font-sans text-6xl font-bold tabular-nums ${
-                  done ? "text-[#C4B88A] animate-pulse" : "text-[#F0EBD8]"
-                }`}
-              >
-                {String(displayMins).padStart(2, "0")}:
-                {String(displaySecs).padStart(2, "0")}
-              </span>
-            </div>
-            {done && (
-              <p className="mt-4 font-sans text-lg font-semibold text-[#C4B88A]">
-                Time is up!
-              </p>
-            )}
-            <button
-              onClick={resetTimer}
-              className="mt-6 w-full rounded-xl bg-[#3D5A3E] px-6 py-4 font-sans text-lg font-semibold text-white active:bg-[#2D4A2E] cursor-pointer"
-            >
-              Reset
-            </button>
-          </>
-        )}
+            <p className="font-sans text-xs text-[#F0EBD8]/50">hours</p>
+          </div>
 
+          <span className="text-4xl font-bold text-[#F0EBD8]/30 mt-[-1.5rem]">:</span>
+
+          {/* Minutes */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setMinutes((m) => Math.max(0, m - 5))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+              >
+                -
+              </button>
+              <span className="w-14 font-sans text-5xl font-bold text-[#F0EBD8] tabular-nums text-center">
+                {String(minutes).padStart(2, "0")}
+              </span>
+              <button
+                onClick={() => setMinutes((m) => Math.min(55, m + 5))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+            <p className="font-sans text-xs text-[#F0EBD8]/50">minutes</p>
+          </div>
+        </div>
+        <button
+          onClick={() => { if (totalSeconds > 0) { onStart(stepIndex, totalSeconds); onClose(); } }}
+          disabled={totalSeconds === 0}
+          className="mt-6 w-full rounded-xl bg-[#3D5A3E] px-6 py-4 font-sans text-lg font-semibold text-white active:bg-[#2D4A2E] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Start
+        </button>
         <button
           onClick={onClose}
           className="mt-3 w-full rounded-xl px-6 py-3 font-sans text-sm font-medium text-[#F0EBD8]/60 hover:text-[#F0EBD8] cursor-pointer"
         >
-          Close
+          Cancel
         </button>
       </div>
     </div>
@@ -119,11 +153,61 @@ export default function CookModePage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [showTimer, setShowTimer] = useState(false);
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+  const [timers, setTimers] = useState<Record<number, StepTimer>>({});
+  const [settingTimerFor, setSettingTimerFor] = useState<number | null>(null);
+  const timersRef = useRef(timers);
+  timersRef.current = timers;
 
   // Touch / swipe refs
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+
+  // Timer tick — runs every second, ticks all active timers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimers((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const key of Object.keys(next)) {
+          const k = Number(key);
+          if (next[k].running && next[k].secondsLeft > 0) {
+            next[k] = { ...next[k], secondsLeft: next[k].secondsLeft - 1 };
+            if (next[k].secondsLeft === 0) {
+              next[k] = { ...next[k], running: false, done: true };
+              playAlarm();
+            }
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function startStepTimer(stepIndex: number, seconds: number) {
+    setTimers((prev) => ({
+      ...prev,
+      [stepIndex]: { stepIndex, secondsLeft: seconds, running: true, done: false },
+    }));
+  }
+
+  function clearStepTimer(stepIndex: number) {
+    setTimers((prev) => {
+      const next = { ...prev };
+      delete next[stepIndex];
+      // Stop alarm if no more done timers
+      const anyDone = Object.values(next).some((t) => t.done);
+      if (!anyDone) stopAlarm();
+      return next;
+    });
+  }
+
+  // Check if any timer is done (for visual flash)
+  const anyTimerDone = Object.values(timers).some((t) => t.done);
+
+  const activeTimers = Object.values(timers).filter((t) => t.running || t.done);
 
   // Wake lock
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -170,6 +254,7 @@ export default function CookModePage() {
       if (wakeLockRef.current) {
         wakeLockRef.current.release().catch(() => {});
       }
+      stopAlarm();
     };
   }, []);
 
@@ -228,7 +313,7 @@ export default function CookModePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#1A2E1A]">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#1A2E1A]">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1A2E1A] border-t-[#3D5A3E]" />
           <p className="font-sans text-sm text-[#F0EBD8]/60">
@@ -241,7 +326,7 @@ export default function CookModePage() {
 
   if (!recipe) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#1A2E1A]">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#1A2E1A]">
         <div className="flex flex-col items-center gap-4 text-center px-6">
           <h1 className="font-serif text-2xl font-bold text-[#F0EBD8]">
             Recipe not found
@@ -264,7 +349,7 @@ export default function CookModePage() {
 
   return (
     <div
-      className="flex min-h-dvh flex-col bg-[#1A2E1A] select-none"
+      className={`fixed inset-0 z-[200] flex flex-col bg-[#1A2E1A] select-none overflow-hidden ${anyTimerDone ? "ring-4 ring-inset ring-red-500 animate-pulse" : ""}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -276,41 +361,9 @@ export default function CookModePage() {
         />
       </div>
 
-      {/* Top bar: step counter + exit */}
-      <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-        <p className="font-sans text-sm text-[#F0EBD8]/50">
-          {isIngredients
-            ? "Ingredients"
-            : isDone
-            ? "Done"
-            : `Step ${instructionIndex + 1} of ${recipe.instructions.length}`}
-        </p>
-        <div className="flex items-center gap-2">
-          {/* Timer button */}
-          {!isIngredients && !isDone && (
-            <button
-              onClick={() => setShowTimer(true)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F0EBD8]/10 text-[#F0EBD8]/70 hover:bg-[#F0EBD8]/20 active:bg-[#F0EBD8]/25 cursor-pointer"
-              title="Set a timer"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-              >
-                <circle cx="12" cy="13" r="8" />
-                <path d="M12 9v4l2 2" />
-                <path d="M5 3L2 6" />
-                <path d="M22 6l-3-3" />
-                <path d="M12 2v3" />
-              </svg>
-            </button>
-          )}
+      {/* Top bar: exit */}
+      <div className="flex shrink-0 items-center justify-end px-4 py-3 sm:px-6">
+        <div className="flex shrink-0 items-center gap-2">
           {/* Exit button */}
           <Link
             href={`/recipes/${recipe.slug}`}
@@ -330,26 +383,35 @@ export default function CookModePage() {
       </div>
 
       {/* Main content area */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 sm:px-10">
+      <div className={`flex flex-1 flex-col items-center overflow-y-auto px-6 py-8 sm:px-10 ${isIngredients || isDone ? "" : "justify-center"}`}>
         {isIngredients && (
           <div className="w-full max-w-lg">
-            {/* Step circle */}
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#3D5A3E] sm:h-20 sm:w-20">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-8 w-8 text-white sm:h-10 sm:w-10"
-              >
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-                <rect x="9" y="3" width="6" height="4" rx="2" />
-                <path d="M9 14l2 2 4-4" />
-              </svg>
-            </div>
+            {/* Recipe image or icon */}
+            {(recipe.images?.[0] || recipe.image) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={recipe.images?.[0] || recipe.image}
+                alt={recipe.title}
+                className="mx-auto h-32 w-32 rounded-full object-cover ring-4 ring-[#3D5A3E] sm:h-40 sm:w-40"
+              />
+            ) : (
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#3D5A3E] sm:h-20 sm:w-20">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-8 w-8 text-white sm:h-10 sm:w-10"
+                >
+                  <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                  <rect x="9" y="3" width="6" height="4" rx="2" />
+                  <path d="M9 14l2 2 4-4" />
+                </svg>
+              </div>
+            )}
 
             <h2 className="mt-6 text-center font-serif text-2xl font-bold text-[#F0EBD8] sm:text-3xl">
               {recipe.title}
@@ -357,14 +419,28 @@ export default function CookModePage() {
             <p className="mt-2 text-center font-sans text-sm text-[#F0EBD8]/50">
               Check you have everything before you start
             </p>
+            {checkedIngredients.size > 0 && (
+              <p className="mt-1 text-center font-sans text-xs text-[#3D5A3E]">
+                {checkedIngredients.size} of {recipe.ingredients.length} ready
+              </p>
+            )}
 
             <ul className="mt-8 space-y-3">
               {recipe.ingredients.map((ingredient, i) => (
                 <li
                   key={i}
-                  className="flex items-start gap-3 rounded-lg bg-[#F0EBD8]/5 px-4 py-3"
+                  onClick={() => setCheckedIngredients((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(i)) next.delete(i); else next.add(i);
+                    return next;
+                  })}
+                  className={`flex items-start gap-3 rounded-lg px-4 py-3 cursor-pointer transition-colors ${
+                    checkedIngredients.has(i) ? "bg-[#3D5A3E]/30" : "bg-[#F0EBD8]/5"
+                  }`}
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-[#F0EBD8]/20 text-transparent">
+                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                    checkedIngredients.has(i) ? "border-[#3D5A3E] bg-[#3D5A3E] text-white" : "border-[#F0EBD8]/20 text-transparent"
+                  }`}>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
@@ -378,7 +454,9 @@ export default function CookModePage() {
                       />
                     </svg>
                   </span>
-                  <span className="font-sans text-base leading-snug text-[#F0EBD8]/90">
+                  <span className={`font-sans text-base leading-snug transition-colors ${
+                    checkedIngredients.has(i) ? "text-[#F0EBD8]/60" : "text-[#F0EBD8]/90"
+                  }`}>
                     {ingredient}
                   </span>
                 </li>
@@ -389,11 +467,24 @@ export default function CookModePage() {
 
         {!isIngredients && !isDone && (
           <div className="flex w-full max-w-lg flex-col items-center text-center">
-            {/* Step number circle */}
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#3D5A3E] sm:h-20 sm:w-20">
-              <span className="font-sans text-2xl font-bold text-white sm:text-3xl">
-                {instructionIndex + 1}
-              </span>
+            {/* Step indicators */}
+            <div className="flex items-center gap-2 mb-6">
+              {recipe.instructions.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setCurrentStep(i + 1)}
+                  className={`flex items-center justify-center rounded-full font-sans font-bold transition-all cursor-pointer ${
+                    i === instructionIndex
+                      ? "h-14 w-14 bg-[#3D5A3E] text-white text-xl ring-2 ring-[#F0EBD8]/40 sm:h-16 sm:w-16 sm:text-2xl"
+                      : currentStep > i + 1
+                      ? "h-9 w-9 bg-[#3D5A3E]/60 text-white/80 text-sm sm:h-10 sm:w-10"
+                      : "h-9 w-9 bg-[#F0EBD8]/10 text-[#F0EBD8]/30 text-sm sm:h-10 sm:w-10"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
             </div>
 
             {/* Step text */}
@@ -409,6 +500,38 @@ export default function CookModePage() {
                 alt={`Step ${instructionIndex + 1}`}
                 className="mt-6 max-h-64 rounded-xl object-cover shadow-lg sm:max-h-80"
               />
+            )}
+
+            {/* Timer for this step */}
+            {timers[instructionIndex] ? (
+              <div className={`mt-8 flex items-center gap-4 rounded-xl px-6 py-4 ${timers[instructionIndex].done ? "bg-red-500/20 animate-pulse" : "bg-[#3D5A3E]/30"}`}>
+                <span className={`font-sans text-3xl font-bold tabular-nums ${timers[instructionIndex].done ? "text-red-400" : "text-[#F0EBD8]"}`}>
+                  {formatTimer(timers[instructionIndex].secondsLeft)}
+                </span>
+                {timers[instructionIndex].done && (
+                  <span className="font-sans text-sm font-semibold text-red-400">Time&rsquo;s up!</span>
+                )}
+                <button
+                  onClick={() => clearStepTimer(instructionIndex)}
+                  className="ml-auto font-sans text-xs text-[#F0EBD8]/50 hover:text-[#F0EBD8] cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setSettingTimerFor(instructionIndex)}
+                className="mt-8 flex items-center gap-2.5 rounded-full bg-[#F0EBD8]/10 px-6 py-3 font-sans text-sm font-medium text-[#F0EBD8]/70 transition-colors hover:bg-[#F0EBD8]/20 active:bg-[#F0EBD8]/25 cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                  <circle cx="12" cy="13" r="8" />
+                  <path d="M12 9v4l2 2" />
+                  <path d="M5 3L2 6" />
+                  <path d="M22 6l-3-3" />
+                  <path d="M12 2v3" />
+                </svg>
+                Set Timer
+              </button>
             )}
           </div>
         )}
@@ -462,7 +585,7 @@ export default function CookModePage() {
 
       {/* Navigation buttons */}
       {!isDone && (
-        <div className="flex gap-3 px-4 pb-6 pt-2 sm:px-6">
+        <div className="flex shrink-0 gap-3 px-4 pb-6 pt-2 sm:px-6">
           <button
             onClick={goPrev}
             disabled={currentStep === 0}
@@ -505,13 +628,41 @@ export default function CookModePage() {
 
       {/* Swipe hint on first step */}
       {currentStep === 0 && (
-        <p className="pb-4 text-center font-sans text-xs text-[#F0EBD8]/30">
+        <p className="shrink-0 pb-4 text-center font-sans text-xs text-[#F0EBD8]/30">
           Swipe or use arrow keys to navigate
         </p>
       )}
 
       {/* Timer overlay */}
-      {showTimer && <TimerOverlay onClose={() => setShowTimer(false)} />}
+      {/* Timer setup overlay */}
+      {settingTimerFor !== null && (
+        <TimerSetup
+          stepIndex={settingTimerFor}
+          onStart={startStepTimer}
+          onClose={() => setSettingTimerFor(null)}
+        />
+      )}
+
+      {/* Active timers bar — shows all running/done timers */}
+      {activeTimers.length > 0 && !isIngredients && (
+        <div className="shrink-0 flex gap-2 overflow-x-auto px-4 py-2 border-t border-[#F0EBD8]/10">
+          {activeTimers.map((t) => (
+            <button
+              key={t.stepIndex}
+              onClick={() => setCurrentStep(t.stepIndex + 1)}
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 font-sans text-xs font-medium cursor-pointer transition-colors ${
+                t.done
+                  ? "bg-red-500/20 text-red-400 animate-pulse"
+                  : "bg-[#3D5A3E]/40 text-[#F0EBD8]/80"
+              }`}
+            >
+              <span>Step {t.stepIndex + 1}</span>
+              <span className="tabular-nums font-bold">{formatTimer(t.secondsLeft)}</span>
+              {t.done && <span className="text-red-400">!!!</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

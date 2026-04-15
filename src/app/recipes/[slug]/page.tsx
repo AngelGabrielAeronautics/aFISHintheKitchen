@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getRecipeBySlug } from "@/lib/firebase-recipes";
+import Toast from "@/components/Toast";
 import { getCategoryBySlug, formatTime, HEAT_ICONS, HEAT_LABELS, DIFFICULTY_ICONS } from "@/lib/types";
 import type { Recipe } from "@/lib/types";
 import Image from "next/image";
@@ -20,7 +21,17 @@ export default function RecipePage() {
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("saved") === "1") {
+      setShowSavedToast(true);
+      // Clean the URL without refreshing
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!slug) return;
@@ -623,6 +634,10 @@ export default function RecipePage() {
 
       {/* Bottom spacing */}
       <div className="h-16" />
+
+      {showSavedToast && (
+        <Toast message="Recipe saved successfully!" onClose={() => setShowSavedToast(false)} />
+      )}
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CATEGORIES, FAMILY_MEMBERS, SEASONS, type Season } from "@/lib/types";
 import type { Category, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
@@ -32,6 +33,7 @@ const INITIAL_INSTRUCTIONS = ["", "", ""];
 
 export default function SubmitRecipePage() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -266,8 +268,7 @@ export default function SubmitRecipePage() {
       };
 
       const savedRecipe = await addRecipe(recipeData);
-      setSavedSlug(savedRecipe.slug);
-      setSubmitted(true);
+      router.push(`/recipes/${savedRecipe.slug}?saved=1`);
     } catch (error) {
       console.error("Failed to submit recipe:", error);
       setErrors((prev) => ({

@@ -187,7 +187,7 @@ export default function AuthPage() {
                     : "text-slate hover:text-charcoal"
                 }`}
               >
-                Sign Up
+                Claim Account
               </button>
             </div>
           )}
@@ -197,6 +197,13 @@ export default function AuthPage() {
             <h2 className="mb-6 font-serif text-xl font-semibold text-charcoal">
               Reset your password
             </h2>
+          )}
+
+          {/* Claim account note */}
+          {mode === "signup" && (
+            <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
+              This cookbook is invite-only. You&rsquo;ll need an invitation from a family member to create an account. If you haven&rsquo;t been invited yet, ask the family admin.
+            </div>
           )}
 
           {/* Error */}
@@ -349,7 +356,7 @@ export default function AuthPage() {
                 disabled={submitting}
                 className="w-full rounded-lg bg-terracotta px-4 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark focus:outline-none focus:ring-2 focus:ring-terracotta/50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submitting ? "Creating account..." : "Sign Up"}
+                {submitting ? "Creating account..." : "Claim Account"}
               </button>
             </form>
           )}
@@ -389,13 +396,13 @@ export default function AuthPage() {
           <p className="mt-6 text-center font-sans text-sm text-slate">
             {mode === "signin" && (
               <>
-                Don&apos;t have an account?{" "}
+                Been invited?{" "}
                 <button
                   type="button"
                   onClick={() => switchMode("signup")}
                   className="font-medium text-terracotta hover:text-terracotta-dark transition-colors"
                 >
-                  Sign up
+                  Claim your account
                 </button>
               </>
             )}

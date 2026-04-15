@@ -233,8 +233,8 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-cream px-4 py-12">
-      <div className="mx-auto w-full max-w-2xl">
-        <h1 className="mb-8 font-serif text-3xl font-bold text-charcoal">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
+        <h1 className="font-serif text-3xl font-bold text-charcoal">
           Account Settings
         </h1>
 

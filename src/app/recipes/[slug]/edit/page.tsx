@@ -400,8 +400,7 @@ export default function EditRecipePage() {
         });
       }
 
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      router.push(`/recipes/${recipe.slug}?saved=1`);
     } catch (error) {
       console.error("Failed to update recipe:", error);
       setErrors((prev) => ({

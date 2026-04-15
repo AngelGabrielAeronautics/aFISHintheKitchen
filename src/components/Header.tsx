@@ -9,18 +9,24 @@ import { signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import Avatar from "@/components/Avatar";
 
-const navLinks = [
+const primaryLinks = [
   { href: "/", label: "Home" },
   { href: "/recipes", label: "Recipes" },
-  { href: "/shopping-list", label: "Shopping List" },
-  { href: "/meal-planner", label: "Meal Planner" },
-  { href: "/members", label: "The Family" },
-  { href: "/collections", label: "Collections" },
-  { href: "/submit", label: "Submit a Recipe" },
+  { href: "/submit", label: "Add Recipe" },
 ];
+
+const moreLinks = [
+  { href: "/meal-planner", label: "Meal Planner" },
+  { href: "/shopping-list", label: "Shopping List" },
+  { href: "/collections", label: "Collections" },
+  { href: "/members", label: "The Family" },
+];
+
+const allLinks = [...primaryLinks, ...moreLinks];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const pathname = usePathname();
   const { user, loading } = useAuth();
 
@@ -59,38 +65,71 @@ export default function Header() {
 
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(link.href)
+            {primaryLinks.map((link) => (
+              link.href === "/" && pathname === "/" ? null : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? "text-terracotta bg-terracotta/8"
+                      : "text-slate hover:text-charcoal hover:bg-cream-dark/60"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              )
+            ))}
+
+            {/* More dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen(!moreOpen)}
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  moreOpen || moreLinks.some((l) => isActive(l.href))
                     ? "text-terracotta bg-terracotta/8"
                     : "text-slate hover:text-charcoal hover:bg-cream-dark/60"
                 }`}
               >
-                {link.label}
-              </Link>
-            ))}
+                More
+                <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`}>
+                  <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {moreOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-xl bg-white py-2 shadow-lg ring-1 ring-charcoal/10">
+                    {moreLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                          isActive(link.href)
+                            ? "text-terracotta bg-terracotta/5"
+                            : "text-slate hover:text-charcoal hover:bg-cream-dark/40"
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Auth button */}
             {!loading && (
               <>
                 {user ? (
-                  <div className="flex items-center gap-3 ml-2 pl-3 border-l border-gold-light">
-                    <Link href="/account" className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-cream-dark/60">
-                      <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
-                      <span className="text-xs text-slate">
-                        {user.displayName || user.email}
-                      </span>
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
+                  <Link href="/account" className="ml-2 pl-3 border-l border-gold-light flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-cream-dark/60">
+                    <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
+                    <span className="text-xs text-slate">
+                      {user.displayName || user.email}
+                    </span>
+                  </Link>
                 ) : (
                   <Link
                     href="/auth"
@@ -145,7 +184,7 @@ export default function Header() {
       {menuOpen && (
         <nav className="md:hidden border-t border-gold-light/60 bg-warm-white">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-1">
-            {navLinks.map((link) => (
+            {allLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -164,24 +203,16 @@ export default function Header() {
             {!loading && (
               <div className="mt-2 pt-2 border-t border-gold-light/60">
                 {user ? (
-                  <>
-                    <Link
-                      href="/account"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors hover:bg-cream-dark/60"
-                    >
-                      <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
-                      <p className="text-xs text-slate">
-                        {user.displayName || user.email}
-                      </p>
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"
-                    >
-                      Sign Out
-                    </button>
-                  </>
+                  <Link
+                    href="/account"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors hover:bg-cream-dark/60"
+                  >
+                    <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
+                    <p className="text-xs text-slate">
+                      {user.displayName || user.email}
+                    </p>
+                  </Link>
                 ) : (
                   <Link
                     href="/auth"
