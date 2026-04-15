@@ -4,11 +4,13 @@ import { useState } from "react";
 
 interface DeleteModalProps {
   title: string;
+  heading?: string;
+  message?: string;
   onConfirm: () => Promise<void>;
   onCancel: () => void;
 }
 
-export default function DeleteModal({ title, onConfirm, onCancel }: DeleteModalProps) {
+export default function DeleteModal({ title, heading, message, onConfirm, onCancel }: DeleteModalProps) {
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -38,11 +40,13 @@ export default function DeleteModal({ title, onConfirm, onCancel }: DeleteModalP
         </div>
 
         <h3 className="text-center font-serif text-xl font-bold text-charcoal">
-          Delete Recipe
+          {heading || "Delete"}
         </h3>
 
         <p className="mt-2 text-center font-sans text-sm text-slate">
-          You are about to permanently delete <span className="font-semibold text-charcoal">&ldquo;{title}&rdquo;</span>. This action cannot be undone.
+          {message || (
+            <>You are about to permanently delete <span className="font-semibold text-charcoal">&ldquo;{title}&rdquo;</span>. This action cannot be undone.</>
+          )}
         </p>
 
         <div className="mt-6">

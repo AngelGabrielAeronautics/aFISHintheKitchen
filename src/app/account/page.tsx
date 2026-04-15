@@ -467,6 +467,9 @@ export default function AccountPage() {
               Delete Account
             </button>
           </div>
+          <p className="mt-3 font-sans text-xs text-slate/60">
+            Your account will be deleted but your recipes, notes, and contributions will remain in the cookbook.
+          </p>
         </section>
       </div>
 
@@ -474,6 +477,8 @@ export default function AccountPage() {
       {showDeleteModal && (
         <DeleteModal
           title="your account"
+          heading="Delete Account"
+          message="Your account will be permanently deleted. Your recipes, notes, and contributions will remain in the cookbook for the family."
           onConfirm={handleDeleteAccount}
           onCancel={() => setShowDeleteModal(false)}
         />
