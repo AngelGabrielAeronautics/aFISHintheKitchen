@@ -3,6 +3,7 @@ import { Neuton, Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
+import ContinueCooking from "@/components/ContinueCooking";
 import "./globals.css";
 
 const neuton = Neuton({
@@ -57,6 +58,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <ContinueCooking />
         </Providers>
       </body>
     </html>

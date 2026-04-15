@@ -70,7 +70,7 @@ function formatTimer(seconds: number): string {
 // ---------------------------------------------------------------------------
 function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStart: (stepIndex: number, seconds: number) => void; onClose: () => void }) {
   const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(5);
+  const [minutes, setMinutes] = useState(0);
 
   const totalSeconds = hours * 3600 + minutes * 60;
 
@@ -109,7 +109,10 @@ function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStar
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setMinutes((m) => Math.max(0, m - 5))}
+                onClick={() => setMinutes((m) => {
+                  if (m <= 5) return Math.max(0, m - 1);
+                  return m - 5;
+                })}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 -
@@ -118,7 +121,10 @@ function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStar
                 {String(minutes).padStart(2, "0")}
               </span>
               <button
-                onClick={() => setMinutes((m) => Math.min(55, m + 5))}
+                onClick={() => setMinutes((m) => {
+                  if (m < 5) return m + 1;
+                  return Math.min(55, m + 5);
+                })}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 +
@@ -152,12 +158,41 @@ export default function CookModePage() {
   const { slug } = useParams<{ slug: string }>();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
-  const [timers, setTimers] = useState<Record<number, StepTimer>>({});
+  // Restore saved state
+  const savedState = typeof window !== "undefined" ? (() => {
+    try {
+      const raw = localStorage.getItem("cookingState");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.slug === slug) return parsed;
+      }
+    } catch { /* ignore */ }
+    return null;
+  })() : null;
+
+  const [currentStep, setCurrentStep] = useState(savedState?.currentStep ?? 0);
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(
+    new Set(savedState?.checkedIngredients ?? [])
+  );
+  const [timers, setTimers] = useState<Record<number, StepTimer>>(savedState?.timers ?? {});
   const [settingTimerFor, setSettingTimerFor] = useState<number | null>(null);
   const timersRef = useRef(timers);
   timersRef.current = timers;
+
+  // Save state to localStorage on changes
+  useEffect(() => {
+    if (!slug || !recipe) return;
+    const state = {
+      slug,
+      recipeTitle: recipe.title,
+      recipeImage: recipe.images?.[0] || recipe.image || "",
+      currentStep,
+      checkedIngredients: Array.from(checkedIngredients),
+      timers,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem("cookingState", JSON.stringify(state));
+  }, [slug, recipe, currentStep, checkedIngredients, timers]);
 
   // Touch / swipe refs
   const touchStartX = useRef<number | null>(null);
@@ -194,12 +229,10 @@ export default function CookModePage() {
   }
 
   function clearStepTimer(stepIndex: number) {
+    stopAlarm();
     setTimers((prev) => {
       const next = { ...prev };
       delete next[stepIndex];
-      // Stop alarm if no more done timers
-      const anyDone = Object.values(next).some((t) => t.done);
-      if (!anyDone) stopAlarm();
       return next;
     });
   }
@@ -262,11 +295,11 @@ export default function CookModePage() {
   const totalSteps = recipe ? recipe.instructions.length + 2 : 0;
 
   const goNext = useCallback(() => {
-    setCurrentStep((s) => Math.min(s + 1, totalSteps - 1));
+    setCurrentStep((s: number) => Math.min(s + 1, totalSteps - 1));
   }, [totalSteps]);
 
   const goPrev = useCallback(() => {
-    setCurrentStep((s) => Math.max(s - 1, 0));
+    setCurrentStep((s: number) => Math.max(s - 1, 0));
   }, []);
 
   // Keyboard navigation
@@ -347,26 +380,26 @@ export default function CookModePage() {
   const isDone = currentStep === totalSteps - 1;
   const instructionIndex = currentStep - 1; // 0-based instruction index
 
+  // Clear saved state when done
+  useEffect(() => {
+    if (isDone) {
+      localStorage.removeItem("cookingState");
+    }
+  }, [isDone]);
+
   return (
     <div
       className={`fixed inset-0 z-[200] flex flex-col bg-[#1A2E1A] select-none overflow-hidden ${anyTimerDone ? "ring-4 ring-inset ring-red-500 animate-pulse" : ""}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Progress bar */}
-      <div className="h-1.5 w-full bg-[#0d1a0d]">
-        <div
-          className="h-full bg-[#3D5A3E] transition-all duration-300 ease-out"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
       {/* Top bar: exit */}
       <div className="flex shrink-0 items-center justify-end px-4 py-3 sm:px-6">
         <div className="flex shrink-0 items-center gap-2">
           {/* Exit button */}
           <Link
             href={`/recipes/${recipe.slug}`}
+            onClick={() => { /* keep state — user can resume later */ }}
             className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F0EBD8]/10 text-[#F0EBD8]/70 hover:bg-[#F0EBD8]/20"
             title="Exit cooking mode"
           >
@@ -513,9 +546,11 @@ export default function CookModePage() {
                 )}
                 <button
                   onClick={() => clearStepTimer(instructionIndex)}
-                  className="ml-auto font-sans text-xs text-[#F0EBD8]/50 hover:text-[#F0EBD8] cursor-pointer"
+                  className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-[#F0EBD8]/40 hover:text-[#F0EBD8] hover:bg-[#F0EBD8]/10 transition-colors cursor-pointer"
                 >
-                  Clear
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             ) : (
@@ -582,6 +617,7 @@ export default function CookModePage() {
           </div>
         )}
       </div>
+
 
       {/* Navigation buttons */}
       {!isDone && (
