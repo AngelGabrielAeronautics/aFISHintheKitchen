@@ -84,6 +84,7 @@ export interface Recipe {
   ingredients: string[];
   instructions: string[];
   instructionImages?: Record<string, string>;
+  video?: string;
   contributedBy: string;
   story?: string;
   originalSource?: string;

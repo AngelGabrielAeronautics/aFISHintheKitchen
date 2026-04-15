@@ -58,6 +58,10 @@ export default function SubmitRecipePage() {
   ]);
   const [tags, setTags] = useState("");
   const [stepImages, setStepImages] = useState<Record<string, { file: File; preview: string }>>({});
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoType, setVideoType] = useState<"link" | "upload">("link");
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -240,6 +244,12 @@ export default function SubmitRecipePage() {
         uploadedStepImages[idx] = url;
       }
 
+      // Upload video if provided
+      let finalVideoUrl = videoUrl.trim();
+      if (videoFile) {
+        finalVideoUrl = await uploadRecipeImage(videoFile, `${slugFromTitle}/video`);
+      }
+
       // Build recipe data
       const recipeData: Parameters<typeof addRecipe>[0] = {
         title,
@@ -260,6 +270,7 @@ export default function SubmitRecipePage() {
         ingredients: ingredients.filter((i) => i.trim()),
         instructions: instructions.filter((i) => i.trim()),
         instructionImages: Object.keys(uploadedStepImages).length > 0 ? uploadedStepImages : undefined,
+        video: finalVideoUrl || undefined,
         tags: tags
           .split(",")
           .map((t) => t.trim())
@@ -291,6 +302,10 @@ export default function SubmitRecipePage() {
     setHeat("");
     setSeasons([]);
     setStepImages({});
+    setVideoUrl("");
+    setVideoFile(null);
+    setVideoPreview(null);
+    setVideoType("link");
     setPrepTime("");
     setCookTime("");
     setServings("");
@@ -782,7 +797,85 @@ export default function SubmitRecipePage() {
               </p>
             </div>
 
-            {/* Photo Upload — up to 3 */}
+            {/* Video */}
+            <div>
+              <label className={labelClasses}>
+                Recipe Video{" "}
+                <span className="text-slate/50 font-normal">(optional)</span>
+              </label>
+
+              {/* Toggle: link or upload */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setVideoType("link")}
+                  className={`rounded-full px-4 py-1.5 font-sans text-xs font-medium transition-colors cursor-pointer ${
+                    videoType === "link" ? "bg-terracotta text-white" : "bg-warm-white text-slate ring-1 ring-gold-light hover:bg-cream-dark/20"
+                  }`}
+                >
+                  YouTube / URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoType("upload")}
+                  className={`rounded-full px-4 py-1.5 font-sans text-xs font-medium transition-colors cursor-pointer ${
+                    videoType === "upload" ? "bg-terracotta text-white" : "bg-warm-white text-slate ring-1 ring-gold-light hover:bg-cream-dark/20"
+                  }`}
+                >
+                  Upload Video
+                </button>
+              </div>
+
+              {videoType === "link" ? (
+                <input
+                  type="url"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="Paste a YouTube or video URL"
+                  className={inputClasses}
+                />
+              ) : (
+                <>
+                  {videoPreview ? (
+                    <div className="relative rounded-lg overflow-hidden border border-gold-light">
+                      <video src={videoPreview} controls className="w-full max-h-48" />
+                      <button
+                        type="button"
+                        onClick={() => { setVideoFile(null); setVideoPreview(null); }}
+                        className="absolute top-2 right-2 w-6 h-6 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white cursor-pointer"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-28 rounded-lg border-2 border-dashed border-gold-light bg-warm-white hover:border-terracotta/50 cursor-pointer transition-colors">
+                      <svg className="w-8 h-8 text-slate/40 mb-2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                      </svg>
+                      <p className="text-xs text-slate/60">
+                        Select a video — <span className="text-terracotta font-medium">browse</span>
+                      </p>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setVideoFile(file);
+                            setVideoPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Photo Upload — up to 5 */}
             <div>
               <label className={labelClasses}>
                 Recipe Photos{" "}

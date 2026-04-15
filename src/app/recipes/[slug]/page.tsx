@@ -25,13 +25,14 @@ export default function RecipePage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
+  const savedParam = searchParams.get("saved");
   useEffect(() => {
-    if (searchParams.get("saved") === "1") {
-      setShowSavedToast(true);
-      // Clean the URL without refreshing
+    if (savedParam === "1") {
       window.history.replaceState({}, "", window.location.pathname);
+      const t = setTimeout(() => setShowSavedToast(true), 0);
+      return () => clearTimeout(t);
     }
-  }, [searchParams]);
+  }, [savedParam]);
 
   useEffect(() => {
     if (!slug) return;
@@ -294,6 +295,35 @@ export default function RecipePage() {
               />
             )}
           </div>
+
+          {/* Video */}
+          {recipe.video && (
+            <div className="mt-6 print-hide">
+              {recipe.video.includes("youtube.com") || recipe.video.includes("youtu.be") ? (
+                <div className="aspect-video rounded-xl overflow-hidden shadow-md">
+                  <iframe
+                    src={recipe.video.includes("youtu.be")
+                      ? `https://www.youtube.com/embed/${recipe.video.split("/").pop()?.split("?")[0]}`
+                      : `https://www.youtube.com/embed/${new URL(recipe.video).searchParams.get("v")}`
+                    }
+                    title={`${recipe.title} video`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="h-full w-full"
+                  />
+                </div>
+              ) : (
+                <video
+                  src={recipe.video}
+                  controls
+                  className="w-full rounded-xl shadow-md"
+                  preload="metadata"
+                >
+                  Your browser does not support video playback.
+                </video>
+              )}
+            </div>
+          )}
 
           {/* Start Cooking button */}
           <Link

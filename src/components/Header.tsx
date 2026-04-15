@@ -5,8 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { signOut } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase";
 import Avatar from "@/components/Avatar";
 
 const primaryLinks = [
@@ -35,10 +33,6 @@ export default function Header() {
     return pathname.startsWith(href);
   };
 
-  async function handleSignOut() {
-    await signOut(getFirebaseAuth());
-    setMenuOpen(false);
-  }
 
   return (
     <header className="sticky top-0 z-50 bg-warm-white/50 backdrop-blur-md border-b border-gold-light/50">

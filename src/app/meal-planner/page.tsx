@@ -275,7 +275,6 @@ export default function MealPlannerPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    setLoadingPlan(true);
     loadMealPlan(weekId).then((plan) => {
       if (!cancelled) {
         setMealPlan(plan);

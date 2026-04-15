@@ -155,24 +155,25 @@ export default function ContinueCooking() {
 
   function getExpiredTimerCount(session: CookingSession): number {
     if (!session.timers) return 0;
-    return Object.values(session.timers).filter((t) => !t.done && Date.now() >= t.endsAt).length;
+    return Object.values(session.timers).filter((t) => !t.done && now >= t.endsAt).length;
   }
 
   function getFirstExpiredStep(session: CookingSession): number | null {
     if (!session.timers) return null;
     const expired = Object.values(session.timers)
-      .filter((t) => !t.done && Date.now() >= t.endsAt)
+      .filter((t) => !t.done && now >= t.endsAt)
       .sort((a, b) => a.endsAt - b.endsAt);
     return expired.length > 0 ? expired[0].stepIndex : null;
   }
 
   function getNextTimer(session: CookingSession): StepTimer | null {
     if (!session.timers) return null;
-    const active = Object.values(session.timers).filter((t) => !t.done && Date.now() < t.endsAt);
+    const active = Object.values(session.timers).filter((t) => !t.done && now < t.endsAt);
     if (active.length === 0) return null;
     return active.sort((a, b) => a.endsAt - b.endsAt)[0];
   }
 
+  const now = Date.now(); // eslint-disable-line react-hooks/purity
   const activeSessions = sessions.filter((s) => !pathname.includes(`/recipes/${s.slug}/cook`));
   if (activeSessions.length === 0) return null;
 
@@ -183,7 +184,7 @@ export default function ContinueCooking() {
           const expired = getExpiredTimerCount(session);
           const expiredStep = getFirstExpiredStep(session);
           const nextTimer = getNextTimer(session);
-          const nextSecondsLeft = nextTimer ? Math.max(0, Math.ceil((nextTimer.endsAt - Date.now()) / 1000)) : 0;
+          const nextSecondsLeft = nextTimer ? Math.max(0, Math.ceil((nextTimer.endsAt - now) / 1000)) : 0;
           const resumeHref = `/recipes/${session.slug}/cook`;
 
           return (

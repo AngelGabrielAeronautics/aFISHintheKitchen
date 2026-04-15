@@ -169,19 +169,22 @@ export default function CookModePage() {
 
   // Restore saved state from localStorage on mount (multi-session)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("cookingSessions");
-      if (raw) {
-        const sessions = JSON.parse(raw);
-        const saved = sessions[slug];
-        if (saved) {
-          setCurrentStep(saved.currentStep ?? 0);
-          setCheckedIngredients(new Set(saved.checkedIngredients ?? []));
-          setTimers(saved.timers ?? {});
+    const t = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem("cookingSessions");
+        if (raw) {
+          const sessions = JSON.parse(raw);
+          const saved = sessions[slug];
+          if (saved) {
+            setCurrentStep(saved.currentStep ?? 0);
+            setCheckedIngredients(new Set(saved.checkedIngredients ?? []));
+            setTimers(saved.timers ?? {});
+          }
         }
-      }
-    } catch { /* ignore */ }
-    setRestoredState(true);
+      } catch { /* ignore */ }
+      setRestoredState(true);
+    }, 0);
+    return () => clearTimeout(t);
   }, [slug]);
 
   // Check for jump-to-step request (from alarm banner) — polls frequently
@@ -196,9 +199,6 @@ export default function CookModePage() {
     return () => clearInterval(interval);
   }, []);
   const [settingTimerFor, setSettingTimerFor] = useState<number | null>(null);
-  const timersRef = useRef(timers);
-  timersRef.current = timers;
-
   // Save state to localStorage on changes (multi-session)
   useEffect(() => {
     if (!slug || !recipe || !restoredState) return;
@@ -414,7 +414,6 @@ export default function CookModePage() {
     );
   }
 
-  const progress = ((currentStep + 1) / totalSteps) * 100;
   const isIngredients = currentStep === 0;
   const isDone = currentStep === totalSteps - 1;
   const instructionIndex = currentStep - 1; // 0-based instruction index
