@@ -162,6 +162,7 @@ export default function CookModePage() {
   const { slug } = useParams<{ slug: string }>();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [timers, setTimers] = useState<Record<number, StepTimer>>({});
@@ -274,7 +275,7 @@ export default function CookModePage() {
     if (!slug) return;
     getRecipeBySlug(slug)
       .then((r) => setRecipe(r))
-      .catch(() => {})
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -391,6 +392,26 @@ export default function CookModePage() {
           <p className="font-sans text-sm text-[#F0EBD8]/60">
             Loading recipe...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#1A2E1A]">
+        <div className="flex flex-col items-center gap-4 text-center px-6">
+          <h1 className="font-serif text-2xl font-bold text-[#F0EBD8]">
+            Something went wrong
+          </h1>
+          <p className="font-sans text-sm text-[#F0EBD8]/60">Could not load the recipe. Check your connection and try again.</p>
+          <button
+            type="button"
+            onClick={() => { setFetchError(false); setLoading(true); getRecipeBySlug(slug).then((r) => setRecipe(r)).catch(() => setFetchError(true)).finally(() => setLoading(false)); }}
+            className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#3D5A3E] px-5 py-2.5 font-sans text-sm font-medium text-white hover:bg-[#2D4A2E] cursor-pointer"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );

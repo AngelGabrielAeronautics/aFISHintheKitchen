@@ -94,29 +94,8 @@ html {
     display: none !important;
   }
 
-  /* Hide tags section */
-  .mt-12.border-t {
-    display: none !important;
-  }
-
-  /* Hide recipe images */
-  .snap-x,
-  .aspect-\[16\/9\] {
-    display: none !important;
-  }
-
-  /* Hide icon row (difficulty/category/protein/heat images) */
-  .mt-4.flex.items-center.gap-3 {
-    display: none !important;
-  }
-
-  /* Hide ingredient copy/download buttons */
-  .flex.gap-1\.5 button {
-    display: none !important;
-  }
-
-  /* Hide ingredient checkboxes */
-  .rounded.border.border-cream-dark\/50 {
+  /* Hide elements marked for print exclusion */
+  .print-hide {
     display: none !important;
   }
 

@@ -73,6 +73,13 @@ export default function ContinueCooking() {
     }
   }
 
+  // Clean up AudioContext on unmount
+  useEffect(() => {
+    return () => {
+      audioCtxRef.current?.close().catch(() => {});
+    };
+  }, []);
+
   // Load sessions
   useEffect(() => {
     try {
@@ -238,6 +245,7 @@ export default function ContinueCooking() {
                 </Link>
                 <button
                   onClick={() => setEndingSlug(session.slug)}
+                  aria-label="End cooking session"
                   className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

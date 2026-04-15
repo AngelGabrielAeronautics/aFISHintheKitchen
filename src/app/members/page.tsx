@@ -42,6 +42,7 @@ export default function MembersPage() {
   const { user } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EditFormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -49,7 +50,7 @@ export default function MembersPage() {
   useEffect(() => {
     getAllMembers()
       .then(setMembers)
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -109,10 +110,21 @@ export default function MembersPage() {
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
           </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 py-20 text-center">
+            <p className="font-sans text-sm text-slate">Something went wrong loading family members.</p>
+            <button type="button" onClick={() => { setError(false); setLoading(true); getAllMembers().then(setMembers).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
+          </div>
         ) : members.length === 0 ? (
-          <p className="py-20 text-center font-sans text-slate">
-            No family members added yet.
-          </p>
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-cream-dark/20">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-slate/40">
+                <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.5 1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z" />
+              </svg>
+            </div>
+            <h3 className="font-serif text-xl font-semibold text-charcoal">No family members yet</h3>
+            <p className="max-w-sm font-sans text-sm text-slate">Family member profiles will appear here once they&apos;ve been added.</p>
+          </div>
         ) : (
           <div className="space-y-8">
             {members.map((member) => {

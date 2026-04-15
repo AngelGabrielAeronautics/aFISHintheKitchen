@@ -142,8 +142,7 @@ export default function EditRecipePage() {
         } else if (fetched.image) {
           setExistingImages([fetched.image]);
         }
-      } catch (error) {
-        console.error("Failed to fetch recipe:", error);
+      } catch {
         setNotFound(true);
       } finally {
         setLoadingRecipe(false);
@@ -421,8 +420,7 @@ export default function EditRecipePage() {
       }
 
       router.push(`/recipes/${recipe.slug}?saved=1`);
-    } catch (error) {
-      console.error("Failed to update recipe:", error);
+    } catch {
       setErrors((prev) => ({
         ...prev,
         submit:
@@ -444,7 +442,7 @@ export default function EditRecipePage() {
     return (
       <main className="min-h-screen bg-cream py-16 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
         </div>
       </main>
     );

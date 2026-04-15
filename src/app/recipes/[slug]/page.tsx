@@ -191,7 +191,7 @@ export default function RecipePage() {
       </div>
 
       {/* Recipe images — full width */}
-      <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
+      <div className="print-hide mx-auto max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
         {recipe.images && recipe.images.length > 0 ? (
           <div className="relative">
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
@@ -492,7 +492,7 @@ export default function RecipePage() {
                     {recipe.servings === 1 ? "serving" : "servings"}
                   </p>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="print-hide flex gap-1.5">
                   <button
                     onClick={copyIngredients}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-slate/50 hover:bg-cream-dark/30 hover:text-charcoal transition-colors cursor-pointer"

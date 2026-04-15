@@ -32,6 +32,21 @@ export const metadata: Metadata = {
   },
   description:
     "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
+  metadataBase: new URL("https://afishinthekitchen.com"),
+  openGraph: {
+    title: "A Fish in the Kitchen",
+    description: "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
+    url: "https://afishinthekitchen.com",
+    siteName: "A Fish in the Kitchen",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "A Fish in the Kitchen" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "A Fish in the Kitchen",
+    description: "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
+    images: ["/og-image.png"],
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [

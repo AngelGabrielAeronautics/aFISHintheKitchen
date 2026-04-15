@@ -33,6 +33,7 @@ function RecipesContent() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   // Advanced filters
   const [filtersOpen, setFiltersOpen] = useState(hasUrlFilters);
@@ -81,8 +82,9 @@ function RecipesContent() {
         }
 
         setRecipes(results);
-      } catch (error) {
-        console.error("Failed to fetch recipes:", error);
+        setError(false);
+      } catch {
+        setError(true);
         setRecipes([]);
       } finally {
         setLoading(false);
@@ -507,6 +509,11 @@ function RecipesContent() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 py-20 text-center">
+            <p className="font-sans text-sm text-slate">Something went wrong loading recipes.</p>
+            <button type="button" onClick={() => fetchRecipes(searchQuery, activeCategory)} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
           </div>
         ) : (
           <>

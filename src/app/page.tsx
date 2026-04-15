@@ -13,6 +13,7 @@ import Avatar from "@/components/Avatar";
 export default function HomePage() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
@@ -69,7 +70,7 @@ export default function HomePage() {
   useEffect(() => {
     getAllRecipes()
       .then((all) => setAllRecipes(all))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -385,6 +386,11 @@ export default function HomePage() {
           {loading ? (
             <div className="mt-12 flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+            </div>
+          ) : error ? (
+            <div className="mt-12 flex flex-col items-center gap-3 py-12 text-center">
+              <p className="font-sans text-sm text-slate">Something went wrong loading recipes.</p>
+              <button type="button" onClick={() => { setError(false); setLoading(true); getAllRecipes().then(setAllRecipes).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
             </div>
           ) : featuredRecipes.length > 0 ? (
             <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">

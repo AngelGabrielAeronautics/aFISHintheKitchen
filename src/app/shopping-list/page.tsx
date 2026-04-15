@@ -104,6 +104,7 @@ function ShoppingListContent() {
   }
 
   function handleClear() {
+    if (!confirm("Clear all selections and start over?")) return;
     setSelectedIds(new Set());
     setCheckedIngredients(new Set());
     setListGenerated(false);
@@ -144,7 +145,7 @@ function ShoppingListContent() {
     return (
       <main className="min-h-screen bg-cream py-16 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
         </div>
       </main>
     );
@@ -244,7 +245,7 @@ function ShoppingListContent() {
               {/* Recipe list */}
               {loadingRecipes ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-terracotta" />
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
                 </div>
               ) : filteredRecipes.length === 0 ? (
                 <p className="text-sm text-slate text-center py-8">

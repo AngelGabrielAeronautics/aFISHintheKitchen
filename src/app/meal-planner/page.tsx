@@ -321,6 +321,7 @@ export default function MealPlannerPage() {
 
   async function removeMeal(day: DayKey) {
     if (!mealPlan) return;
+    if (!confirm("Remove this meal from the plan?")) return;
     const meals = { ...mealPlan.meals };
     delete meals[day];
     const updated: MealPlan = { ...mealPlan, meals };
@@ -335,7 +336,7 @@ export default function MealPlannerPage() {
     return (
       <main className="min-h-screen bg-cream py-16 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
         </div>
       </main>
     );
@@ -461,7 +462,7 @@ export default function MealPlannerPage() {
         {/* Loading state */}
         {loadingPlan ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
           </div>
         ) : (
           <>

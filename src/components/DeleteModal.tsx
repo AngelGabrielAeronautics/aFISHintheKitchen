@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface DeleteModalProps {
   title: string;
@@ -16,6 +16,14 @@ export default function DeleteModal({ title, heading, message, onConfirm, onCanc
 
   const canDelete = confirmText === "DELETE";
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
+
   async function handleDelete() {
     if (!canDelete || deleting) return;
     setDeleting(true);
@@ -23,7 +31,7 @@ export default function DeleteModal({ title, heading, message, onConfirm, onCanc
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="alertdialog" aria-labelledby="delete-modal-title" aria-describedby="delete-modal-desc">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-charcoal/60 backdrop-blur-sm"
@@ -39,11 +47,11 @@ export default function DeleteModal({ title, heading, message, onConfirm, onCanc
           </svg>
         </div>
 
-        <h3 className="text-center font-serif text-xl font-bold text-charcoal">
+        <h3 id="delete-modal-title" className="text-center font-serif text-xl font-bold text-charcoal">
           {heading || "Delete"}
         </h3>
 
-        <p className="mt-2 text-center font-sans text-sm text-slate">
+        <p id="delete-modal-desc" className="mt-2 text-center font-sans text-sm text-slate">
           {message || (
             <>You are about to permanently delete <span className="font-semibold text-charcoal">&ldquo;{title}&rdquo;</span>. This action cannot be undone.</>
           )}

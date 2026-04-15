@@ -280,8 +280,7 @@ export default function SubmitRecipePage() {
 
       const savedRecipe = await addRecipe(recipeData);
       router.push(`/recipes/${savedRecipe.slug}?saved=1`);
-    } catch (error) {
-      console.error("Failed to submit recipe:", error);
+    } catch {
       setErrors((prev) => ({
         ...prev,
         submit:
@@ -333,7 +332,7 @@ export default function SubmitRecipePage() {
     return (
       <main className="min-h-screen bg-cream py-16 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
         </div>
       </main>
     );
@@ -727,7 +726,7 @@ export default function SubmitRecipePage() {
           {/* ---- Section: Ingredients ---- */}
           <section className="space-y-5">
             <h2 className="font-serif text-xl text-charcoal border-b border-gold-light pb-2">
-              Ingredients
+              Ingredients <span className="text-terracotta text-sm">*</span>
             </h2>
 
             <SortableList
@@ -749,7 +748,7 @@ export default function SubmitRecipePage() {
           {/* ---- Section: Instructions ---- */}
           <section className="space-y-5">
             <h2 className="font-serif text-xl text-charcoal border-b border-gold-light pb-2">
-              Instructions
+              Instructions <span className="text-terracotta text-sm">*</span>
             </h2>
 
             <SortableList

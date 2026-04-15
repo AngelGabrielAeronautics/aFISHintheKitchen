@@ -219,7 +219,7 @@ export default function RecipePreferences({
           <button
             onClick={handleLove}
             disabled={busy}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               userLoves
                 ? "bg-terracotta text-white"
                 : "bg-white text-slate ring-1 ring-cream-dark/40 hover:ring-terracotta/40 hover:text-terracotta"
@@ -234,7 +234,7 @@ export default function RecipePreferences({
           <button
             onClick={handleMustTry}
             disabled={busy}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               userMustTry
                 ? "bg-gold text-white"
                 : "bg-white text-slate ring-1 ring-cream-dark/40 hover:ring-gold/40 hover:text-gold"
@@ -249,7 +249,7 @@ export default function RecipePreferences({
           <button
             onClick={handleTried}
             disabled={busy}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               userTried
                 ? "bg-sage text-white"
                 : "bg-white text-slate ring-1 ring-cream-dark/40 hover:ring-sage/40 hover:text-sage"
@@ -264,7 +264,7 @@ export default function RecipePreferences({
           <button
             onClick={handleDislike}
             disabled={busy}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+            className={`flex items-center gap-2 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               userDislikes
                 ? "bg-slate text-white"
                 : "bg-white text-slate ring-1 ring-cream-dark/40 hover:ring-slate/40 hover:text-charcoal"

@@ -56,6 +56,7 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
       {/* Drag handle */}
       <button
         type="button"
+        aria-label="Drag to reorder"
         className="mt-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-1 text-slate/30 hover:text-slate/60 transition-colors"
         {...attributes}
         {...listeners}
@@ -103,6 +104,7 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
                   <button
                     type="button"
                     onClick={onImageRemove}
+                    aria-label="Remove image"
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white cursor-pointer"
                   >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -129,6 +131,7 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
         <button
           type="button"
           onClick={onRemove}
+          aria-label="Remove item"
           className="flex-shrink-0 mt-2 w-8 h-8 flex items-center justify-center rounded-lg text-slate/30 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
