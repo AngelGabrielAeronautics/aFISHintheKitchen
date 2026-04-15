@@ -338,15 +338,6 @@ export default function RecipePage() {
           )}
         </div>
 
-        {/* Family verdict */}
-        <RecipePreferences
-          recipeId={recipe.id}
-          initialLovedBy={recipe.lovedBy ?? []}
-          initialDislikedBy={recipe.dislikedBy ?? []}
-          initialMustTry={recipe.mustTry ?? []}
-          initialTriedBy={recipe.triedBy ?? []}
-        />
-
         {/* Info bar */}
         <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
@@ -606,24 +597,14 @@ export default function RecipePage() {
           </div>
         )}
 
-        {/* Tags */}
-        {recipe.tags.length > 0 && (
-          <div className="print-hide mt-12 border-t border-cream-dark/30 pt-8">
-            <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-slate/60">
-              Tags
-            </h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {recipe.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-cream-dark/20 px-3 py-1 font-sans text-xs text-slate transition-colors hover:bg-cream-dark/40"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Family verdict */}
+        <RecipePreferences
+          recipeId={recipe.id}
+          initialLovedBy={recipe.lovedBy ?? []}
+          initialDislikedBy={recipe.dislikedBy ?? []}
+          initialMustTry={recipe.mustTry ?? []}
+          initialTriedBy={recipe.triedBy ?? []}
+        />
 
         {/* Family Notes */}
         <RecipeNotes
@@ -650,6 +631,25 @@ export default function RecipePage() {
           entries={recipe.editHistory ?? []}
           contributedBy={recipe.contributedBy}
         />
+
+        {/* Tags */}
+        {recipe.tags.length > 0 && (
+          <div className="print-hide mt-8 border-t border-cream-dark/30 pt-6">
+            <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-slate/60">
+              Tags
+            </h3>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {recipe.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-cream-dark/20 px-3 py-1 font-sans text-xs text-slate transition-colors hover:bg-cream-dark/40"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom spacing */}
