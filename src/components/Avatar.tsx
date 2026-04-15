@@ -72,7 +72,7 @@ export default function Avatar({ name, size = "sm", ring = false }: AvatarProps)
   const color = AVATAR_COLORS[hashName(name) % AVATAR_COLORS.length];
   const initials = getInitials(name);
   const px = imageSizes[size];
-  const ringClass = ring ? "ring-3 ring-terracotta" : "";
+  const ringClass = ring ? "ring-2 ring-terracotta" : "";
 
   if (avatarFile && !imgError) {
     return (

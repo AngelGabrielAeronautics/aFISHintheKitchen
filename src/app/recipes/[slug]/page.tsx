@@ -242,94 +242,102 @@ export default function RecipePage() {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        {/* Title & icons */}
+        {/* Title */}
         <div className="mt-8">
           <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
             {recipe.title}
           </h1>
 
-          {/* Icon row: Difficulty, Category, Protein, Heat */}
-          <div className="mt-4 flex items-center gap-3">
-            <Image
-              src={DIFFICULTY_ICONS[recipe.difficulty]}
-              alt={recipe.difficulty}
-              width={56}
-              height={56}
-              className="h-14 w-14 object-contain"
-              title={recipe.difficulty}
-            />
-            {category && (
-              <Link
-                href={`/recipes?category=${category.slug}`}
-                className="transition-transform hover:scale-105"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/icons/${category.slug}.png`}
-                  alt={category.name}
-                  className="h-14 w-14 object-contain"
-                  onError={(e) => {
-                    const el = e.currentTarget;
-                    el.style.display = "none";
-                    el.parentElement!.innerHTML = `<span class="inline-block rounded-full bg-terracotta/10 px-4 py-1.5 font-sans text-xs font-semibold text-terracotta">${category.name}</span>`;
-                  }}
+          {/* Contributor line + category/protein pills */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="flex items-center gap-2">
+              <Avatar name={recipe.contributedBy} size="md" ring />
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-sans text-sm font-semibold text-charcoal">
+                  {recipe.contributedBy}
+                </span>
+                <span className="font-sans text-xs text-slate/50">
+                  {new Date(recipe.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+              </div>
+            </div>
+            <span className="text-slate/30">|</span>
+            <div className="flex items-center gap-2">
+              {category && (
+                <Link
+                  href={`/recipes?category=${category.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-terracotta/8 px-3 py-1 font-sans text-xs font-medium text-terracotta transition-colors hover:bg-terracotta/15"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/icons/${category.slug}.png`}
+                    alt=""
+                    className="h-12 w-12 object-contain"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <span className="max-w-[5rem] text-center leading-tight">{category.name}</span>
+                </Link>
+              )}
+              {recipe.protein && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/10 px-3 py-1 font-sans text-xs font-medium text-sage-dark">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/icons/${recipe.protein}.png`}
+                    alt=""
+                    className="h-12 w-12 object-contain"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <span className="max-w-[5rem] text-center leading-tight">{recipe.protein.charAt(0).toUpperCase() + recipe.protein.slice(1)}</span>
+                </span>
+              )}
+              {recipe.heat && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-terracotta/8 px-3 py-1 font-sans text-xs font-medium text-terracotta">
+                  <Image
+                    src={HEAT_ICONS[recipe.heat]}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 object-contain"
+                  />
+                  <span className="flex flex-col items-start leading-tight">
+                    <span className="font-semibold">{HEAT_LABELS[recipe.heat]}</span>
+                    <span className="text-[10px] text-terracotta/70">Heat</span>
+                  </span>
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-terracotta/8 px-3 py-1 font-sans text-xs font-medium text-terracotta">
+                <Image
+                  src={DIFFICULTY_ICONS[recipe.difficulty]}
+                  alt=""
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 object-contain"
                 />
-              </Link>
-            )}
-            {recipe.protein && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`/icons/${recipe.protein}.png`}
-                alt={recipe.protein}
-                className="h-14 w-14 object-contain"
-                title={recipe.protein}
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
-            )}
-            {recipe.heat && (
-              <Image
-                src={HEAT_ICONS[recipe.heat]}
-                alt={HEAT_LABELS[recipe.heat]}
-                width={56}
-                height={56}
-                className="h-14 w-14 object-contain"
-                title={HEAT_LABELS[recipe.heat]}
-              />
-            )}
+                <span className="flex flex-col items-start leading-tight">
+                  <span className="font-semibold">{recipe.difficulty}</span>
+                  <span className="text-[10px] text-terracotta/70">Difficulty</span>
+                </span>
+              </span>
+            </div>
           </div>
+
+          {recipe.versionOf && recipe.versionAuthor && (
+            <p className="mt-2 font-sans text-xs text-terracotta">
+              {recipe.versionAuthor}&rsquo;s version of{" "}
+              <Link href={`/recipes`} className="underline hover:text-terracotta-dark">
+                {recipe.versionOf}
+              </Link>
+            </p>
+          )}
+          {recipe.originalSource && (
+            <p className="mt-1 font-sans text-xs text-slate">
+              Original recipe by <span className="font-medium text-charcoal">{recipe.originalSource}</span>
+            </p>
+          )}
 
           <p className="mt-4 font-sans text-base leading-relaxed text-slate">
             {recipe.description}
           </p>
-        </div>
-
-        {/* Contributed by & story */}
-        <div className="mt-6">
-          <div className="flex items-center gap-3">
-            <Avatar name={recipe.contributedBy} size="xl" ring />
-            <div>
-              <p className="font-sans text-xs text-slate">Contributed by</p>
-              <p className="font-sans text-base font-semibold text-charcoal">
-                {recipe.contributedBy}
-              </p>
-              {recipe.versionOf && recipe.versionAuthor && (
-                <p className="font-sans text-xs text-terracotta">
-                  {recipe.versionAuthor}&rsquo;s version of{" "}
-                  <Link href={`/recipes`} className="underline hover:text-terracotta-dark">
-                    {recipe.versionOf}
-                  </Link>
-                </p>
-              )}
-              {recipe.originalSource && (
-                <p className="font-sans text-xs text-slate">
-                  Original recipe by <span className="font-medium text-charcoal">{recipe.originalSource}</span>
-                </p>
-              )}
-              <p className="font-sans text-[10px] text-slate/50">
-                Added {new Date(recipe.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-              </p>
-            </div>
-          </div>
 
           {recipe.story && (
             <blockquote className="mt-4 border-l-4 border-terracotta/30 bg-warm-white/60 py-4 pl-5 pr-4 rounded-r-lg">
@@ -341,7 +349,7 @@ export default function RecipePage() {
         </div>
 
         {/* Info bar */}
-        <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-5">
           <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -424,8 +432,8 @@ export default function RecipePage() {
                   title={s.name}
                   className={`text-base ${
                     recipe.seasons?.includes(s.value as "spring" | "summer" | "autumn" | "winter")
-                      ? "opacity-100"
-                      : "opacity-20"
+                      ? ""
+                      : "grayscale opacity-25"
                   }`}
                 >
                   {s.label}
@@ -438,35 +446,6 @@ export default function RecipePage() {
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
-            <Image
-              src={DIFFICULTY_ICONS[recipe.difficulty]}
-              alt={recipe.difficulty}
-              width={32}
-              height={32}
-              className="h-8 w-8 object-contain"
-            />
-            <span className="font-sans text-xs text-slate">Difficulty</span>
-            <span className="font-sans text-sm font-semibold text-charcoal">
-              {recipe.difficulty}
-            </span>
-          </div>
-
-          {recipe.heat && (
-            <div className="flex flex-col items-center gap-1.5 rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
-              <Image
-                src={HEAT_ICONS[recipe.heat]}
-                alt={HEAT_LABELS[recipe.heat]}
-                width={32}
-                height={32}
-                className="h-8 w-8 object-contain"
-              />
-              <span className="font-sans text-xs text-slate">Heat</span>
-              <span className="font-sans text-sm font-semibold text-charcoal">
-                {HEAT_LABELS[recipe.heat]}
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Two-column layout: Instructions & Ingredients */}
