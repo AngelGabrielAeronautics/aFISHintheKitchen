@@ -119,60 +119,9 @@ export default function RecipePage() {
 
   return (
     <main className="min-h-screen bg-cream">
-      {/* Recipe images — full width */}
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {recipe.images && recipe.images.length > 0 ? (
-          <div className="relative">
-            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {recipe.images.map((url, index) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={index}
-                  src={url}
-                  alt={`${recipe.title} — photo ${index + 1}`}
-                  className="w-full shrink-0 snap-center object-cover rounded-2xl shadow-md aspect-[16/9]"
-                />
-              ))}
-            </div>
-            {recipe.images.length > 1 && (
-              <div className="mt-2 flex justify-center gap-1.5">
-                {recipe.images.map((_, index) => (
-                  <span key={index} className="h-1.5 w-1.5 rounded-full bg-slate/30" />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : recipe.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={recipe.image}
-            alt={recipe.title}
-            className="w-full aspect-[16/9] object-cover rounded-2xl shadow-md"
-          />
-        ) : (
-          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 shadow-md">
-            <div className="absolute inset-0 flex items-center justify-center opacity-15">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 64 64"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-32 w-32 text-terracotta sm:h-40 sm:w-40"
-              >
-                <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
-                <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
-              </svg>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        {/* Back + Print/Share/Edit buttons */}
-        <div className="print-hide flex items-center justify-between py-4">
+      {/* Back + Print/Share/Edit buttons */}
+      <div className="print-hide mx-auto max-w-6xl px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
           <Link
             href="/recipes"
             className="inline-flex items-center gap-2 font-sans text-sm font-medium text-slate transition-colors hover:text-terracotta"
@@ -239,7 +188,60 @@ export default function RecipePage() {
             )}
           </div>
         </div>
+      </div>
 
+      {/* Recipe images — full width */}
+      <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
+        {recipe.images && recipe.images.length > 0 ? (
+          <div className="relative">
+            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {recipe.images.map((url, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={index}
+                  src={url}
+                  alt={`${recipe.title} — photo ${index + 1}`}
+                  className="w-full shrink-0 snap-center object-cover rounded-2xl shadow-md aspect-[16/9]"
+                />
+              ))}
+            </div>
+            {recipe.images.length > 1 && (
+              <div className="mt-2 flex justify-center gap-1.5">
+                {recipe.images.map((_, index) => (
+                  <span key={index} className="h-1.5 w-1.5 rounded-full bg-slate/30" />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : recipe.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={recipe.image}
+            alt={recipe.title}
+            className="w-full aspect-[16/9] object-cover rounded-2xl shadow-md"
+          />
+        ) : (
+          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 shadow-md">
+            <div className="absolute inset-0 flex items-center justify-center opacity-15">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 64 64"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-32 w-32 text-terracotta sm:h-40 sm:w-40"
+              >
+                <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
+                <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Title & icons */}
         <div className="mt-8">
           <h1 className="font-serif text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">
