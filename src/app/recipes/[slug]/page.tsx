@@ -470,7 +470,7 @@ export default function RecipePage() {
         {/* Two-column layout: Instructions & Ingredients */}
         <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Instructions (left, wider) */}
-          <div className="lg:col-span-2">
+          <div className="order-2 lg:order-1 lg:col-span-2">
             <h2 className="font-serif text-2xl font-bold text-charcoal">
               Instructions
             </h2>
@@ -499,7 +499,7 @@ export default function RecipePage() {
           </div>
 
           {/* Ingredients (right, sidebar) */}
-          <div className="lg:col-span-1">
+          <div className="order-1 lg:order-2 lg:col-span-1">
             <div className="rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30 lg:sticky lg:top-8">
               <div className="flex items-start justify-between gap-2">
                 <div>
