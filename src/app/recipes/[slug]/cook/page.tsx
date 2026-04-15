@@ -50,12 +50,16 @@ function stopAlarm() {
 // ---------------------------------------------------------------------------
 interface StepTimer {
   stepIndex: number;
-  secondsLeft: number;
-  running: boolean;
+  endsAt: number; // absolute timestamp (Date.now() + seconds * 1000)
   done: boolean;
 }
 
-function formatTimer(seconds: number): string {
+function getSecondsLeft(timer: StepTimer): number {
+  if (timer.done) return 0;
+  return Math.max(0, Math.ceil((timer.endsAt - Date.now()) / 1000));
+}
+
+function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
@@ -158,30 +162,45 @@ export default function CookModePage() {
   const { slug } = useParams<{ slug: string }>();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  // Restore saved state
-  const savedState = typeof window !== "undefined" ? (() => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+  const [timers, setTimers] = useState<Record<number, StepTimer>>({});
+  const [restoredState, setRestoredState] = useState(false);
+
+  // Restore saved state from localStorage on mount (multi-session)
+  useEffect(() => {
     try {
-      const raw = localStorage.getItem("cookingState");
+      const raw = localStorage.getItem("cookingSessions");
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.slug === slug) return parsed;
+        const sessions = JSON.parse(raw);
+        const saved = sessions[slug];
+        if (saved) {
+          setCurrentStep(saved.currentStep ?? 0);
+          setCheckedIngredients(new Set(saved.checkedIngredients ?? []));
+          setTimers(saved.timers ?? {});
+        }
+      }
+      // Migrate old single-session format
+      const oldRaw = localStorage.getItem("cookingState");
+      if (oldRaw) {
+        const old = JSON.parse(oldRaw);
+        if (old.slug === slug) {
+          setCurrentStep(old.currentStep ?? 0);
+          setCheckedIngredients(new Set(old.checkedIngredients ?? []));
+          setTimers(old.timers ?? {});
+        }
+        localStorage.removeItem("cookingState");
       }
     } catch { /* ignore */ }
-    return null;
-  })() : null;
-
-  const [currentStep, setCurrentStep] = useState(savedState?.currentStep ?? 0);
-  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(
-    new Set(savedState?.checkedIngredients ?? [])
-  );
-  const [timers, setTimers] = useState<Record<number, StepTimer>>(savedState?.timers ?? {});
+    setRestoredState(true);
+  }, [slug]);
   const [settingTimerFor, setSettingTimerFor] = useState<number | null>(null);
   const timersRef = useRef(timers);
   timersRef.current = timers;
 
-  // Save state to localStorage on changes
+  // Save state to localStorage on changes (multi-session)
   useEffect(() => {
-    if (!slug || !recipe) return;
+    if (!slug || !recipe || !restoredState) return;
     const state = {
       slug,
       recipeTitle: recipe.title,
@@ -191,27 +210,31 @@ export default function CookModePage() {
       timers,
       savedAt: Date.now(),
     };
-    localStorage.setItem("cookingState", JSON.stringify(state));
-  }, [slug, recipe, currentStep, checkedIngredients, timers]);
+    try {
+      const raw = localStorage.getItem("cookingSessions");
+      const sessions: Record<string, typeof state> = raw ? JSON.parse(raw) : {};
+      sessions[slug] = state;
+      localStorage.setItem("cookingSessions", JSON.stringify(sessions));
+    } catch { /* ignore */ }
+  }, [slug, recipe, currentStep, checkedIngredients, timers, restoredState]);
 
   // Touch / swipe refs
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Timer tick — runs every second, ticks all active timers
+  // Timer tick — checks absolute end times every second
+  const [, setTick] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
+      setTick((t) => t + 1); // force re-render to update display
       setTimers((prev) => {
         const next = { ...prev };
         let changed = false;
         for (const key of Object.keys(next)) {
           const k = Number(key);
-          if (next[k].running && next[k].secondsLeft > 0) {
-            next[k] = { ...next[k], secondsLeft: next[k].secondsLeft - 1 };
-            if (next[k].secondsLeft === 0) {
-              next[k] = { ...next[k], running: false, done: true };
-              playAlarm();
-            }
+          if (!next[k].done && Date.now() >= next[k].endsAt) {
+            next[k] = { ...next[k], done: true };
+            playAlarm();
             changed = true;
           }
         }
@@ -224,7 +247,7 @@ export default function CookModePage() {
   function startStepTimer(stepIndex: number, seconds: number) {
     setTimers((prev) => ({
       ...prev,
-      [stepIndex]: { stepIndex, secondsLeft: seconds, running: true, done: false },
+      [stepIndex]: { stepIndex, endsAt: Date.now() + seconds * 1000, done: false },
     }));
   }
 
@@ -240,7 +263,7 @@ export default function CookModePage() {
   // Check if any timer is done (for visual flash)
   const anyTimerDone = Object.values(timers).some((t) => t.done);
 
-  const activeTimers = Object.values(timers).filter((t) => t.running || t.done);
+  const activeTimers = Object.values(timers);
 
   // Wake lock
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -317,6 +340,21 @@ export default function CookModePage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goNext, goPrev]);
 
+  // Clear this session when done
+  const isDoneCheck = totalSteps > 0 && currentStep === totalSteps - 1;
+  useEffect(() => {
+    if (isDoneCheck && slug) {
+      try {
+        const raw = localStorage.getItem("cookingSessions");
+        if (raw) {
+          const sessions = JSON.parse(raw);
+          delete sessions[slug];
+          localStorage.setItem("cookingSessions", JSON.stringify(sessions));
+        }
+      } catch { /* ignore */ }
+    }
+  }, [isDoneCheck, slug]);
+
   // Touch swipe handlers
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -379,13 +417,6 @@ export default function CookModePage() {
   const isIngredients = currentStep === 0;
   const isDone = currentStep === totalSteps - 1;
   const instructionIndex = currentStep - 1; // 0-based instruction index
-
-  // Clear saved state when done
-  useEffect(() => {
-    if (isDone) {
-      localStorage.removeItem("cookingState");
-    }
-  }, [isDone]);
 
   return (
     <div
@@ -539,7 +570,7 @@ export default function CookModePage() {
             {timers[instructionIndex] ? (
               <div className={`mt-8 flex items-center gap-4 rounded-xl px-6 py-4 ${timers[instructionIndex].done ? "bg-red-500/20 animate-pulse" : "bg-[#3D5A3E]/30"}`}>
                 <span className={`font-sans text-3xl font-bold tabular-nums ${timers[instructionIndex].done ? "text-red-400" : "text-[#F0EBD8]"}`}>
-                  {formatTimer(timers[instructionIndex].secondsLeft)}
+                  {formatSeconds(getSecondsLeft(timers[instructionIndex]))}
                 </span>
                 {timers[instructionIndex].done && (
                   <span className="font-sans text-sm font-semibold text-red-400">Time&rsquo;s up!</span>
@@ -693,7 +724,7 @@ export default function CookModePage() {
               }`}
             >
               <span>Step {t.stepIndex + 1}</span>
-              <span className="tabular-nums font-bold">{formatTimer(t.secondsLeft)}</span>
+              <span className="tabular-nums font-bold">{formatSeconds(getSecondsLeft(t))}</span>
               {t.done && <span className="text-red-400">!!!</span>}
             </button>
           ))}
