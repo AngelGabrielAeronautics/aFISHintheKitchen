@@ -4,6 +4,8 @@ import {
   orderBy,
   where,
   getDocs,
+  getDoc,
+  setDoc,
   addDoc,
   writeBatch,
   doc,
@@ -274,4 +276,73 @@ export async function updateCollection(
 export async function deleteCollection(id: string): Promise<void> {
   const docRef = doc(getDb(), "collections", id);
   await deleteDoc(docRef);
+}
+
+// --- User Management ---
+
+export interface InvitedUser {
+  email: string;
+  name: string;
+  invitedBy: string;
+  status: "pending" | "registered";
+  createdAt: string;
+  registeredAt?: string;
+}
+
+export async function getInvitedUsers(): Promise<InvitedUser[]> {
+  const q = query(
+    collection(getDb(), "invitedUsers"),
+    orderBy("createdAt", "desc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ ...d.data(), email: d.id } as InvitedUser));
+}
+
+export async function addInvitedUser(
+  data: Omit<InvitedUser, "status" | "createdAt">
+): Promise<void> {
+  const email = data.email.toLowerCase().trim();
+  const docRef = doc(getDb(), "invitedUsers", email);
+  await setDoc(docRef, {
+    name: data.name,
+    invitedBy: data.invitedBy,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export async function removeInvitedUser(email: string): Promise<void> {
+  const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
+  await deleteDoc(docRef);
+}
+
+export async function isEmailAllowed(email: string): Promise<boolean> {
+  const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
+  const snapshot = await getDoc(docRef);
+  return snapshot.exists();
+}
+
+export async function markUserRegistered(email: string): Promise<void> {
+  const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
+  await updateDoc(docRef, {
+    status: "registered",
+    registeredAt: new Date().toISOString(),
+  });
+}
+
+export async function isAdmin(email: string): Promise<boolean> {
+  const docRef = doc(getDb(), "config", "settings");
+  const snapshot = await getDoc(docRef);
+  if (!snapshot.exists()) return false;
+  const data = snapshot.data();
+  const adminEmails: string[] = data.adminEmails ?? [];
+  return adminEmails.includes(email.toLowerCase().trim());
+}
+
+export async function getAdminEmails(): Promise<string[]> {
+  const docRef = doc(getDb(), "config", "settings");
+  const snapshot = await getDoc(docRef);
+  if (!snapshot.exists()) return [];
+  const data = snapshot.data();
+  return data.adminEmails ?? [];
 }

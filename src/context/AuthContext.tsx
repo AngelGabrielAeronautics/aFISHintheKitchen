@@ -3,10 +3,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { isAdmin as checkIsAdmin } from "@/lib/firebase-recipes";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -14,10 +16,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adminStatus, setAdminStatus] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser?.email) {
+        try {
+          const admin = await checkIsAdmin(firebaseUser.email);
+          setAdminStatus(admin);
+        } catch {
+          setAdminStatus(false);
+        }
+      } else {
+        setAdminStatus(false);
+      }
       setLoading(false);
     });
 
@@ -25,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin: adminStatus }}>
       {children}
     </AuthContext.Provider>
   );

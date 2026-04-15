@@ -11,6 +11,7 @@ import {
 import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { isEmailAllowed, markUserRegistered } from "@/lib/firebase-recipes";
 
 type AuthMode = "signin" | "signup" | "reset";
 
@@ -99,6 +100,15 @@ export default function AuthPage() {
     setSubmitting(true);
 
     try {
+      const allowed = await isEmailAllowed(email);
+      if (!allowed) {
+        setError(
+          "This email hasn't been invited yet. Ask a family member to send you an invite."
+        );
+        setSubmitting(false);
+        return;
+      }
+
       const credential = await createUserWithEmailAndPassword(
         getFirebaseAuth(),
         email,
@@ -108,6 +118,7 @@ export default function AuthPage() {
         displayName: displayName.trim(),
       });
       await sendEmailVerification(credential.user);
+      await markUserRegistered(email);
       setSuccessMessage(
         `We've sent a verification email to ${email}. Please check your inbox.`
       );
