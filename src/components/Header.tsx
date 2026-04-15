@@ -78,10 +78,12 @@ export default function Header() {
               <>
                 {user ? (
                   <div className="flex items-center gap-3 ml-2 pl-3 border-l border-gold-light">
-                    <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
-                    <span className="text-xs text-slate">
-                      {user.displayName || user.email}
-                    </span>
+                    <Link href="/account" className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-cream-dark/60">
+                      <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
+                      <span className="text-xs text-slate">
+                        {user.displayName || user.email}
+                      </span>
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"
@@ -163,12 +165,16 @@ export default function Header() {
               <div className="mt-2 pt-2 border-t border-gold-light/60">
                 {user ? (
                   <>
-                    <div className="flex items-center gap-2 px-4 py-1">
+                    <Link
+                      href="/account"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors hover:bg-cream-dark/60"
+                    >
                       <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
                       <p className="text-xs text-slate">
                         {user.displayName || user.email}
                       </p>
-                    </div>
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors cursor-pointer"

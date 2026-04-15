@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
@@ -106,7 +107,12 @@ export default function AuthPage() {
       await updateProfile(credential.user, {
         displayName: displayName.trim(),
       });
-      router.push("/");
+      await sendEmailVerification(credential.user);
+      setSuccessMessage(
+        `We've sent a verification email to ${email}. Please check your inbox.`
+      );
+      // Short delay so the user sees the message before redirect
+      setTimeout(() => router.push("/"), 3000);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getErrorMessage(code));
