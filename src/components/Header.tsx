@@ -51,7 +51,7 @@ export default function Header() {
               alt="A Fish in the Kitchen"
               width={44}
               height={44}
-              className="rounded-full"
+              className="h-11 w-11 rounded-full"
             />
             <div className="flex flex-col">
               <span className="font-serif text-xl sm:text-2xl font-semibold text-charcoal leading-tight tracking-tight">
