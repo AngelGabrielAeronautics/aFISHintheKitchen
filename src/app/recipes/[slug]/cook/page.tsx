@@ -80,26 +80,26 @@ function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStar
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-2xl bg-[#1e2d1e] px-10 py-10 text-center shadow-2xl">
-        <h3 className="font-serif text-2xl font-bold text-[#F0EBD8]">
+      <div className="mx-4 w-full max-w-md rounded-2xl bg-[#1e2d1e] px-6 sm:px-10 py-8 sm:py-10 text-center shadow-2xl">
+        <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#F0EBD8]">
           Step {stepIndex + 1} Timer
         </h3>
-        <div className="mt-8 flex items-center justify-center gap-8">
+        <div className="mt-6 sm:mt-8 flex items-center justify-center gap-3 sm:gap-8">
           {/* Hours */}
           <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setHours((h) => Math.max(0, h - 1))}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 -
               </button>
-              <span className="w-14 font-sans text-5xl font-bold text-[#F0EBD8] tabular-nums text-center">
+              <span className="w-10 sm:w-14 font-sans text-4xl sm:text-5xl font-bold text-[#F0EBD8] tabular-nums text-center">
                 {hours}
               </span>
               <button
                 onClick={() => setHours((h) => Math.min(12, h + 1))}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 +
               </button>
@@ -107,21 +107,21 @@ function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStar
             <p className="font-sans text-xs text-[#F0EBD8]/50">hours</p>
           </div>
 
-          <span className="text-4xl font-bold text-[#F0EBD8]/30 mt-[-1.5rem]">:</span>
+          <span className="text-3xl sm:text-4xl font-bold text-[#F0EBD8]/30 mt-[-1.5rem]">:</span>
 
           {/* Minutes */}
           <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setMinutes((m) => {
                   if (m <= 5) return Math.max(0, m - 1);
                   return m - 5;
                 })}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 -
               </button>
-              <span className="w-14 font-sans text-5xl font-bold text-[#F0EBD8] tabular-nums text-center">
+              <span className="w-10 sm:w-14 font-sans text-4xl sm:text-5xl font-bold text-[#F0EBD8] tabular-nums text-center">
                 {String(minutes).padStart(2, "0")}
               </span>
               <button
@@ -129,7 +129,7 @@ function TimerSetup({ stepIndex, onStart, onClose }: { stepIndex: number; onStar
                   if (m < 5) return m + 1;
                   return Math.min(55, m + 5);
                 })}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-[#3D5A3E] text-lg font-bold text-white active:bg-[#2D4A2E] cursor-pointer"
               >
                 +
               </button>
