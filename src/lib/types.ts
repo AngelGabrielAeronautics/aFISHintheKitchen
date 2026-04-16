@@ -224,7 +224,7 @@ export interface RecipeCollection {
   description: string;
   createdBy: string;
   recipeIds: string[];
-  assignments?: Record<string, string>; // recipeId -> family member name
+  assignments?: Record<string, string[]>; // recipeId -> up to 3 family member names
   comments?: EventMenuComment[];
   createdAt: string;
 }

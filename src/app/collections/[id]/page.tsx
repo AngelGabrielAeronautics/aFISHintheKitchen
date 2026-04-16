@@ -35,7 +35,7 @@ export default function CollectionDetailPage() {
   const [saving, setSaving] = useState(false);
 
   // Assignments
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [assignments, setAssignments] = useState<Record<string, string[]>>({});
 
   // Comments
   const [comments, setComments] = useState<EventMenuComment[]>([]);
@@ -129,21 +129,25 @@ export default function CollectionDetailPage() {
     }
   }
 
-  async function handleAssign(recipeId: string, member: string) {
-    const next = { ...assignments };
-    const previousMember = next[recipeId];
-    if (member) {
-      next[recipeId] = member;
-    } else {
-      delete next[recipeId];
-    }
-    setAssignments(next);
-    if (collection) {
-      setCollection({ ...collection, assignments: next });
-      updateCollection(collection.id, { assignments: next }).catch(() => {});
+  function toggleAssign(recipeId: string, member: string) {
+    const current = assignments[recipeId] ?? [];
+    const isAssigned = current.includes(member);
+    let next: Record<string, string[]>;
 
-      // Notify the assigned person (if changed)
-      if (member && member !== previousMember) {
+    if (isAssigned) {
+      const filtered = current.filter((m) => m !== member);
+      next = { ...assignments };
+      if (filtered.length === 0) {
+        delete next[recipeId];
+      } else {
+        next[recipeId] = filtered;
+      }
+    } else {
+      if (current.length >= 3) return; // max 3
+      next = { ...assignments, [recipeId]: [...current, member] };
+
+      // Notify the newly assigned person
+      if (collection) {
         const recipe = recipeMap.get(recipeId);
         const assignedBy = user?.displayName || user?.email || "Someone";
         createNotification({
@@ -153,6 +157,12 @@ export default function CollectionDetailPage() {
           authorName: assignedBy,
         }).catch(() => {});
       }
+    }
+
+    setAssignments(next);
+    if (collection) {
+      setCollection({ ...collection, assignments: next });
+      updateCollection(collection.id, { assignments: next }).catch(() => {});
     }
   }
 
@@ -417,24 +427,29 @@ export default function CollectionDetailPage() {
                 <div key={recipe.id}>
                   <RecipeCard recipe={recipe} />
                   {/* Assignment */}
-                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-warm-white px-3 py-2 ring-1 ring-cream-dark/30">
-                    {assignments[recipe.id] ? (
-                      <Avatar name={assignments[recipe.id]} size="sm" ring />
-                    ) : (
-                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-slate/30">
-                        <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" />
-                      </svg>
-                    )}
-                    <select
-                      value={assignments[recipe.id] ?? ""}
-                      onChange={(e) => handleAssign(recipe.id, e.target.value)}
-                      className="flex-1 bg-transparent font-sans text-xs text-charcoal outline-none cursor-pointer"
-                    >
-                      <option value="">Assign to...</option>
-                      {FAMILY_MEMBERS.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                  <div className="mt-2 rounded-lg bg-warm-white px-3 py-2 ring-1 ring-cream-dark/30">
+                    <div className="flex flex-wrap gap-1.5">
+                      {FAMILY_MEMBERS.map((name) => {
+                        const isAssigned = (assignments[recipe.id] ?? []).includes(name);
+                        const atMax = (assignments[recipe.id] ?? []).length >= 3 && !isAssigned;
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => toggleAssign(recipe.id, name)}
+                            disabled={atMax}
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-sans text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
+                              isAssigned
+                                ? "bg-terracotta text-white"
+                                : "bg-cream-dark/20 text-slate hover:bg-cream-dark/40"
+                            }`}
+                          >
+                            <Avatar name={name} size="sm" />
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ))}
