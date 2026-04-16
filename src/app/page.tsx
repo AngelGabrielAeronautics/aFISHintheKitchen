@@ -15,8 +15,10 @@ import LandingPage from "@/components/LandingPage";
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
+  const { household, loading: householdLoading } = useHousehold();
+  const router = useRouter();
 
-  if (authLoading) {
+  if (authLoading || householdLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
@@ -26,6 +28,11 @@ export default function HomePage() {
 
   if (!user) {
     return <LandingPage />;
+  }
+
+  if (!household) {
+    router.push("/setup");
+    return null;
   }
 
   return <HomeContent />;
