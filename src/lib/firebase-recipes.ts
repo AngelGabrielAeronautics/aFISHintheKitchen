@@ -23,16 +23,23 @@ function recipesCollection() {
   return collection(getDb(), "recipes");
 }
 
-export async function getAllRecipes(): Promise<Recipe[]> {
-  const q = query(recipesCollection(), orderBy("createdAt", "desc"));
+export async function getAllRecipes(householdId?: string): Promise<Recipe[]> {
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
+    : [orderBy("createdAt", "desc")];
+  const q = query(recipesCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
 }
 
 export async function getRecipeBySlug(
-  slug: string
+  slug: string,
+  householdId?: string
 ): Promise<Recipe | null> {
-  const q = query(recipesCollection(), where("slug", "==", slug));
+  const constraints = householdId
+    ? [where("slug", "==", slug), where("householdId", "==", householdId)]
+    : [where("slug", "==", slug)];
+  const q = query(recipesCollection(), ...constraints);
   const snapshot = await getDocs(q);
   if (snapshot.empty) return null;
   const d = snapshot.docs[0];
@@ -40,25 +47,28 @@ export async function getRecipeBySlug(
 }
 
 export async function getRecipesByCategory(
-  category: string
+  category: string,
+  householdId?: string
 ): Promise<Recipe[]> {
-  const q = query(
-    recipesCollection(),
-    where("category", "==", category),
-    orderBy("createdAt", "desc")
-  );
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), where("category", "==", category), orderBy("createdAt", "desc")]
+    : [where("category", "==", category), orderBy("createdAt", "desc")];
+  const q = query(recipesCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
 }
 
-export async function getFeaturedRecipes(): Promise<Recipe[]> {
-  const q = query(recipesCollection(), where("featured", "==", true));
+export async function getFeaturedRecipes(householdId?: string): Promise<Recipe[]> {
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), where("featured", "==", true)]
+    : [where("featured", "==", true)];
+  const q = query(recipesCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
 }
 
-export async function searchRecipes(queryStr: string): Promise<Recipe[]> {
-  const all = await getAllRecipes();
+export async function searchRecipes(queryStr: string, householdId?: string): Promise<Recipe[]> {
+  const all = await getAllRecipes(householdId);
   const lower = queryStr.toLowerCase();
   return all.filter((recipe) => {
     return (
@@ -207,8 +217,11 @@ function membersCollection() {
   return collection(getDb(), "members");
 }
 
-export async function getAllMembers(): Promise<Member[]> {
-  const q = query(membersCollection(), orderBy("order", "asc"));
+export async function getAllMembers(householdId?: string): Promise<Member[]> {
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), orderBy("order", "asc")]
+    : [orderBy("order", "asc")];
+  const q = query(membersCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Member));
 }
@@ -250,8 +263,11 @@ function collectionsCollection() {
   return collection(getDb(), "collections");
 }
 
-export async function getAllCollections(): Promise<RecipeCollection[]> {
-  const q = query(collectionsCollection(), orderBy("createdAt", "desc"));
+export async function getAllCollections(householdId?: string): Promise<RecipeCollection[]> {
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
+    : [orderBy("createdAt", "desc")];
+  const q = query(collectionsCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as RecipeCollection));
 }
@@ -300,16 +316,16 @@ export interface InvitedUser {
   email: string;
   name: string;
   invitedBy: string;
+  householdId?: string;
   status: "pending" | "registered";
   createdAt: string;
   registeredAt?: string;
 }
 
-export async function getInvitedUsers(): Promise<InvitedUser[]> {
-  const q = query(
-    collection(getDb(), "invitedUsers"),
-    orderBy("createdAt", "desc")
-  );
+export async function getInvitedUsers(householdId?: string): Promise<InvitedUser[]> {
+  const q = householdId
+    ? query(collection(getDb(), "invitedUsers"), where("householdId", "==", householdId), orderBy("createdAt", "desc"))
+    : query(collection(getDb(), "invitedUsers"), orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), email: d.id } as InvitedUser));
 }
@@ -322,6 +338,7 @@ export async function addInvitedUser(
   await setDoc(docRef, {
     name: data.name,
     invitedBy: data.invitedBy,
+    ...(data.householdId ? { householdId: data.householdId } : {}),
     status: "pending",
     createdAt: new Date().toISOString(),
   });
@@ -369,8 +386,11 @@ function tipsCollection() {
   return collection(getDb(), "tips");
 }
 
-export async function getAllTips(): Promise<KitchenTip[]> {
-  const q = query(tipsCollection(), orderBy("createdAt", "desc"));
+export async function getAllTips(householdId?: string): Promise<KitchenTip[]> {
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
+    : [orderBy("createdAt", "desc")];
+  const q = query(tipsCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
 }
@@ -422,7 +442,7 @@ function notificationsCollection() {
   return collection(getDb(), "notifications");
 }
 
-export async function createNotification(data: { type: "new-recipe" | "event-assignment"; message: string; link: string; authorName: string; collectionId?: string; recipeId?: string; assignedMember?: string }): Promise<void> {
+export async function createNotification(data: { type: "new-recipe" | "event-assignment"; message: string; link: string; authorName: string; householdId?: string; collectionId?: string; recipeId?: string; assignedMember?: string }): Promise<void> {
   await addDoc(notificationsCollection(), {
     ...data,
     createdAt: new Date().toISOString(),
@@ -430,8 +450,11 @@ export async function createNotification(data: { type: "new-recipe" | "event-ass
   });
 }
 
-export async function getNotifications(limit = 20): Promise<AppNotification[]> {
-  const q = query(notificationsCollection(), orderBy("createdAt", "desc"));
+export async function getNotifications(householdId?: string, limit = 20): Promise<AppNotification[]> {
+  const constraints = householdId
+    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
+    : [orderBy("createdAt", "desc")];
+  const q = query(notificationsCollection(), ...constraints);
   const snapshot = await getDocs(q);
   return snapshot.docs.slice(0, limit).map((d) => ({ ...d.data(), id: d.id } as AppNotification));
 }
