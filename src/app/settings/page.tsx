@@ -51,8 +51,14 @@ export default function SettingsPage() {
     );
   }
 
-  if (!user) { router.push("/auth"); return null; }
-  if (!household || !householdId) { router.push("/setup"); return null; }
+  useEffect(() => {
+    if (!authLoading && !householdLoading) {
+      if (!user) router.push("/auth");
+      else if (!household) router.push("/setup");
+    }
+  }, [authLoading, householdLoading, user, household, router]);
+
+  if (!user || !household || !householdId) return null;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

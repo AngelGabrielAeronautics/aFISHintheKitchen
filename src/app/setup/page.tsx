@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
@@ -30,22 +30,19 @@ export default function SetupPage() {
 
   const slug = nameToSlug(name);
 
-  if (authLoading || householdLoading) {
+  useEffect(() => {
+    if (!authLoading && !householdLoading) {
+      if (!user) router.push("/auth");
+      else if (household) router.push("/");
+    }
+  }, [authLoading, householdLoading, user, household, router]);
+
+  if (authLoading || householdLoading || !user || household) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
       </main>
     );
-  }
-
-  if (!user) {
-    router.push("/auth");
-    return null;
-  }
-
-  if (household) {
-    router.push("/");
-    return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
