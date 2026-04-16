@@ -26,9 +26,9 @@ function RecipesContent() {
   const proteinParam = searchParams.get("protein") ?? "all";
   const ingredientParam = searchParams.get("ingredient") ?? "";
   const maxTimeParam = searchParams.get("maxTime") ?? "";
-  const sortParam = searchParams.get("sort") ?? "newest";
+  const sortParam = searchParams.get("sort") ?? "az";
 
-  const hasUrlFilters = cookParam !== "all" || difficultyParam !== "all" || proteinParam !== "all" || ingredientParam !== "" || maxTimeParam !== "" || sortParam !== "newest";
+  const hasUrlFilters = cookParam !== "all" || difficultyParam !== "all" || proteinParam !== "all" || ingredientParam !== "" || maxTimeParam !== "" || sortParam !== "az";
 
   const [searchQuery, setSearchQuery] = useState(searchParam);
   const [activeCategory, setActiveCategory] = useState(categoryParam);
@@ -263,12 +263,12 @@ function RecipesContent() {
               placeholder="Search recipes, ingredients, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 ${searchQuery || activeFilterCount > 0 ? "pr-24" : "pr-14"}`}
+              className={`w-full rounded-full border border-cream-dark/40 bg-warm-white py-3 pl-12 font-sans text-sm text-charcoal shadow-sm outline-none transition-all placeholder:text-slate/50 focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 ${searchQuery || activeFilterCount > 0 ? "pr-32" : "pr-14"}`}
             />
             {(searchQuery || activeFilterCount > 0) && (
               <button
                 onClick={clearAllFilters}
-                className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full px-2 py-1 font-sans text-[10px] font-medium text-slate/60 hover:text-charcoal hover:bg-cream-dark/30 transition-colors cursor-pointer"
+                className="absolute right-16 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full px-2 py-1 font-sans text-[10px] font-medium text-slate/60 hover:text-charcoal hover:bg-cream-dark/30 transition-colors cursor-pointer"
                 title="Clear all"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
