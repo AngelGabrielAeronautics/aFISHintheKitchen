@@ -272,7 +272,7 @@ export default function RecipePage() {
                   <img
                     src={`/icons/${category.slug}.png`}
                     alt=""
-                    className="h-12 w-12 object-contain"
+                    className="h-8 w-8 sm:h-12 sm:w-12 object-contain"
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                   <span className="max-w-[5rem] text-center leading-tight">{category.name}</span>
@@ -284,7 +284,7 @@ export default function RecipePage() {
                   <img
                     src={`/icons/${recipe.protein}.png`}
                     alt=""
-                    className="h-12 w-12 object-contain"
+                    className="h-8 w-8 sm:h-12 sm:w-12 object-contain"
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                   <span className="max-w-[5rem] text-center leading-tight">{recipe.protein.charAt(0).toUpperCase() + recipe.protein.slice(1)}</span>
@@ -297,7 +297,7 @@ export default function RecipePage() {
                     alt=""
                     width={48}
                     height={48}
-                    className="h-12 w-12 object-contain"
+                    className="h-8 w-8 sm:h-12 sm:w-12 object-contain"
                   />
                   <span className="flex flex-col items-start leading-tight">
                     <span className="font-semibold">{HEAT_LABELS[recipe.heat]}</span>
@@ -311,7 +311,7 @@ export default function RecipePage() {
                   alt=""
                   width={48}
                   height={48}
-                  className="h-12 w-12 object-contain"
+                  className="h-8 w-8 sm:h-12 sm:w-12 object-contain"
                 />
                 <span className="flex flex-col items-start leading-tight">
                   <span className="font-semibold">{recipe.difficulty}</span>

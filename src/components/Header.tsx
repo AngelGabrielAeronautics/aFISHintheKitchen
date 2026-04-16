@@ -17,6 +17,7 @@ const moreLinks = [
   { href: "/meal-planner", label: "Meal Planner" },
   { href: "/shopping-list", label: "Shopping List" },
   { href: "/collections", label: "Collections" },
+  { href: "/tips", label: "Tips & Tricks" },
   { href: "/members", label: "The Family" },
 ];
 
@@ -176,7 +177,7 @@ export default function Header() {
 
       {/* Mobile dropdown */}
       {menuOpen && (
-        <nav className="md:hidden border-t border-gold-light/60 bg-warm-white">
+        <nav className="md:hidden border-t border-gold-light/60 bg-warm-white max-h-[calc(100vh-5rem)] overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-1">
             {allLinks.map((link) => (
               <Link

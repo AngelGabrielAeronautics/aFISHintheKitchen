@@ -127,39 +127,57 @@ export const SEASONS: { value: Season; label: string }[] = [
 ];
 
 export const FAMILY_MEMBERS = [
-  "Poppie",
-  "Granny Gill",
-  "Dylan",
-  "Sam",
   "Bella",
   "Charlie",
+  "Dylan",
+  "Granny Gill",
+  "Poppie",
   "Quaid",
+  "Sam",
 ] as const;
 
 export const CATEGORIES: CategoryInfo[] = [
   {
-    slug: "starters-snacks",
-    name: "Starters & Snacks",
-    description: "Kick things off with something tasty",
-    icon: "🧀",
+    slug: "baking-breads",
+    name: "Baking & Breads",
+    description: "Fill the house with that smell",
+    icon: "🍞",
   },
   {
-    slug: "soups",
-    name: "Soups",
-    description: "Warm the soul, one bowl at a time",
-    icon: "🍲",
+    slug: "braai",
+    name: "Braai",
+    description: "Fire, meat, and good company",
+    icon: "🔥",
   },
   {
-    slug: "stews",
-    name: "Stews",
-    description: "Low and slow, worth the wait",
-    icon: "🫕",
+    slug: "desserts",
+    name: "Desserts",
+    description: "Save room — you will want seconds",
+    icon: "🍰",
+  },
+  {
+    slug: "drinks",
+    name: "Drinks & Shakes",
+    description: "Something to sip on",
+    icon: "🥤",
+  },
+  {
+    slug: "holiday-specials",
+    name: "Holiday Specials",
+    description: "Traditions that bring everyone to the table",
+    icon: "🎄",
   },
   {
     slug: "mains",
     name: "Mains",
     description: "The heart of every family dinner",
     icon: "🍽️",
+  },
+  {
+    slug: "sauces-condiments",
+    name: "Sauces & Condiments",
+    description: "The secret weapons behind every great dish",
+    icon: "🫙",
   },
   {
     slug: "seafood",
@@ -174,40 +192,22 @@ export const CATEGORIES: CategoryInfo[] = [
     icon: "🥗",
   },
   {
-    slug: "baking-breads",
-    name: "Baking & Breads",
-    description: "Fill the house with that smell",
-    icon: "🍞",
+    slug: "soups",
+    name: "Soups",
+    description: "Warm the soul, one bowl at a time",
+    icon: "🍲",
   },
   {
-    slug: "desserts",
-    name: "Desserts",
-    description: "Save room — you will want seconds",
-    icon: "🍰",
+    slug: "starters-snacks",
+    name: "Starters & Snacks",
+    description: "Kick things off with something tasty",
+    icon: "🧀",
   },
   {
-    slug: "sauces-condiments",
-    name: "Sauces & Condiments",
-    description: "The secret weapons behind every great dish",
-    icon: "🫙",
-  },
-  {
-    slug: "drinks",
-    name: "Drinks & Shakes",
-    description: "Something to sip on",
-    icon: "🥤",
-  },
-  {
-    slug: "braai",
-    name: "Braai",
-    description: "Fire, meat, and good company",
-    icon: "🔥",
-  },
-  {
-    slug: "holiday-specials",
-    name: "Holiday Specials",
-    description: "Traditions that bring everyone to the table",
-    icon: "🎄",
+    slug: "stews",
+    name: "Stews",
+    description: "Low and slow, worth the wait",
+    icon: "🫕",
   },
 ];
 
@@ -229,4 +229,32 @@ export function formatTime(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
+}
+
+export type TipCategory =
+  | "technique"
+  | "ingredient"
+  | "equipment"
+  | "time-saver"
+  | "substitution"
+  | "safety"
+  | "general";
+
+export const TIP_CATEGORIES: { value: TipCategory; label: string; icon: string }[] = [
+  { value: "equipment", label: "Equipment", icon: "🍳" },
+  { value: "general", label: "General", icon: "💡" },
+  { value: "ingredient", label: "Ingredient", icon: "🧅" },
+  { value: "safety", label: "Safety", icon: "🧤" },
+  { value: "substitution", label: "Substitution", icon: "🔄" },
+  { value: "technique", label: "Technique", icon: "🔪" },
+  { value: "time-saver", label: "Time Saver", icon: "⏱️" },
+];
+
+export interface KitchenTip {
+  id: string;
+  title: string;
+  content: string;
+  category: TipCategory;
+  author: string;
+  createdAt: string;
 }

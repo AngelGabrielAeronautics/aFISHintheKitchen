@@ -334,7 +334,7 @@ export default function MealPlannerPage() {
   // --- Auth loading ---
   if (authLoading) {
     return (
-      <main className="min-h-screen bg-cream py-16 px-4">
+      <main className="min-h-screen bg-cream py-8 sm:py-16 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
         </div>
@@ -345,7 +345,7 @@ export default function MealPlannerPage() {
   // --- Not signed in ---
   if (!user) {
     return (
-      <main className="min-h-screen bg-cream py-16 px-4">
+      <main className="min-h-screen bg-cream py-8 sm:py-16 px-4">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
             <div className="w-16 h-16 bg-gold-light/30 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -496,7 +496,7 @@ export default function MealPlannerPage() {
             )}
 
             {/* Day grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {DAYS.map(({ key, label, short }) => {
                 const meal = mealPlan?.meals[key];
                 const isToday = isCurrentWeek && key === todayDayKey;

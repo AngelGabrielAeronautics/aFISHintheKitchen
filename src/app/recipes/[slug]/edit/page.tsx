@@ -440,7 +440,7 @@ export default function EditRecipePage() {
   // --- Auth loading or recipe loading state ---
   if (authLoading || loadingRecipe) {
     return (
-      <main className="min-h-screen bg-cream py-16 px-4">
+      <main className="min-h-screen bg-cream py-8 sm:py-16 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
         </div>
@@ -451,7 +451,7 @@ export default function EditRecipePage() {
   // --- Not signed in ---
   if (!user) {
     return (
-      <main className="min-h-screen bg-cream py-16 px-4">
+      <main className="min-h-screen bg-cream py-8 sm:py-16 px-4">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
             <div className="w-16 h-16 bg-gold-light/30 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -490,7 +490,7 @@ export default function EditRecipePage() {
   // --- Recipe not found ---
   if (notFound || !recipe) {
     return (
-      <main className="min-h-screen bg-cream py-16 px-4">
+      <main className="min-h-screen bg-cream py-8 sm:py-16 px-4">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
             <h2 className="font-serif text-2xl text-charcoal mb-2">
@@ -646,14 +646,14 @@ export default function EditRecipePage() {
                 >
                   <option value="">Select protein</option>
                   <option value="beef">Beef</option>
-                  <option value="poultry">Poultry</option>
-                  <option value="lamb">Lamb</option>
-                  <option value="pork">Pork</option>
-                  <option value="seafood">Seafood</option>
                   <option value="eggs">Eggs</option>
-                  <option value="vegetarian">Vegetarian</option>
-                  <option value="vegan">Vegan</option>
+                  <option value="lamb">Lamb</option>
                   <option value="mixed">Mixed</option>
+                  <option value="pork">Pork</option>
+                  <option value="poultry">Poultry</option>
+                  <option value="seafood">Seafood</option>
+                  <option value="vegan">Vegan</option>
+                  <option value="vegetarian">Vegetarian</option>
                 </select>
                 {errors.protein && (
                   <p className={errorClasses}>{errors.protein}</p>

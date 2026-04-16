@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
-import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection } from "./types";
+import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory } from "./types";
 
 function recipesCollection() {
   return collection(getDb(), "recipes");
@@ -345,4 +345,28 @@ export async function getAdminEmails(): Promise<string[]> {
   if (!snapshot.exists()) return [];
   const data = snapshot.data();
   return data.adminEmails ?? [];
+}
+
+// ── Kitchen Tips ──
+
+function tipsCollection() {
+  return collection(getDb(), "tips");
+}
+
+export async function getAllTips(): Promise<KitchenTip[]> {
+  const q = query(tipsCollection(), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
+}
+
+export async function addTip(data: { title: string; content: string; category: TipCategory; author: string }): Promise<KitchenTip> {
+  const createdAt = new Date().toISOString();
+  const payload = { ...data, createdAt };
+  const docRef = await addDoc(tipsCollection(), payload);
+  return { ...payload, id: docRef.id };
+}
+
+export async function deleteTip(id: string): Promise<void> {
+  const docRef = doc(getDb(), "tips", id);
+  await deleteDoc(docRef);
 }

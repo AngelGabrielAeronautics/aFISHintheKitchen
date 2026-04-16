@@ -57,7 +57,7 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
       <button
         type="button"
         aria-label="Drag to reorder"
-        className="mt-3 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-1 text-slate/30 hover:text-slate/60 transition-colors"
+        className="mt-2.5 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-2 text-slate/30 hover:text-slate/60 transition-colors"
         {...attributes}
         {...listeners}
       >

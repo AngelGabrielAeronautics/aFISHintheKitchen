@@ -349,14 +349,14 @@ function RecipesContent() {
                 >
                   <option value="all">Any protein</option>
                   <option value="beef">Beef</option>
-                  <option value="poultry">Poultry</option>
-                  <option value="lamb">Lamb</option>
-                  <option value="pork">Pork</option>
-                  <option value="seafood">Seafood</option>
                   <option value="eggs">Eggs</option>
-                  <option value="vegetarian">Vegetarian</option>
-                  <option value="vegan">Vegan</option>
+                  <option value="lamb">Lamb</option>
                   <option value="mixed">Mixed</option>
+                  <option value="pork">Pork</option>
+                  <option value="poultry">Poultry</option>
+                  <option value="seafood">Seafood</option>
+                  <option value="vegan">Vegan</option>
+                  <option value="vegetarian">Vegetarian</option>
                 </select>
               </div>
 
@@ -460,7 +460,8 @@ function RecipesContent() {
         )}
 
         {/* Category filter pills */}
-        <div className="mt-8 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="relative mt-8">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide pr-8">
           <button
             onClick={() => setActiveCategory("all")}
             className={`shrink-0 rounded-full px-4 py-2 font-sans text-sm font-medium transition-all ${
@@ -504,6 +505,8 @@ function RecipesContent() {
               </button>
             );
           })}
+        </div>
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-cream to-transparent md:hidden" />
         </div>
 
         {loading ? (

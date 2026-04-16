@@ -196,14 +196,14 @@ export default function HomePage() {
                   <select value={filterProtein} onChange={(e) => setFilterProtein(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="all">Any protein</option>
                     <option value="beef">Beef</option>
-                    <option value="poultry">Poultry</option>
-                    <option value="lamb">Lamb</option>
-                    <option value="pork">Pork</option>
-                    <option value="seafood">Seafood</option>
                     <option value="eggs">Eggs</option>
-                    <option value="vegetarian">Vegetarian</option>
-                    <option value="vegan">Vegan</option>
+                    <option value="lamb">Lamb</option>
                     <option value="mixed">Mixed</option>
+                    <option value="pork">Pork</option>
+                    <option value="poultry">Poultry</option>
+                    <option value="seafood">Seafood</option>
+                    <option value="vegan">Vegan</option>
+                    <option value="vegetarian">Vegetarian</option>
                   </select>
                 </div>
                 <div>
@@ -244,7 +244,7 @@ export default function HomePage() {
 
       {/* Recipe of the Week */}
       {recipeOfTheWeek && (
-        <section className="bg-warm-white py-16 md:py-24">
+        <section className="bg-warm-white py-10 sm:py-16 md:py-24">
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center mb-10">
               <h2 className="font-serif text-3xl font-bold text-charcoal md:text-4xl inline-flex items-center gap-3">
@@ -372,7 +372,7 @@ export default function HomePage() {
       )}
 
       {/* Featured Recipes */}
-      <section className="bg-cream py-20 md:py-28">
+      <section className="bg-cream py-12 sm:py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
             <h2 className="font-serif text-3xl font-bold text-charcoal md:text-4xl">
@@ -428,7 +428,7 @@ export default function HomePage() {
       </section>
 
       {/* Browse by Category */}
-      <section className="bg-warm-white py-20 md:py-28">
+      <section className="bg-warm-white py-12 sm:py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
             <h2 className="font-serif text-3xl font-bold text-charcoal md:text-4xl">
@@ -454,7 +454,7 @@ export default function HomePage() {
       </section>
 
       {/* About / Family Story */}
-      <section className="bg-cream-dark py-20 md:py-28">
+      <section className="bg-cream-dark py-12 sm:py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <h2 className="font-serif text-3xl font-bold text-charcoal md:text-4xl">
             About This Cookbook
