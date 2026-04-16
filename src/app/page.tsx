@@ -18,6 +18,12 @@ export default function HomePage() {
   const { household, loading: householdLoading } = useHousehold();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!authLoading && !householdLoading && user && !household) {
+      router.push("/setup");
+    }
+  }, [authLoading, householdLoading, user, household, router]);
+
   if (authLoading || householdLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
@@ -31,7 +37,6 @@ export default function HomePage() {
   }
 
   if (!household) {
-    router.push("/setup");
     return null;
   }
 
