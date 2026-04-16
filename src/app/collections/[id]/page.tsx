@@ -59,7 +59,13 @@ export default function CollectionDetailPage() {
         setNotFound(true);
       } else {
         setCollection(found);
-        setAssignments(found.assignments ?? {});
+        // Migrate old string assignments to string[] format
+        const raw = found.assignments ?? {};
+        const migrated: Record<string, string[]> = {};
+        for (const [key, val] of Object.entries(raw)) {
+          migrated[key] = Array.isArray(val) ? val : [val];
+        }
+        setAssignments(migrated);
         setComments(found.comments ?? []);
       }
       setAllRecipes(recs);
