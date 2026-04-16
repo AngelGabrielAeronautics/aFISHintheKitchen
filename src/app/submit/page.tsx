@@ -37,6 +37,9 @@ export default function SubmitRecipePage() {
   const router = useRouter();
   const { householdId } = useHousehold();
 
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<Category | "">("");
@@ -173,6 +176,49 @@ export default function SubmitRecipePage() {
   }
 
   // --- Validation ---
+  async function handleImportFromPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImporting(true);
+    setImportError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/import-recipe", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.error) {
+        setImportError(data.error);
+        return;
+      }
+
+      // Pre-fill form fields
+      if (data.title) setTitle(data.title);
+      if (data.description) setDescription(data.description);
+      if (data.category) setCategory(data.category);
+      if (data.difficulty) setDifficulty(data.difficulty);
+      if (data.protein) setProtein(data.protein);
+      if (data.prepTime) setPrepTime(String(data.prepTime));
+      if (data.cookTime) setCookTime(String(data.cookTime));
+      if (data.servings) setServings(String(data.servings));
+      if (data.tags && Array.isArray(data.tags)) setTags(data.tags.join(", "));
+      if (data.seasons && Array.isArray(data.seasons)) setSeasons(data.seasons);
+      if (data.ingredients && Array.isArray(data.ingredients) && data.ingredients.length > 0) {
+        setIngredients(data.ingredients);
+      }
+      if (data.instructions && Array.isArray(data.instructions) && data.instructions.length > 0) {
+        setInstructions(data.instructions);
+      }
+    } catch {
+      setImportError("Failed to process image. Please try again.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   function validate(): boolean {
     const newErrors: FormErrors = {};
 
@@ -450,6 +496,37 @@ export default function SubmitRecipePage() {
           <p className="text-slate text-lg">
             Got a family favourite? Add it to the collection.
           </p>
+        </div>
+
+        {/* AI Import */}
+        <div className="mb-8 rounded-2xl bg-gradient-to-r from-terracotta/5 to-sage/5 p-6 ring-1 ring-terracotta/20">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <h3 className="font-serif text-lg font-bold text-charcoal">Import from Photo</h3>
+              <p className="mt-1 font-sans text-sm text-slate">
+                Take a photo of a recipe from a book, magazine, or handwritten card and let AI fill in the form for you.
+              </p>
+            </div>
+            <label className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 font-sans text-sm font-medium transition-colors cursor-pointer ${importing ? "bg-slate/20 text-slate" : "bg-terracotta text-white hover:bg-terracotta-dark"}`}>
+              {importing ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Reading recipe...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clipRule="evenodd" />
+                  </svg>
+                  Upload Photo
+                </>
+              )}
+              <input type="file" accept="image/*" onChange={handleImportFromPhoto} disabled={importing} className="hidden" />
+            </label>
+          </div>
+          {importError && (
+            <p className="mt-3 font-sans text-sm text-red-500">{importError}</p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-10">
