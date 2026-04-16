@@ -8,12 +8,17 @@ import {
   getRecipesByCategory,
 } from "@/lib/firebase-recipes";
 import { CATEGORIES, SEASONS, type Recipe, type Protein, type Season } from "@/lib/types";
+import {
+  filterRecipes,
+  sortRecipes,
+  paginate,
+  totalPages as totalPagesFn,
+  type Difficulty,
+  type SortOption,
+} from "@/lib/recipe-filters";
 import RecipeCard from "@/components/RecipeCard";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
-
-type Difficulty = "Easy" | "Medium" | "Hard";
-type SortOption = "newest" | "quickest" | "longest" | "az";
 
 function RecipesContent() {
   const { user } = useAuth();
@@ -124,60 +129,17 @@ function RecipesContent() {
 
   // Apply client-side filters and sorting on top of fetched results
   const filteredRecipes = useMemo(() => {
-    let results = [...recipes];
-
-    if (filterCook !== "all") {
-      results = results.filter((r) => r.contributedBy === filterCook);
-    }
-
-    if (filterDifficulty !== "all") {
-      results = results.filter((r) => r.difficulty === filterDifficulty);
-    }
-
-    if (filterMaxTime !== "") {
-      results = results.filter((r) => r.prepTime + r.cookTime <= filterMaxTime);
-    }
-
-    if (filterProtein !== "all") {
-      results = results.filter((r) => r.protein === filterProtein);
-    }
-
-    if (filterStatus !== "all" && user?.displayName) {
-      const name = user.displayName;
-      if (filterStatus === "must-try") {
-        results = results.filter((r) => r.mustTry?.includes(name));
-      } else if (filterStatus === "tried") {
-        results = results.filter((r) => r.triedBy?.includes(name));
-      } else if (filterStatus === "not-tried") {
-        results = results.filter((r) => !r.triedBy?.includes(name));
-      }
-    }
-
-    if (filterSeason !== "all") {
-      results = results.filter((r) => r.seasons?.includes(filterSeason));
-    }
-
-    if (filterIngredient.trim()) {
-      const term = filterIngredient.toLowerCase();
-      results = results.filter((r) =>
-        r.ingredients.some((ing) => ing.toLowerCase().includes(term))
-      );
-    }
-
-    switch (filterSort) {
-      case "quickest":
-        results.sort((a, b) => (a.prepTime + a.cookTime) - (b.prepTime + b.cookTime));
-        break;
-      case "longest":
-        results.sort((a, b) => (b.prepTime + b.cookTime) - (a.prepTime + a.cookTime));
-        break;
-      case "az":
-        results.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      // "newest" is already the default order from Firestore
-    }
-
-    return results;
+    const filtered = filterRecipes(recipes, {
+      cook: filterCook,
+      difficulty: filterDifficulty,
+      maxTime: filterMaxTime,
+      protein: filterProtein,
+      status: filterStatus,
+      statusUserName: user?.displayName ?? undefined,
+      season: filterSeason,
+      ingredient: filterIngredient,
+    });
+    return sortRecipes(filtered, filterSort);
   }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein, filterStatus, filterSeason, user]);
 
   // Reset to page 1 when filters change
@@ -185,11 +147,8 @@ function RecipesContent() {
     setCurrentPage(1);
   }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein, filterStatus, filterSeason, activeCategory, searchQuery]);
 
-  const totalPages = Math.ceil(filteredRecipes.length / recipesPerPage);
-  const paginatedRecipes = filteredRecipes.slice(
-    (currentPage - 1) * recipesPerPage,
-    currentPage * recipesPerPage
-  );
+  const totalPages = totalPagesFn(filteredRecipes.length, recipesPerPage);
+  const paginatedRecipes = paginate(filteredRecipes, currentPage, recipesPerPage);
 
   function clearAllFilters() {
     setSearchQuery("");
