@@ -140,7 +140,19 @@ async function saveMealPlan(plan: MealPlan): Promise<void> {
 async function loadFamilyPlans(weekId: string): Promise<MealPlan[]> {
   const q = query(collection(getDb(), "mealPlans"), where("weekId", "==", weekId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as MealPlan);
+  return snap.docs.map((d) => {
+    const data = d.data() as MealPlan;
+    // Migrate old single-object meals to arrays
+    const meals: MealPlan["meals"] = {};
+    for (const [day, val] of Object.entries(data.meals ?? {})) {
+      if (Array.isArray(val)) {
+        meals[day as DayKey] = val;
+      } else if (val && typeof val === "object" && "recipeId" in val) {
+        meals[day as DayKey] = [val as MealAssignment];
+      }
+    }
+    return { ...data, meals };
+  });
 }
 
 // --- Recipe Search Modal ---
