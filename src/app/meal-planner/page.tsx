@@ -147,10 +147,12 @@ async function loadFamilyPlans(weekId: string): Promise<MealPlan[]> {
 
 function RecipeSearchModal({
   recipes,
+  excludeIds,
   onSelect,
   onClose,
 }: {
   recipes: Recipe[];
+  excludeIds?: string[];
   onSelect: (r: Recipe) => void;
   onClose: () => void;
 }) {
@@ -170,11 +172,12 @@ function RecipeSearchModal({
   }, [onClose]);
 
   const filtered = useMemo(() => {
-    const sorted = [...recipes].sort((a, b) => a.title.localeCompare(b.title));
+    const excluded = new Set(excludeIds ?? []);
+    const sorted = [...recipes].filter((r) => !excluded.has(r.id)).sort((a, b) => a.title.localeCompare(b.title));
     if (!search.trim()) return sorted;
     const q = search.toLowerCase();
     return sorted.filter((r) => r.title.toLowerCase().includes(q));
-  }, [search, recipes]);
+  }, [search, recipes, excludeIds]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -726,6 +729,7 @@ export default function MealPlannerPage() {
       {selectingDay && !loadingRecipes && (
         <RecipeSearchModal
           recipes={recipes}
+          excludeIds={(mealPlan?.meals[selectingDay] ?? []).map((m) => m.recipeId)}
           onSelect={(recipe) => assignRecipe(selectingDay, recipe)}
           onClose={() => setSelectingDay(null)}
         />
