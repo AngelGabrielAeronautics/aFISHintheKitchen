@@ -52,11 +52,11 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
 
       {/* Content */}
       <div className="flex flex-col gap-3 p-5">
-        <h3 className="font-serif text-xl font-bold leading-snug text-charcoal transition-colors duration-200 group-hover:text-terracotta">
+        <h3 className="font-serif text-xl font-bold leading-snug text-charcoal transition-colors duration-200 group-hover:text-terracotta line-clamp-1">
           {recipe.title}
         </h3>
 
-        <p className="line-clamp-2 font-sans text-sm leading-relaxed text-slate">
+        <p className="line-clamp-2 min-h-[2.75rem] font-sans text-sm leading-relaxed text-slate">
           {recipe.description}
         </p>
 
