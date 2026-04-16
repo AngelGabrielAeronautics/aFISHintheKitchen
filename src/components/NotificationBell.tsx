@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/firebase-recipes";
+import { getNotifications, markNotificationRead, markAllNotificationsRead, updateAssignmentStatus } from "@/lib/firebase-recipes";
 import type { AppNotification } from "@/lib/types";
 
 export default function NotificationBell() {
@@ -13,7 +13,9 @@ export default function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
 
   const uid = user?.uid ?? "";
+  const displayName = user?.displayName || user?.email || "";
   const unreadCount = notifications.filter((n) => !n.readBy.includes(uid)).length;
+  const [responded, setResponded] = useState<Record<string, "accepted" | "declined">>({});
 
   useEffect(() => {
     if (!uid) return;
@@ -60,6 +62,13 @@ export default function NotificationBell() {
     );
   }
 
+  async function handleRespond(notification: AppNotification, status: "accepted" | "declined") {
+    if (!notification.collectionId || !notification.recipeId || !notification.assignedMember) return;
+    await updateAssignmentStatus(notification.collectionId, notification.recipeId, notification.assignedMember, status).catch(() => {});
+    setResponded((prev) => ({ ...prev, [notification.id]: status }));
+    handleMarkRead(notification.id);
+  }
+
   if (!user) return null;
 
   return (
@@ -103,26 +112,55 @@ export default function NotificationBell() {
             ) : (
               notifications.map((n) => {
                 const isUnread = !n.readBy.includes(uid);
+                const isAssignment = n.type === "event-assignment" && n.assignedMember === displayName;
+                const response = responded[n.id];
                 return (
-                  <Link
+                  <div
                     key={n.id}
-                    href={n.link}
-                    onClick={() => { handleMarkRead(n.id); setOpen(false); }}
-                    className={`block px-4 py-3 border-b border-cream-dark/20 last:border-b-0 transition-colors hover:bg-cream-dark/20 ${isUnread ? "bg-terracotta/5" : ""}`}
+                    className={`px-4 py-3 border-b border-cream-dark/20 last:border-b-0 transition-colors ${isUnread ? "bg-terracotta/5" : ""}`}
                   >
-                    <p className={`font-sans text-sm ${isUnread ? "font-medium text-charcoal" : "text-slate"}`}>
-                      {n.message}
-                    </p>
-                    <p className="mt-0.5 font-sans text-[10px] text-slate/50">
-                      {new Date(n.createdAt).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </Link>
+                    <Link
+                      href={n.link}
+                      onClick={() => { handleMarkRead(n.id); setOpen(false); }}
+                      className="block hover:opacity-80"
+                    >
+                      <p className={`font-sans text-sm ${isUnread ? "font-medium text-charcoal" : "text-slate"}`}>
+                        {n.message}
+                      </p>
+                      <p className="mt-0.5 font-sans text-[10px] text-slate/50">
+                        {new Date(n.createdAt).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </Link>
+                    {isAssignment && !response && (
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRespond(n, "accepted")}
+                          className="rounded-lg bg-sage/15 px-3 py-1.5 font-sans text-xs font-medium text-sage-dark hover:bg-sage/25 transition-colors cursor-pointer"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRespond(n, "declined")}
+                          className="rounded-lg bg-red-500/10 px-3 py-1.5 font-sans text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                    {isAssignment && response && (
+                      <p className={`mt-1.5 font-sans text-xs font-medium ${response === "accepted" ? "text-sage-dark" : "text-red-500"}`}>
+                        {response === "accepted" ? "Accepted" : "Declined"}
+                      </p>
+                    )}
+                  </div>
                 );
               })
             )}

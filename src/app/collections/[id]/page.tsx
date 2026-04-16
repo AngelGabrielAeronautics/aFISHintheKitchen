@@ -10,6 +10,7 @@ import {
   updateCollection,
   deleteCollection,
   createNotification,
+  updateAssignmentStatus,
 } from "@/lib/firebase-recipes";
 import type { RecipeCollection, Recipe, EventMenuComment, EditLogEntry } from "@/lib/types";
 import { FAMILY_MEMBERS } from "@/lib/types";
@@ -37,6 +38,7 @@ export default function CollectionDetailPage() {
 
   // Assignments
   const [assignments, setAssignments] = useState<Record<string, string[]>>({});
+  const [assignmentStatus, setAssignmentStatus] = useState<Record<string, Record<string, "pending" | "accepted" | "declined">>>({});
 
   // Comments
   const [comments, setComments] = useState<EventMenuComment[]>([]);
@@ -72,6 +74,7 @@ export default function CollectionDetailPage() {
         setAssignments(migrated);
         setComments(found.comments ?? []);
         setEditHistory(found.editHistory ?? []);
+        setAssignmentStatus(found.assignmentStatus ?? {});
       }
       setAllRecipes(recs);
       setLoading(false);
@@ -171,9 +174,21 @@ export default function CollectionDetailPage() {
       next[recipeId] = filtered;
     }
     setAssignments(next);
+
+    // Update assignment status
+    const nextStatus = { ...assignmentStatus };
+    if (member) {
+      if (!nextStatus[recipeId]) nextStatus[recipeId] = {};
+      nextStatus[recipeId][member] = "pending";
+    }
+    if (previous && previous !== member) {
+      if (nextStatus[recipeId]) delete nextStatus[recipeId][previous];
+    }
+    setAssignmentStatus(nextStatus);
+
     if (collection) {
-      setCollection({ ...collection, assignments: next });
-      updateCollection(collection.id, { assignments: next }).catch(() => {});
+      setCollection({ ...collection, assignments: next, assignmentStatus: nextStatus });
+      updateCollection(collection.id, { assignments: next, assignmentStatus: nextStatus }).catch(() => {});
 
       // Notify and log
       if (member && member !== previous) {
@@ -181,15 +196,41 @@ export default function CollectionDetailPage() {
         const assignedBy = user?.displayName || user?.email || "Someone";
         createNotification({
           type: "event-assignment",
-          message: `${assignedBy} assigned you to make "${recipe?.title ?? "a recipe"}" for ${collection.name}`,
+          message: `${assignedBy} assigned you to make "${recipe?.title ?? "a recipe"}" for ${collection.name}. Do you accept?`,
           link: `/collections/${collection.id}`,
           authorName: assignedBy,
+          collectionId: collection.id,
+          recipeId,
+          assignedMember: member,
         }).catch(() => {});
         logEdit(`Assigned ${member} to ${recipe?.title ?? "a recipe"}`);
       } else if (!member && previous) {
         const recipe = recipeMap.get(recipeId);
         logEdit(`Unassigned ${previous} from ${recipe?.title ?? "a recipe"}`);
       }
+    }
+  }
+
+  async function handleRespondAssignment(recipeId: string, member: string, status: "accepted" | "declined") {
+    if (!collection) return;
+    const nextStatus = { ...assignmentStatus };
+    if (!nextStatus[recipeId]) nextStatus[recipeId] = {};
+    nextStatus[recipeId][member] = status;
+    setAssignmentStatus(nextStatus);
+    setCollection({ ...collection, assignmentStatus: nextStatus });
+    await updateAssignmentStatus(collection.id, recipeId, member, status).catch(() => {});
+    logEdit(`${member} ${status} assignment for ${recipeMap.get(recipeId)?.title ?? "a recipe"}`);
+
+    if (status === "declined") {
+      // Remove the declined member from assignments
+      const nextAssign = { ...assignments };
+      if (nextAssign[recipeId]) {
+        nextAssign[recipeId] = nextAssign[recipeId].filter((m) => m !== member);
+        if (nextAssign[recipeId].length === 0) delete nextAssign[recipeId];
+      }
+      setAssignments(nextAssign);
+      setCollection((prev) => prev ? { ...prev, assignments: nextAssign } : prev);
+      updateCollection(collection.id, { assignments: nextAssign }).catch(() => {});
     }
   }
 
@@ -459,6 +500,9 @@ export default function CollectionDetailPage() {
                       const current = assignments[recipe.id] ?? [];
                       const value = current[slot] ?? "";
                       const otherSlots = current.filter((_, i) => i !== slot);
+                      const status = value ? (assignmentStatus[recipe.id]?.[value] ?? "pending") : null;
+                      const currentUserName = user?.displayName || user?.email || "";
+                      const isCurrentUser = value === currentUserName;
                       return (
                         <div key={slot} className="flex items-center gap-2 rounded-lg bg-warm-white px-3 py-1.5 ring-1 ring-cream-dark/30">
                           {value ? (
@@ -478,6 +522,23 @@ export default function CollectionDetailPage() {
                               <option key={name} value={name}>{name}</option>
                             ))}
                           </select>
+                          {/* Status badge */}
+                          {status && (
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 font-sans text-[10px] font-medium ${
+                              status === "accepted" ? "bg-sage/15 text-sage-dark" :
+                              status === "declined" ? "bg-red-500/10 text-red-500" :
+                              "bg-gold-light/30 text-gold"
+                            }`}>
+                              {status === "accepted" ? "Accepted" : status === "declined" ? "Declined" : "Pending"}
+                            </span>
+                          )}
+                          {/* Accept/Decline for current user */}
+                          {isCurrentUser && status === "pending" && (
+                            <div className="flex gap-1 shrink-0">
+                              <button type="button" onClick={() => handleRespondAssignment(recipe.id, value, "accepted")} className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-sage/15 text-sage-dark hover:bg-sage/25 transition-colors cursor-pointer">Accept</button>
+                              <button type="button" onClick={() => handleRespondAssignment(recipe.id, value, "declined")} className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer">Decline</button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

@@ -225,6 +225,7 @@ export interface RecipeCollection {
   createdBy: string;
   recipeIds: string[];
   assignments?: Record<string, string[]>; // recipeId -> up to 3 family member names
+  assignmentStatus?: Record<string, Record<string, "pending" | "accepted" | "declined">>;
   comments?: EventMenuComment[];
   editHistory?: EditLogEntry[];
   createdAt: string;
@@ -278,6 +279,10 @@ export interface AppNotification {
   message: string;
   link: string;
   authorName: string;
+  // Event assignment metadata
+  collectionId?: string;
+  recipeId?: string;
+  assignedMember?: string;
   createdAt: string;
   readBy: string[];
 }

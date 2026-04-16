@@ -278,6 +278,22 @@ export async function deleteCollection(id: string): Promise<void> {
   await deleteDoc(docRef);
 }
 
+export async function updateAssignmentStatus(
+  collectionId: string,
+  recipeId: string,
+  memberName: string,
+  status: "pending" | "accepted" | "declined"
+): Promise<void> {
+  const docRef = doc(getDb(), "collections", collectionId);
+  const snapshot = await getDoc(docRef);
+  if (!snapshot.exists()) return;
+  const data = snapshot.data() as RecipeCollection;
+  const assignmentStatus = data.assignmentStatus ?? {};
+  if (!assignmentStatus[recipeId]) assignmentStatus[recipeId] = {};
+  assignmentStatus[recipeId][memberName] = status;
+  await updateDoc(docRef, { assignmentStatus });
+}
+
 // --- User Management ---
 
 export interface InvitedUser {
@@ -406,7 +422,7 @@ function notificationsCollection() {
   return collection(getDb(), "notifications");
 }
 
-export async function createNotification(data: { type: "new-recipe" | "event-assignment"; message: string; link: string; authorName: string }): Promise<void> {
+export async function createNotification(data: { type: "new-recipe" | "event-assignment"; message: string; link: string; authorName: string; collectionId?: string; recipeId?: string; assignedMember?: string }): Promise<void> {
   await addDoc(notificationsCollection(), {
     ...data,
     createdAt: new Date().toISOString(),
