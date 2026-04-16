@@ -19,20 +19,49 @@ function ShoppingListContent() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preselectedIds));
-  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(
-    new Set()
-  );
-  const [viewMode, setViewMode] = useState<ViewMode>("by-recipe");
-  const [listGenerated, setListGenerated] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("shoppingListIds");
+      const savedSet = saved ? new Set<string>(JSON.parse(saved)) : new Set<string>();
+      // Merge with any URL params
+      for (const id of preselectedIds) savedSet.add(id);
+      return savedSet;
+    } catch { return new Set<string>(preselectedIds); }
+  });
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("shoppingListChecked");
+      return saved ? new Set<string>(JSON.parse(saved)) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      return (localStorage.getItem("shoppingListView") as ViewMode) || "by-recipe";
+    } catch { return "by-recipe"; }
+  });
+  const [listGenerated, setListGenerated] = useState(() => {
+    try {
+      return localStorage.getItem("shoppingListGenerated") === "true" || preselectedIds.length > 0;
+    } catch { return preselectedIds.length > 0; }
+  });
   const [copied, setCopied] = useState(false);
+
+  // Persist state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("shoppingListIds", JSON.stringify([...selectedIds]));
+      localStorage.setItem("shoppingListChecked", JSON.stringify([...checkedIngredients]));
+      localStorage.setItem("shoppingListView", viewMode);
+      localStorage.setItem("shoppingListGenerated", String(listGenerated));
+    } catch { /* ignore */ }
+  }, [selectedIds, checkedIngredients, viewMode, listGenerated]);
 
   useEffect(() => {
     if (!user) return;
     getAllRecipes()
       .then((all) => {
         setRecipes(all);
-        // Auto-generate list if recipes were pre-selected from meal planner
+        // Auto-generate list if recipes were pre-selected from URL
         if (preselectedIds.length > 0) {
           setListGenerated(true);
         }
@@ -109,6 +138,12 @@ function ShoppingListContent() {
     setCheckedIngredients(new Set());
     setListGenerated(false);
     setViewMode("by-recipe");
+    try {
+      localStorage.removeItem("shoppingListIds");
+      localStorage.removeItem("shoppingListChecked");
+      localStorage.removeItem("shoppingListView");
+      localStorage.removeItem("shoppingListGenerated");
+    } catch { /* ignore */ }
   }
 
   function handleCopyList() {
