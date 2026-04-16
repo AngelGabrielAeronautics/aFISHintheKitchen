@@ -107,17 +107,6 @@ export default function RecipePage() {
     });
   }
 
-  function downloadIngredients() {
-    const r = recipe!;
-    const text = `${r.title} — Ingredients\n\n${r.ingredients.map((i) => `- ${i}`).join("\n")}\n\nServings: ${r.servings}`;
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${r.slug}-ingredients.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
 
   return (
     <main className="min-h-screen bg-cream">
@@ -494,32 +483,31 @@ export default function RecipePage() {
                     {recipe.servings === 1 ? "serving" : "servings"}
                   </p>
                 </div>
-                <div className="print-hide flex gap-1.5">
+                <div className="print-hide flex items-center gap-1.5">
+                  <Link
+                    href={`/shopping-list?recipes=${recipe.id}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-terracotta/10 px-3 py-1.5 font-sans text-xs font-medium text-terracotta hover:bg-terracotta/20 transition-colors"
+                  >
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                      <path d="M1 1.75A.75.75 0 0 1 1.75 1h1.628a1.75 1.75 0 0 1 1.734 1.51L5.18 3a65.25 65.25 0 0 1 13.36 1.412.75.75 0 0 1 .58.875 48.645 48.645 0 0 1-1.618 6.2.75.75 0 0 1-.712.513H6a2.503 2.503 0 0 0-2.292 1.5H17.25a.75.75 0 0 1 0 1.5H2.76a.75.75 0 0 1-.748-.807 4.002 4.002 0 0 1 2.716-3.486L3.626 2.716a.25.25 0 0 0-.248-.216H1.75A.75.75 0 0 1 1 1.75ZM6 17.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM15.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+                    </svg>
+                    Shopping List
+                  </Link>
                   <button
                     onClick={copyIngredients}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate/50 hover:bg-cream-dark/30 hover:text-charcoal transition-colors cursor-pointer"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate/40 hover:bg-cream-dark/30 hover:text-charcoal transition-colors cursor-pointer"
                     title="Copy ingredients"
                   >
                     {copied ? (
-                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-sage">
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-sage">
                         <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
                       </svg>
                     ) : (
-                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
                         <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
                         <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
                       </svg>
                     )}
-                  </button>
-                  <button
-                    onClick={downloadIngredients}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate/50 hover:bg-cream-dark/30 hover:text-charcoal transition-colors cursor-pointer"
-                    title="Download ingredients"
-                  >
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                      <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-                      <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-                    </svg>
                   </button>
                 </div>
               </div>
