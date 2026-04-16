@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { getAllRecipes } from "@/lib/firebase-recipes";
+import Avatar from "@/components/Avatar";
 import { useAuth } from "@/context/AuthContext";
 import type { Recipe } from "@/lib/types";
 
@@ -29,6 +30,8 @@ interface MealAssignment {
 
 interface MealPlan {
   weekId: string;
+  userId: string;
+  userName: string;
   meals: Partial<Record<DayKey, MealAssignment>>;
 }
 
@@ -93,16 +96,26 @@ function getTodayDayKey(): DayKey | null {
 
 // --- Firestore helpers ---
 
-async function loadMealPlan(weekId: string): Promise<MealPlan> {
-  const snap = await getDoc(doc(getDb(), "mealPlans", weekId));
+function planDocId(uid: string, weekId: string) {
+  return `${uid}_${weekId}`;
+}
+
+async function loadMealPlan(uid: string, userName: string, weekId: string): Promise<MealPlan> {
+  const snap = await getDoc(doc(getDb(), "mealPlans", planDocId(uid, weekId)));
   if (snap.exists()) {
     return snap.data() as MealPlan;
   }
-  return { weekId, meals: {} };
+  return { weekId, userId: uid, userName, meals: {} };
 }
 
 async function saveMealPlan(plan: MealPlan): Promise<void> {
-  await setDoc(doc(getDb(), "mealPlans", plan.weekId), plan);
+  await setDoc(doc(getDb(), "mealPlans", planDocId(plan.userId, plan.weekId)), plan);
+}
+
+async function loadFamilyPlans(weekId: string): Promise<MealPlan[]> {
+  const q = query(collection(getDb(), "mealPlans"), where("weekId", "==", weekId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data() as MealPlan);
 }
 
 // --- Recipe Search Modal ---
@@ -246,6 +259,8 @@ export default function MealPlannerPage() {
     getMondayOfWeek(new Date())
   );
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
+  const [familyPlans, setFamilyPlans] = useState<MealPlan[]>([]);
+  const [viewMode, setViewMode] = useState<"mine" | "family">("mine");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loadingPlan, setLoadingPlan] = useState(true);
   const [loadingRecipes, setLoadingRecipes] = useState(true);
@@ -275,10 +290,16 @@ export default function MealPlannerPage() {
   // Load meal plan when week changes
   useEffect(() => {
     if (!user) return;
+    const userName = user.displayName || user.email || "Unknown";
     let cancelled = false;
-    loadMealPlan(weekId).then((plan) => {
+    setLoadingPlan(true);
+    Promise.all([
+      loadMealPlan(user.uid, userName, weekId),
+      loadFamilyPlans(weekId),
+    ]).then(([myPlan, allPlans]) => {
       if (!cancelled) {
-        setMealPlan(plan);
+        setMealPlan(myPlan);
+        setFamilyPlans(allPlans.filter((p) => p.userId !== user.uid && Object.keys(p.meals).length > 0));
         setLoadingPlan(false);
       }
     });
@@ -496,6 +517,31 @@ export default function MealPlannerPage() {
               </div>
             )}
 
+            {/* View tabs */}
+            <div className="flex gap-2 mb-6">
+              <button
+                type="button"
+                onClick={() => setViewMode("mine")}
+                className={`rounded-full px-4 py-1.5 font-sans text-sm font-medium transition-colors cursor-pointer ${viewMode === "mine" ? "bg-terracotta text-white" : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:text-charcoal"}`}
+              >
+                My Plan
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("family")}
+                className={`rounded-full px-4 py-1.5 font-sans text-sm font-medium transition-colors cursor-pointer ${viewMode === "family" ? "bg-terracotta text-white" : "bg-warm-white text-slate ring-1 ring-cream-dark/40 hover:text-charcoal"}`}
+              >
+                Family
+                {familyPlans.length > 0 && (
+                  <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 text-xs ${viewMode === "family" ? "bg-white/20" : "bg-cream-dark/30"}`}>
+                    {familyPlans.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {viewMode === "mine" ? (
+            <>
             {/* Day grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {DAYS.map(({ key, label, short }) => {
@@ -634,6 +680,49 @@ export default function MealPlannerPage() {
                   Generate Shopping List for This Week
                 </Link>
               </div>
+            )}
+            </>
+            ) : (
+            /* ---- Family view ---- */
+            <div>
+              {familyPlans.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="font-sans text-sm text-slate">No other family members have planned meals for this week yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {familyPlans.map((plan) => (
+                    <div key={plan.userId} className="rounded-2xl bg-warm-white p-5 ring-1 ring-cream-dark/30">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Avatar name={plan.userName} size="md" ring />
+                        <h3 className="font-serif text-lg font-bold text-charcoal">{plan.userName}&rsquo;s Plan</h3>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                        {DAYS.map(({ key, short }) => {
+                          const meal = plan.meals[key];
+                          return (
+                            <div key={key} className="rounded-lg bg-cream/60 p-2.5">
+                              <p className="font-sans text-[10px] font-semibold text-slate/60 uppercase mb-1.5">{short}</p>
+                              {meal ? (
+                                <Link href={`/recipes/${meal.slug}`} className="block">
+                                  {meal.image && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={meal.image} alt="" className="w-full aspect-square rounded-md object-cover mb-1.5" />
+                                  )}
+                                  <p className="font-sans text-xs font-medium text-charcoal leading-tight line-clamp-2 hover:text-terracotta transition-colors">{meal.title}</p>
+                                </Link>
+                              ) : (
+                                <p className="font-sans text-[10px] text-slate/40 italic">No meal</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             )}
           </>
         )}
