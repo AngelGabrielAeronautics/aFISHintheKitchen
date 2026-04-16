@@ -39,11 +39,6 @@ function ShoppingListContent() {
       return (localStorage.getItem("shoppingListView") as ViewMode) || "by-recipe";
     } catch { return "by-recipe"; }
   });
-  const [listGenerated, setListGenerated] = useState(() => {
-    try {
-      return localStorage.getItem("shoppingListGenerated") === "true" || preselectedIds.length > 0;
-    } catch { return preselectedIds.length > 0; }
-  });
   const [copied, setCopied] = useState(false);
 
   // Persist state to localStorage
@@ -52,19 +47,14 @@ function ShoppingListContent() {
       localStorage.setItem("shoppingListIds", JSON.stringify([...selectedIds]));
       localStorage.setItem("shoppingListChecked", JSON.stringify([...checkedIngredients]));
       localStorage.setItem("shoppingListView", viewMode);
-      localStorage.setItem("shoppingListGenerated", String(listGenerated));
     } catch { /* ignore */ }
-  }, [selectedIds, checkedIngredients, viewMode, listGenerated]);
+  }, [selectedIds, checkedIngredients, viewMode]);
 
   useEffect(() => {
     if (!user) return;
     getAllRecipes()
       .then((all) => {
         setRecipes(all);
-        // Auto-generate list if recipes were pre-selected from URL
-        if (preselectedIds.length > 0) {
-          setListGenerated(true);
-        }
       })
       .finally(() => setLoadingRecipes(false));
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -126,23 +116,15 @@ function ShoppingListContent() {
     });
   }
 
-  function handleGenerate() {
-    if (selectedIds.size === 0) return;
-    setCheckedIngredients(new Set());
-    setListGenerated(true);
-  }
-
   function handleClear() {
     if (!confirm("Clear all selections and start over?")) return;
     setSelectedIds(new Set());
     setCheckedIngredients(new Set());
-    setListGenerated(false);
     setViewMode("by-recipe");
     try {
       localStorage.removeItem("shoppingListIds");
       localStorage.removeItem("shoppingListChecked");
       localStorage.removeItem("shoppingListView");
-      localStorage.removeItem("shoppingListGenerated");
     } catch { /* ignore */ }
   }
 
@@ -350,23 +332,12 @@ function ShoppingListContent() {
                 </div>
               )}
 
-              {/* Generate button */}
-              <div className="mt-5 pt-4 border-t border-gold-light/50">
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={selectedIds.size === 0}
-                  className="w-full bg-terracotta text-white font-medium py-3 rounded-lg hover:bg-terracotta-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Generate Shopping List
-                </button>
-              </div>
             </div>
           </div>
 
           {/* Right column: shopping list */}
           <div className="flex-1 min-w-0">
-            {!listGenerated ? (
+            {selectedIds.size === 0 ? (
               <div className="bg-warm-white rounded-2xl border border-gold-light/50 shadow-sm p-8 sm:p-12 text-center">
                 <div className="w-16 h-16 bg-cream-dark/40 rounded-full flex items-center justify-center mx-auto mb-5">
                   <svg
@@ -384,11 +355,10 @@ function ShoppingListContent() {
                   </svg>
                 </div>
                 <h3 className="font-serif text-xl text-charcoal mb-2">
-                  No list yet
+                  No recipes selected
                 </h3>
                 <p className="text-slate text-sm max-w-sm mx-auto">
-                  Select the recipes you plan to cook, then click &quot;Generate
-                  Shopping List&quot; to combine all the ingredients.
+                  Select recipes from the list or add them from a recipe page to build your shopping list.
                 </p>
               </div>
             ) : (
