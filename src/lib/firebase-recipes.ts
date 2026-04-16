@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
+import { slugify, matchesRecipeQuery } from "./recipe-utils";
 import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory, AppNotification, UserPreferences, Household, HouseholdMember, HouseholdCustomisation } from "./types";
 
 function recipesCollection() {
@@ -69,28 +70,13 @@ export async function getFeaturedRecipes(householdId?: string): Promise<Recipe[]
 
 export async function searchRecipes(queryStr: string, householdId?: string): Promise<Recipe[]> {
   const all = await getAllRecipes(householdId);
-  const lower = queryStr.toLowerCase();
-  return all.filter((recipe) => {
-    return (
-      recipe.title.toLowerCase().includes(lower) ||
-      recipe.description.toLowerCase().includes(lower) ||
-      recipe.tags.some((tag) => tag.toLowerCase().includes(lower)) ||
-      recipe.ingredients.some((ingredient) =>
-        ingredient.toLowerCase().includes(lower)
-      )
-    );
-  });
+  return all.filter((recipe) => matchesRecipeQuery(recipe, queryStr));
 }
 
 export async function addRecipe(
   recipe: Omit<Recipe, "id" | "slug" | "createdAt">
 ): Promise<Recipe> {
-  const slug = recipe.title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
+  const slug = slugify(recipe.title);
 
   const createdAt = new Date().toISOString();
 
