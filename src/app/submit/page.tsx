@@ -284,8 +284,7 @@ export default function SubmitRecipePage() {
       createNotification({
         type: "new-recipe",
         message: `${contributedBy} added a new recipe: ${title}`,
-        recipeSlug: savedRecipe.slug,
-        recipeTitle: title,
+        link: `/recipes/${savedRecipe.slug}`,
         authorName: contributedBy,
       }).catch(() => {}); // fire and forget
 

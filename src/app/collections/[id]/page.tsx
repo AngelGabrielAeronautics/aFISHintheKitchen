@@ -9,8 +9,9 @@ import {
   getAllRecipes,
   updateCollection,
   deleteCollection,
+  createNotification,
 } from "@/lib/firebase-recipes";
-import type { RecipeCollection, Recipe } from "@/lib/types";
+import type { RecipeCollection, Recipe, EventMenuComment } from "@/lib/types";
 import { FAMILY_MEMBERS } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
 import Avatar from "@/components/Avatar";
@@ -36,6 +37,11 @@ export default function CollectionDetailPage() {
   // Assignments
   const [assignments, setAssignments] = useState<Record<string, string>>({});
 
+  // Comments
+  const [comments, setComments] = useState<EventMenuComment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [addingComment, setAddingComment] = useState(false);
+
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -54,6 +60,7 @@ export default function CollectionDetailPage() {
       } else {
         setCollection(found);
         setAssignments(found.assignments ?? {});
+        setComments(found.comments ?? []);
       }
       setAllRecipes(recs);
       setLoading(false);
@@ -124,6 +131,7 @@ export default function CollectionDetailPage() {
 
   async function handleAssign(recipeId: string, member: string) {
     const next = { ...assignments };
+    const previousMember = next[recipeId];
     if (member) {
       next[recipeId] = member;
     } else {
@@ -133,7 +141,42 @@ export default function CollectionDetailPage() {
     if (collection) {
       setCollection({ ...collection, assignments: next });
       updateCollection(collection.id, { assignments: next }).catch(() => {});
+
+      // Notify the assigned person (if changed)
+      if (member && member !== previousMember) {
+        const recipe = recipeMap.get(recipeId);
+        const assignedBy = user?.displayName || user?.email || "Someone";
+        createNotification({
+          type: "event-assignment",
+          message: `${assignedBy} assigned you to make "${recipe?.title ?? "a recipe"}" for ${collection.name}`,
+          link: `/collections/${collection.id}`,
+          authorName: assignedBy,
+        }).catch(() => {});
+      }
     }
+  }
+
+  async function handleAddComment() {
+    if (!newComment.trim() || !user || !collection) return;
+    setAddingComment(true);
+    const comment: EventMenuComment = {
+      id: Date.now().toString(),
+      author: user.displayName || user.email || "Unknown",
+      text: newComment.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...comments, comment];
+    setComments(updated);
+    setNewComment("");
+    updateCollection(collection.id, { comments: updated }).catch(() => {});
+    setAddingComment(false);
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    if (!collection) return;
+    const updated = comments.filter((c) => c.id !== commentId);
+    setComments(updated);
+    updateCollection(collection.id, { comments: updated }).catch(() => {});
   }
 
   async function handleDelete() {
@@ -398,6 +441,67 @@ export default function CollectionDetailPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Comments */}
+      {!editing && collection && (
+        <div className="mt-10 rounded-2xl bg-warm-white p-6 ring-1 ring-cream-dark/30">
+          <h3 className="font-serif text-lg font-bold text-charcoal">
+            Comments
+          </h3>
+
+          {comments.length > 0 ? (
+            <div className="mt-4 space-y-4">
+              {comments.map((c) => (
+                <div key={c.id} className="flex gap-3">
+                  <Avatar name={c.author} size="sm" ring />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-sans text-xs font-semibold text-charcoal">{c.author}</span>
+                      <span className="font-sans text-[10px] text-slate/50">
+                        {new Date(c.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      {user && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(c.id)}
+                          aria-label="Delete comment"
+                          className="ml-auto font-sans text-[10px] text-slate/30 hover:text-red-500 transition-colors cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-0.5 font-sans text-sm text-slate whitespace-pre-line">{c.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 font-sans text-xs text-slate/50">No comments yet.</p>
+          )}
+
+          {user && (
+            <div className="mt-4 flex gap-2 pt-4 border-t border-cream-dark/20">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                placeholder="Add a comment..."
+                className="flex-1 rounded-lg border border-gold-light bg-cream px-3 py-2 font-sans text-sm text-charcoal placeholder:text-slate/40 outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+              />
+              <button
+                type="button"
+                onClick={handleAddComment}
+                disabled={addingComment || !newComment.trim()}
+                className="rounded-lg bg-terracotta px-4 py-2 font-sans text-sm font-medium text-white hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                Post
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </main>
   );

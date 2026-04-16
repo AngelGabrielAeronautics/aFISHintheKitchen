@@ -406,7 +406,7 @@ function notificationsCollection() {
   return collection(getDb(), "notifications");
 }
 
-export async function createNotification(data: { type: "new-recipe"; message: string; recipeSlug: string; recipeTitle: string; authorName: string }): Promise<void> {
+export async function createNotification(data: { type: "new-recipe" | "event-assignment"; message: string; link: string; authorName: string }): Promise<void> {
   await addDoc(notificationsCollection(), {
     ...data,
     createdAt: new Date().toISOString(),

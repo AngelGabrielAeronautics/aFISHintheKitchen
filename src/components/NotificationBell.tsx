@@ -106,7 +106,7 @@ export default function NotificationBell() {
                 return (
                   <Link
                     key={n.id}
-                    href={`/recipes/${n.recipeSlug}`}
+                    href={n.link}
                     onClick={() => { handleMarkRead(n.id); setOpen(false); }}
                     className={`block px-4 py-3 border-b border-cream-dark/20 last:border-b-0 transition-colors hover:bg-cream-dark/20 ${isUnread ? "bg-terracotta/5" : ""}`}
                   >

@@ -211,6 +211,13 @@ export const CATEGORIES: CategoryInfo[] = [
   },
 ];
 
+export interface EventMenuComment {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface RecipeCollection {
   id: string;
   name: string;
@@ -218,6 +225,7 @@ export interface RecipeCollection {
   createdBy: string;
   recipeIds: string[];
   assignments?: Record<string, string>; // recipeId -> family member name
+  comments?: EventMenuComment[];
   createdAt: string;
 }
 
@@ -265,10 +273,9 @@ export interface KitchenTip {
 
 export interface AppNotification {
   id: string;
-  type: "new-recipe";
+  type: "new-recipe" | "event-assignment";
   message: string;
-  recipeSlug: string;
-  recipeTitle: string;
+  link: string;
   authorName: string;
   createdAt: string;
   readBy: string[];
