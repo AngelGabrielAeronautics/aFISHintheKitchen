@@ -143,10 +143,16 @@ export default function CollectionDetailPage() {
       const changes: string[] = [];
       if (editName.trim() !== collection.name) changes.push("Updated name");
       if (editDesc.trim() !== collection.description) changes.push("Updated description");
-      const added = editRecipeIds.filter((id) => !collection.recipeIds.includes(id)).length;
-      const removed = collection.recipeIds.filter((id) => !editRecipeIds.includes(id)).length;
-      if (added > 0) changes.push(`Added ${added} recipe${added > 1 ? "s" : ""}`);
-      if (removed > 0) changes.push(`Removed ${removed} recipe${removed > 1 ? "s" : ""}`);
+      const addedIds = editRecipeIds.filter((id) => !collection.recipeIds.includes(id));
+      const removedIds = collection.recipeIds.filter((id) => !editRecipeIds.includes(id));
+      if (addedIds.length > 0) {
+        const names = addedIds.map((id) => recipeMap.get(id)?.title ?? "Unknown").join(", ");
+        changes.push(`Added ${names}`);
+      }
+      if (removedIds.length > 0) {
+        const names = removedIds.map((id) => recipeMap.get(id)?.title ?? "Unknown").join(", ");
+        changes.push(`Removed ${names}`);
+      }
       if (changes.length > 0) logEdit(changes.join(", "));
 
       setCollection({
