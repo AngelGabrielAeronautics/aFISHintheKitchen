@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import SortableList from "@/components/SortableList";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import UnsavedChangesModal from "@/components/UnsavedChangesModal";
-import { addRecipe, uploadRecipeImage } from "@/lib/firebase-recipes";
+import { addRecipe, uploadRecipeImage, createNotification } from "@/lib/firebase-recipes";
 
 interface FormErrors {
   title?: string;
@@ -279,6 +279,16 @@ export default function SubmitRecipePage() {
       };
 
       const savedRecipe = await addRecipe(recipeData);
+
+      // Notify the family
+      createNotification({
+        type: "new-recipe",
+        message: `${contributedBy} added a new recipe: ${title}`,
+        recipeSlug: savedRecipe.slug,
+        recipeTitle: title,
+        authorName: contributedBy,
+      }).catch(() => {}); // fire and forget
+
       router.push(`/recipes/${savedRecipe.slug}?saved=1`);
     } catch {
       setErrors((prev) => ({

@@ -261,3 +261,18 @@ export interface KitchenTip {
   linkedRecipes?: { id: string; title: string; slug: string }[];
   createdAt: string;
 }
+
+export interface AppNotification {
+  id: string;
+  type: "new-recipe";
+  message: string;
+  recipeSlug: string;
+  recipeTitle: string;
+  authorName: string;
+  createdAt: string;
+  readBy: string[];
+}
+
+export interface UserPreferences {
+  notifyNewRecipes: boolean;
+}

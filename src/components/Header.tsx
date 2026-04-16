@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/Avatar";
+import NotificationBell from "@/components/NotificationBell";
 
 const primaryLinks = [
   { href: "/", label: "Home" },
@@ -119,12 +120,15 @@ export default function Header() {
             {!loading && (
               <>
                 {user ? (
-                  <Link href="/account" className="ml-2 pl-3 border-l border-gold-light flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-cream-dark/60">
-                    <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
-                    <span className="text-xs text-slate">
-                      {user.displayName || user.email}
-                    </span>
-                  </Link>
+                  <div className="ml-2 pl-3 border-l border-gold-light flex items-center gap-1">
+                    <NotificationBell />
+                    <Link href="/account" className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-cream-dark/60">
+                      <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
+                      <span className="text-xs text-slate">
+                        {user.displayName || user.email}
+                      </span>
+                    </Link>
+                  </div>
                 ) : (
                   <Link
                     href="/auth"

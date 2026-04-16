@@ -16,6 +16,7 @@ import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import DeleteModal from "@/components/DeleteModal";
+import { getUserPreferences, updateUserPreferences } from "@/lib/firebase-recipes";
 
 function getErrorMessage(code: string): string {
   switch (code) {
@@ -77,6 +78,10 @@ export default function AccountPage() {
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Notification preferences
+  const [notifyNewRecipes, setNotifyNewRecipes] = useState(true);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth");
@@ -88,6 +93,14 @@ export default function AccountPage() {
       setDisplayName(user.displayName);
     }
   }, [user?.displayName]);
+
+  useEffect(() => {
+    if (user?.uid && !prefsLoaded) {
+      getUserPreferences(user.uid)
+        .then((prefs) => { setNotifyNewRecipes(prefs.notifyNewRecipes); setPrefsLoaded(true); })
+        .catch(() => setPrefsLoaded(true));
+    }
+  }, [user?.uid, prefsLoaded]);
 
   if (loading || !user) {
     return null;
@@ -468,6 +481,32 @@ export default function AccountPage() {
             </Link>
           </section>
         )}
+
+        {/* ---- Notifications ---- */}
+        <section className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg">
+          <h2 className="font-serif text-xl font-semibold text-charcoal mb-5">
+            Notifications
+          </h2>
+          <label className="flex items-center justify-between gap-4 cursor-pointer">
+            <div>
+              <p className="font-sans text-sm font-medium text-charcoal">New recipe alerts</p>
+              <p className="font-sans text-xs text-slate">Get notified when a family member adds a new recipe</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={notifyNewRecipes}
+              onClick={() => {
+                const next = !notifyNewRecipes;
+                setNotifyNewRecipes(next);
+                updateUserPreferences(user.uid, { notifyNewRecipes: next }).catch(() => {});
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${notifyNewRecipes ? "bg-terracotta" : "bg-cream-dark"}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${notifyNewRecipes ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </label>
+        </section>
 
         {/* ---- Sign Out & Delete Section ---- */}
         <section className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg">

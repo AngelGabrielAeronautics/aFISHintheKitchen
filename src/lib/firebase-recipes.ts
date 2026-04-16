@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
-import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory } from "./types";
+import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory, AppNotification, UserPreferences } from "./types";
 
 function recipesCollection() {
   return collection(getDb(), "recipes");
@@ -398,4 +398,53 @@ export async function updateTip(id: string, data: Partial<Omit<KitchenTip, "id" 
 export async function deleteTip(id: string): Promise<void> {
   const docRef = doc(getDb(), "tips", id);
   await deleteDoc(docRef);
+}
+
+// ── Notifications ──
+
+function notificationsCollection() {
+  return collection(getDb(), "notifications");
+}
+
+export async function createNotification(data: { type: "new-recipe"; message: string; recipeSlug: string; recipeTitle: string; authorName: string }): Promise<void> {
+  await addDoc(notificationsCollection(), {
+    ...data,
+    createdAt: new Date().toISOString(),
+    readBy: [],
+  });
+}
+
+export async function getNotifications(limit = 20): Promise<AppNotification[]> {
+  const q = query(notificationsCollection(), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.slice(0, limit).map((d) => ({ ...d.data(), id: d.id } as AppNotification));
+}
+
+export async function markNotificationRead(notificationId: string, uid: string): Promise<void> {
+  const docRef = doc(getDb(), "notifications", notificationId);
+  await updateDoc(docRef, { readBy: arrayUnion(uid) });
+}
+
+export async function markAllNotificationsRead(notifications: AppNotification[], uid: string): Promise<void> {
+  const batch = writeBatch(getDb());
+  for (const n of notifications) {
+    if (!n.readBy.includes(uid)) {
+      batch.update(doc(getDb(), "notifications", n.id), { readBy: arrayUnion(uid) });
+    }
+  }
+  await batch.commit();
+}
+
+// ── User Preferences ──
+
+export async function getUserPreferences(uid: string): Promise<UserPreferences> {
+  const docRef = doc(getDb(), "userPreferences", uid);
+  const snapshot = await getDoc(docRef);
+  if (!snapshot.exists()) return { notifyNewRecipes: true };
+  return snapshot.data() as UserPreferences;
+}
+
+export async function updateUserPreferences(uid: string, prefs: Partial<UserPreferences>): Promise<void> {
+  const docRef = doc(getDb(), "userPreferences", uid);
+  await setDoc(docRef, prefs, { merge: true });
 }
