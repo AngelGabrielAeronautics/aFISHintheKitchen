@@ -9,6 +9,7 @@ import { getAllRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
 import Avatar from "@/components/Avatar";
+import { useHousehold } from "@/context/HouseholdContext";
 
 export default function HomePage() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [filterSort, setFilterSort] = useState("newest");
   const [rotwIconError, setRotwIconError] = useState(false);
   const router = useRouter();
+  const { householdId } = useHousehold();
 
   const contributors = [...new Set(allRecipes.map(r => r.contributedBy))].sort();
 
@@ -68,7 +70,7 @@ export default function HomePage() {
   const activeFilterCount = [filterCategory !== "all", filterCook !== "all", filterDifficulty !== "all", filterProtein !== "all", filterIngredient.trim() !== "", filterMaxTime !== "", filterSort !== "newest"].filter(Boolean).length;
 
   useEffect(() => {
-    getAllRecipes()
+    getAllRecipes(householdId ?? undefined)
       .then((all) => setAllRecipes(all))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -390,7 +392,7 @@ export default function HomePage() {
           ) : error ? (
             <div className="mt-12 flex flex-col items-center gap-3 py-12 text-center">
               <p className="font-sans text-sm text-slate">Something went wrong loading recipes.</p>
-              <button type="button" onClick={() => { setError(false); setLoading(true); getAllRecipes().then(setAllRecipes).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
+              <button type="button" onClick={() => { setError(false); setLoading(true); getAllRecipes(householdId ?? undefined).then(setAllRecipes).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
             </div>
           ) : featuredRecipes.length > 0 ? (
             <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">

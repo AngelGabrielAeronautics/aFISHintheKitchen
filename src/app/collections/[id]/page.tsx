@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 import {
   getAllCollections,
   getAllRecipes,
@@ -22,6 +23,7 @@ export default function CollectionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { householdId } = useHousehold();
 
   const [collection, setCollection] = useState<RecipeCollection | null>(null);
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
@@ -57,8 +59,8 @@ export default function CollectionDetailPage() {
   useEffect(() => {
     async function load() {
       const [cols, recs] = await Promise.all([
-        getAllCollections(),
-        getAllRecipes(),
+        getAllCollections(householdId ?? undefined),
+        getAllRecipes(householdId ?? undefined),
       ]);
       const found = cols.find((c) => c.id === collectionId);
       if (!found) {

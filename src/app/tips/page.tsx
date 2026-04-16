@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 import Link from "next/link";
 import { getAllTips, getAllRecipes, addTip, deleteTip, updateTip, uploadTipFile } from "@/lib/firebase-recipes";
 import type { KitchenTip, Recipe } from "@/lib/types";
@@ -13,6 +14,7 @@ const inputClasses =
 
 export default function TipsPage() {
   const { user } = useAuth();
+  const { householdId } = useHousehold();
   const [tips, setTips] = useState<KitchenTip[]>([]);
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function TipsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([getAllTips(), getAllRecipes()])
+    Promise.all([getAllTips(householdId ?? undefined), getAllRecipes(householdId ?? undefined)])
       .then(([t, r]) => { setTips(t); setAllRecipes(r); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -482,7 +484,7 @@ export default function TipsPage() {
               onClick={() => {
                 setError(false);
                 setLoading(true);
-                getAllTips()
+                getAllTips(householdId ?? undefined)
                   .then(setTips)
                   .catch(() => setError(true))
                   .finally(() => setLoading(false));

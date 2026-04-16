@@ -3,11 +3,13 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 import { getAllCollections, getAllRecipes, addCollection } from "@/lib/firebase-recipes";
 import type { RecipeCollection, Recipe } from "@/lib/types";
 
 export default function CollectionsPage() {
   const { user } = useAuth();
+  const { householdId } = useHousehold();
   const [collections, setCollections] = useState<RecipeCollection[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     async function load() {
-      const [cols, recs] = await Promise.all([getAllCollections(), getAllRecipes()]);
+      const [cols, recs] = await Promise.all([getAllCollections(householdId ?? undefined), getAllRecipes(householdId ?? undefined)]);
       setCollections(cols);
       setRecipes(recs);
       setLoading(false);

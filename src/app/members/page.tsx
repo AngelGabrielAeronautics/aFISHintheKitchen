@@ -5,6 +5,7 @@ import { getAllMembers, updateMember } from "@/lib/firebase-recipes";
 import type { Member } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 
 const inputClass =
   "w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20";
@@ -40,6 +41,7 @@ function splitComma(value: string): string[] {
 
 export default function MembersPage() {
   const { user } = useAuth();
+  const { householdId } = useHousehold();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -48,7 +50,7 @@ export default function MembersPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getAllMembers()
+    getAllMembers(householdId ?? undefined)
       .then(setMembers)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -113,7 +115,7 @@ export default function MembersPage() {
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-20 text-center">
             <p className="font-sans text-sm text-slate">Something went wrong loading family members.</p>
-            <button type="button" onClick={() => { setError(false); setLoading(true); getAllMembers().then(setMembers).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
+            <button type="button" onClick={() => { setError(false); setLoading(true); getAllMembers(householdId ?? undefined).then(setMembers).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
           </div>
         ) : members.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">

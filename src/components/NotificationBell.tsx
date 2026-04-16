@@ -3,11 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 import { getNotifications, markNotificationRead, markAllNotificationsRead, updateAssignmentStatus } from "@/lib/firebase-recipes";
 import type { AppNotification } from "@/lib/types";
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const { householdId } = useHousehold();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -19,10 +21,10 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!uid) return;
-    getNotifications(undefined, 20).then(setNotifications).catch(() => {});
+    getNotifications(householdId ?? undefined, 20).then(setNotifications).catch(() => {});
     // Poll every 60s for new notifications
     const interval = setInterval(() => {
-      getNotifications(undefined, 20).then(setNotifications).catch(() => {});
+      getNotifications(householdId ?? undefined, 20).then(setNotifications).catch(() => {});
     }, 60_000);
     return () => clearInterval(interval);
   }, [uid]);

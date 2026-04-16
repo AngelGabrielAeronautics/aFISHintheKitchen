@@ -10,6 +10,7 @@ import {
   getAdminEmails,
   type InvitedUser,
 } from "@/lib/firebase-recipes";
+import { useHousehold } from "@/context/HouseholdContext";
 
 /*
   Firestore rules needed (deploy manually):
@@ -30,6 +31,7 @@ import {
 export default function AdminUsersPage() {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
+  const { householdId } = useHousehold();
 
   const [users, setUsers] = useState<InvitedUser[]>([]);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
@@ -48,7 +50,7 @@ export default function AdminUsersPage() {
   const fetchData = useCallback(async () => {
     try {
       const [usersData, adminsData] = await Promise.all([
-        getInvitedUsers(),
+        getInvitedUsers(householdId ?? undefined),
         getAdminEmails(),
       ]);
       setUsers(usersData);
@@ -95,6 +97,7 @@ export default function AdminUsersPage() {
         email: trimmedEmail,
         name: trimmedName,
         invitedBy: user?.displayName ?? "Unknown",
+        ...(householdId ? { householdId } : {}),
       });
       setSuccessMessage(`Invitation added for ${trimmedName} (${trimmedEmail})`);
       setInviteName("");

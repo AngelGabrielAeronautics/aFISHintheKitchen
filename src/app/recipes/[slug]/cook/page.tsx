@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getRecipeBySlug } from "@/lib/firebase-recipes";
+import { useHousehold } from "@/context/HouseholdContext";
 import type { Recipe } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -166,6 +167,7 @@ export default function CookModePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [timers, setTimers] = useState<Record<number, StepTimer>>({});
+  const { householdId } = useHousehold();
   const [restoredState, setRestoredState] = useState(false);
 
   // Restore saved state from localStorage on mount (multi-session)
@@ -273,7 +275,7 @@ export default function CookModePage() {
   // Fetch recipe
   useEffect(() => {
     if (!slug) return;
-    getRecipeBySlug(slug)
+    getRecipeBySlug(slug, householdId ?? undefined)
       .then((r) => setRecipe(r))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
@@ -407,7 +409,7 @@ export default function CookModePage() {
           <p className="font-sans text-sm text-[#F0EBD8]/60">Could not load the recipe. Check your connection and try again.</p>
           <button
             type="button"
-            onClick={() => { setFetchError(false); setLoading(true); getRecipeBySlug(slug).then((r) => setRecipe(r)).catch(() => setFetchError(true)).finally(() => setLoading(false)); }}
+            onClick={() => { setFetchError(false); setLoading(true); getRecipeBySlug(slug, householdId ?? undefined).then((r) => setRecipe(r)).catch(() => setFetchError(true)).finally(() => setLoading(false)); }}
             className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#3D5A3E] px-5 py-2.5 font-sans text-sm font-medium text-white hover:bg-[#2D4A2E] cursor-pointer"
           >
             Try again

@@ -13,6 +13,7 @@ import RecipePreferences from "@/components/RecipePreferences";
 import RecipeNotes from "@/components/RecipeNotes";
 import EditHistory from "@/components/EditHistory";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 
 export default function RecipePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -24,6 +25,7 @@ export default function RecipePage() {
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [linkedTips, setLinkedTips] = useState<KitchenTip[]>([]);
   const { user } = useAuth();
+  const { householdId } = useHousehold();
   const searchParams = useSearchParams();
 
   const savedParam = searchParams.get("saved");
@@ -38,7 +40,7 @@ export default function RecipePage() {
   useEffect(() => {
     if (!slug) return;
 
-    getRecipeBySlug(slug)
+    getRecipeBySlug(slug, householdId ?? undefined)
       .then((r) => {
         if (r) {
           setRecipe(r);

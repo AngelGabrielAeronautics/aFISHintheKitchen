@@ -10,12 +10,14 @@ import {
 import { CATEGORIES, SEASONS, type Recipe, type Protein, type Season } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 
 type Difficulty = "Easy" | "Medium" | "Hard";
 type SortOption = "newest" | "quickest" | "longest" | "az";
 
 function RecipesContent() {
   const { user } = useAuth();
+  const { householdId } = useHousehold();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") ?? "all";
   const searchParam = searchParams.get("search") ?? "";
@@ -71,14 +73,14 @@ function RecipesContent() {
         let results: Recipe[];
 
         if (search.trim() && category !== "all") {
-          results = await searchRecipes(search);
+          results = await searchRecipes(search, householdId ?? undefined);
           results = results.filter((r) => r.category === category);
         } else if (search.trim()) {
-          results = await searchRecipes(search);
+          results = await searchRecipes(search, householdId ?? undefined);
         } else if (category !== "all") {
-          results = await getRecipesByCategory(category);
+          results = await getRecipesByCategory(category, householdId ?? undefined);
         } else {
-          results = await getAllRecipes();
+          results = await getAllRecipes(householdId ?? undefined);
         }
 
         setRecipes(results);
@@ -95,7 +97,7 @@ function RecipesContent() {
 
   // Fetch all recipes once for category counts and contributor list
   useEffect(() => {
-    getAllRecipes().then(setAllRecipes).catch(() => {});
+    getAllRecipes(householdId ?? undefined).then(setAllRecipes).catch(() => {});
   }, []);
 
   const categoryCounts = allRecipes.reduce<Record<string, number>>((acc, r) => {

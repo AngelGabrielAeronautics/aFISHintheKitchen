@@ -8,6 +8,7 @@ import { getDb } from "@/lib/firebase";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import Avatar from "@/components/Avatar";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 import type { Recipe } from "@/lib/types";
 
 // --- Types ---
@@ -295,6 +296,7 @@ function RecipeSearchModal({
 
 export default function MealPlannerPage() {
   const { user, loading: authLoading } = useAuth();
+  const { householdId } = useHousehold();
   const [currentMonday, setCurrentMonday] = useState<Date>(
     getMondayOfWeek(new Date())
   );
@@ -316,7 +318,7 @@ export default function MealPlannerPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    getAllRecipes().then((r) => {
+    getAllRecipes(householdId ?? undefined).then((r) => {
       if (!cancelled) {
         setRecipes(r);
         setLoadingRecipes(false);

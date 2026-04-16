@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useHousehold } from "@/context/HouseholdContext";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import type { Recipe } from "@/lib/types";
 import Avatar from "@/components/Avatar";
@@ -13,6 +14,7 @@ type ViewMode = "by-recipe" | "combined";
 
 function ShoppingListContent() {
   const { user, loading: authLoading } = useAuth();
+  const { householdId } = useHousehold();
   const searchParams = useSearchParams();
   const preselectedIds = searchParams.get("recipes")?.split(",").filter(Boolean) ?? [];
 
@@ -53,7 +55,7 @@ function ShoppingListContent() {
 
   useEffect(() => {
     if (!user) return;
-    getAllRecipes()
+    getAllRecipes(householdId ?? undefined)
       .then((all) => {
         setRecipes(all);
       })

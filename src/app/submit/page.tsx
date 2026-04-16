@@ -11,6 +11,7 @@ import SortableList from "@/components/SortableList";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import UnsavedChangesModal from "@/components/UnsavedChangesModal";
 import { addRecipe, uploadRecipeImage, createNotification } from "@/lib/firebase-recipes";
+import { useHousehold } from "@/context/HouseholdContext";
 
 interface FormErrors {
   title?: string;
@@ -34,6 +35,7 @@ const INITIAL_INSTRUCTIONS = ["", "", ""];
 export default function SubmitRecipePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { householdId } = useHousehold();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -276,6 +278,7 @@ export default function SubmitRecipePage() {
           .map((t) => t.trim())
           .filter(Boolean),
         featured: false,
+        ...(householdId ? { householdId } : {}),
       };
 
       const savedRecipe = await addRecipe(recipeData);
@@ -286,6 +289,7 @@ export default function SubmitRecipePage() {
         message: `${contributedBy} added a new recipe: ${title}`,
         link: `/recipes/${savedRecipe.slug}`,
         authorName: contributedBy,
+        ...(householdId ? { householdId } : {}),
       }).catch(() => {}); // fire and forget
 
       router.push(`/recipes/${savedRecipe.slug}?saved=1`);

@@ -19,6 +19,7 @@ import {
   addEditLogEntry,
   addRecipe,
 } from "@/lib/firebase-recipes";
+import { useHousehold } from "@/context/HouseholdContext";
 
 interface FormErrors {
   title?: string;
@@ -40,6 +41,7 @@ export default function EditRecipePage() {
   const { slug } = useParams<{ slug: string }>();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { householdId } = useHousehold();
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loadingRecipe, setLoadingRecipe] = useState(true);
@@ -98,7 +100,7 @@ export default function EditRecipePage() {
     async function fetchRecipe() {
       setLoadingRecipe(true);
       try {
-        const fetched = await getRecipeBySlug(slug);
+        const fetched = await getRecipeBySlug(slug, householdId ?? undefined);
         if (!fetched) {
           setNotFound(true);
           return;
