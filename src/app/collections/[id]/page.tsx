@@ -175,11 +175,12 @@ export default function CollectionDetailPage() {
     }
     setAssignments(next);
 
-    // Update assignment status
+    // Update assignment status — auto-accept if assigning yourself
+    const currentUserName = user?.displayName || user?.email || "";
     const nextStatus = { ...assignmentStatus };
     if (member) {
       if (!nextStatus[recipeId]) nextStatus[recipeId] = {};
-      nextStatus[recipeId][member] = "pending";
+      nextStatus[recipeId][member] = member === currentUserName ? "accepted" : "pending";
     }
     if (previous && previous !== member) {
       if (nextStatus[recipeId]) delete nextStatus[recipeId][previous];
@@ -194,15 +195,18 @@ export default function CollectionDetailPage() {
       if (member && member !== previous) {
         const recipe = recipeMap.get(recipeId);
         const assignedBy = user?.displayName || user?.email || "Someone";
-        createNotification({
-          type: "event-assignment",
-          message: `${assignedBy} assigned you to make "${recipe?.title ?? "a recipe"}" for ${collection.name}. Do you accept?`,
-          link: `/collections/${collection.id}`,
-          authorName: assignedBy,
-          collectionId: collection.id,
-          recipeId,
-          assignedMember: member,
-        }).catch(() => {});
+        // Only notify others, not yourself
+        if (member !== currentUserName) {
+          createNotification({
+            type: "event-assignment",
+            message: `${assignedBy} assigned you to make "${recipe?.title ?? "a recipe"}" for ${collection.name}. Do you accept?`,
+            link: `/collections/${collection.id}`,
+            authorName: assignedBy,
+            collectionId: collection.id,
+            recipeId,
+            assignedMember: member,
+          }).catch(() => {});
+        }
         logEdit(`Assigned ${member} to ${recipe?.title ?? "a recipe"}`);
       } else if (!member && previous) {
         const recipe = recipeMap.get(recipeId);
