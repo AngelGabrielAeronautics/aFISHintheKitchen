@@ -129,25 +129,25 @@ export default function CollectionDetailPage() {
     }
   }
 
-  function toggleAssign(recipeId: string, member: string) {
-    const current = assignments[recipeId] ?? [];
-    const isAssigned = current.includes(member);
-    let next: Record<string, string[]>;
-
-    if (isAssigned) {
-      const filtered = current.filter((m) => m !== member);
-      next = { ...assignments };
-      if (filtered.length === 0) {
-        delete next[recipeId];
-      } else {
-        next[recipeId] = filtered;
-      }
+  function handleAssignSlot(recipeId: string, slotIndex: number, member: string) {
+    const current = [...(assignments[recipeId] ?? ["", "", ""])];
+    while (current.length < 3) current.push("");
+    const previous = current[slotIndex];
+    current[slotIndex] = member;
+    const filtered = current.filter(Boolean);
+    const next = { ...assignments };
+    if (filtered.length === 0) {
+      delete next[recipeId];
     } else {
-      if (current.length >= 3) return; // max 3
-      next = { ...assignments, [recipeId]: [...current, member] };
+      next[recipeId] = filtered;
+    }
+    setAssignments(next);
+    if (collection) {
+      setCollection({ ...collection, assignments: next });
+      updateCollection(collection.id, { assignments: next }).catch(() => {});
 
       // Notify the newly assigned person
-      if (collection) {
+      if (member && member !== previous) {
         const recipe = recipeMap.get(recipeId);
         const assignedBy = user?.displayName || user?.email || "Someone";
         createNotification({
@@ -157,12 +157,6 @@ export default function CollectionDetailPage() {
           authorName: assignedBy,
         }).catch(() => {});
       }
-    }
-
-    setAssignments(next);
-    if (collection) {
-      setCollection({ ...collection, assignments: next });
-      updateCollection(collection.id, { assignments: next }).catch(() => {});
     }
   }
 
@@ -426,30 +420,34 @@ export default function CollectionDetailPage() {
               {collectionRecipes.map((recipe) => (
                 <div key={recipe.id}>
                   <RecipeCard recipe={recipe} />
-                  {/* Assignment */}
-                  <div className="mt-2 rounded-lg bg-warm-white px-3 py-2 ring-1 ring-cream-dark/30">
-                    <div className="flex flex-wrap gap-1.5">
-                      {FAMILY_MEMBERS.map((name) => {
-                        const isAssigned = (assignments[recipe.id] ?? []).includes(name);
-                        const atMax = (assignments[recipe.id] ?? []).length >= 3 && !isAssigned;
-                        return (
-                          <button
-                            key={name}
-                            type="button"
-                            onClick={() => toggleAssign(recipe.id, name)}
-                            disabled={atMax}
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-sans text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
-                              isAssigned
-                                ? "bg-terracotta text-white"
-                                : "bg-cream-dark/20 text-slate hover:bg-cream-dark/40"
-                            }`}
+                  {/* Assignment — 3 slots */}
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {[0, 1, 2].map((slot) => {
+                      const current = assignments[recipe.id] ?? [];
+                      const value = current[slot] ?? "";
+                      const otherSlots = current.filter((_, i) => i !== slot);
+                      return (
+                        <div key={slot} className="flex items-center gap-2 rounded-lg bg-warm-white px-3 py-1.5 ring-1 ring-cream-dark/30">
+                          {value ? (
+                            <Avatar name={value} size="sm" ring />
+                          ) : (
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-slate/20 shrink-0">
+                              <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" />
+                            </svg>
+                          )}
+                          <select
+                            value={value}
+                            onChange={(e) => handleAssignSlot(recipe.id, slot, e.target.value)}
+                            className="flex-1 bg-transparent font-sans text-xs text-charcoal outline-none cursor-pointer"
                           >
-                            <Avatar name={name} size="sm" />
-                            {name}
-                          </button>
-                        );
-                      })}
-                    </div>
+                            <option value="">Assign to...</option>
+                            {FAMILY_MEMBERS.filter((name) => name === value || !otherSlots.includes(name)).map((name) => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
