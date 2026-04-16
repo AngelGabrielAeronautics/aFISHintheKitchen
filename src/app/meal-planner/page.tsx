@@ -32,7 +32,7 @@ interface MealPlan {
   weekId: string;
   userId: string;
   userName: string;
-  meals: Partial<Record<DayKey, MealAssignment>>;
+  meals: Partial<Record<DayKey, MealAssignment[]>>;
 }
 
 const DAYS: { key: DayKey; label: string; short: string }[] = [
@@ -101,9 +101,34 @@ function planDocId(uid: string, weekId: string) {
 }
 
 async function loadMealPlan(uid: string, userName: string, weekId: string): Promise<MealPlan> {
+  // Try new per-user doc first
   const snap = await getDoc(doc(getDb(), "mealPlans", planDocId(uid, weekId)));
   if (snap.exists()) {
-    return snap.data() as MealPlan;
+    const data = snap.data() as MealPlan;
+    // Migrate old single-object meals to arrays
+    const meals: MealPlan["meals"] = {};
+    for (const [day, val] of Object.entries(data.meals)) {
+      if (Array.isArray(val)) {
+        meals[day as DayKey] = val;
+      } else if (val && typeof val === "object" && "recipeId" in val) {
+        meals[day as DayKey] = [val as MealAssignment];
+      }
+    }
+    return { ...data, meals };
+  }
+  // Fallback: try old shared doc (weekId only, no uid prefix)
+  const oldSnap = await getDoc(doc(getDb(), "mealPlans", weekId));
+  if (oldSnap.exists()) {
+    const old = oldSnap.data();
+    const meals: MealPlan["meals"] = {};
+    for (const [day, val] of Object.entries(old.meals ?? {})) {
+      if (Array.isArray(val)) {
+        meals[day as DayKey] = val;
+      } else if (val && typeof val === "object" && "recipeId" in val) {
+        meals[day as DayKey] = [val as MealAssignment];
+      }
+    }
+    return { weekId, userId: uid, userName, meals };
   }
   return { weekId, userId: uid, userName, meals: {} };
 }
@@ -289,7 +314,7 @@ export default function MealPlannerPage() {
 
   // Load meal plan when week changes
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
     const userName = user.displayName || user.email || "Unknown";
     let cancelled = false;
     setLoadingPlan(true);
@@ -322,16 +347,18 @@ export default function MealPlannerPage() {
 
   async function assignRecipe(day: DayKey, recipe: Recipe) {
     if (!mealPlan) return;
+    const existing = mealPlan.meals[day] ?? [];
+    const newMeal: MealAssignment = {
+      recipeId: recipe.id,
+      title: recipe.title,
+      slug: recipe.slug,
+      ...(recipe.images?.[0] ? { image: recipe.images[0] } : recipe.image ? { image: recipe.image } : {}),
+    };
     const updated: MealPlan = {
       ...mealPlan,
       meals: {
         ...mealPlan.meals,
-        [day]: {
-          recipeId: recipe.id,
-          title: recipe.title,
-          slug: recipe.slug,
-          ...(recipe.image ? { image: recipe.image } : {}),
-        },
+        [day]: [...existing, newMeal],
       },
     };
     setMealPlan(updated);
@@ -341,11 +368,16 @@ export default function MealPlannerPage() {
     setSaving(false);
   }
 
-  async function removeMeal(day: DayKey) {
+  async function removeMeal(day: DayKey, index: number) {
     if (!mealPlan) return;
-    if (!confirm("Remove this meal from the plan?")) return;
+    const current = mealPlan.meals[day] ?? [];
+    const filtered = current.filter((_, i) => i !== index);
     const meals = { ...mealPlan.meals };
-    delete meals[day];
+    if (filtered.length === 0) {
+      delete meals[day];
+    } else {
+      meals[day] = filtered;
+    }
     const updated: MealPlan = { ...mealPlan, meals };
     setMealPlan(updated);
     setSaving(true);
@@ -495,13 +527,20 @@ export default function MealPlannerPage() {
                   <span className="font-semibold text-terracotta">
                     What&apos;s cooking today?
                   </span>{" "}
-                  {mealPlan?.meals[todayDayKey] ? (
-                    <Link
-                      href={`/recipes/${mealPlan.meals[todayDayKey]!.slug}`}
-                      className="font-medium text-charcoal underline decoration-terracotta/40 hover:decoration-terracotta transition-colors"
-                    >
-                      {mealPlan.meals[todayDayKey]!.title}
-                    </Link>
+                  {(mealPlan?.meals[todayDayKey]?.length ?? 0) > 0 ? (
+                    <span>
+                      {mealPlan!.meals[todayDayKey]!.map((m, i) => (
+                        <span key={m.recipeId}>
+                          {i > 0 && ", "}
+                          <Link
+                            href={`/recipes/${m.slug}`}
+                            className="font-medium text-charcoal underline decoration-terracotta/40 hover:decoration-terracotta transition-colors"
+                          >
+                            {m.title}
+                          </Link>
+                        </span>
+                      ))}
+                    </span>
                   ) : (
                     <span className="text-slate italic">
                       Nothing planned yet -{" "}
@@ -576,91 +615,42 @@ export default function MealPlannerPage() {
                     </div>
 
                     {/* Day body */}
-                    <div className="p-3">
-                      {meal ? (
-                        <div className="space-y-2">
-                          {/* Recipe thumbnail + title */}
-                          <Link
-                            href={`/recipes/${meal.slug}`}
-                            className="flex items-start gap-2.5 group"
-                          >
-                            {meal.image ? (
-                              <Image
-                                src={meal.image}
-                                alt={meal.title}
-                                width={48}
-                                height={48}
-                                className="w-12 h-12 rounded-lg object-cover shrink-0"
-                              />
+                    <div className="p-3 space-y-2">
+                      {(meal ?? []).map((m, i) => (
+                        <div key={`${m.recipeId}-${i}`} className="flex items-start gap-2 group/meal">
+                          <Link href={`/recipes/${m.slug}`} className="flex items-start gap-2 flex-1 min-w-0">
+                            {m.image ? (
+                              <Image src={m.image} alt={m.title} width={36} height={36} className="w-9 h-9 rounded-md object-cover shrink-0" />
                             ) : (
-                              <span className="w-12 h-12 rounded-lg bg-gold-light/30 flex items-center justify-center shrink-0 text-slate/40">
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth={1.5}
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75l-1.5.75a3.354 3.354 0 01-3 0 3.354 3.354 0 00-3 0 3.354 3.354 0 01-3 0 3.354 3.354 0 00-3 0 3.354 3.354 0 01-3 0L3 16.5m15-3.379a48.474 48.474 0 00-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 013 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 016 13.12M12.265 3.11a.375.375 0 11-.53 0L12 2.845l.265.265zm-3 0a.375.375 0 11-.53 0L9 2.845l.265.265zm6 0a.375.375 0 11-.53 0L15 2.845l.265.265z"
-                                  />
+                              <span className="w-9 h-9 rounded-md bg-gold-light/30 flex items-center justify-center shrink-0 text-slate/30">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75l-1.5.75a3.354 3.354 0 01-3 0 3.354 3.354 0 00-3 0 3.354 3.354 0 01-3 0 3.354 3.354 0 00-3 0 3.354 3.354 0 01-3 0L3 16.5m15-3.379a48.474 48.474 0 00-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 013 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 016 13.12" />
                                 </svg>
                               </span>
                             )}
-                            <p className="text-sm font-medium text-charcoal leading-snug group-hover:text-terracotta transition-colors line-clamp-3">
-                              {meal.title}
-                            </p>
+                            <p className="text-xs font-medium text-charcoal leading-snug hover:text-terracotta transition-colors line-clamp-2">{m.title}</p>
                           </Link>
-
-                          {/* Remove button */}
                           <button
-                            onClick={() => removeMeal(key)}
-                            className="flex items-center gap-1 text-xs text-slate hover:text-red-500 transition-colors cursor-pointer"
+                            onClick={() => removeMeal(key, i)}
+                            aria-label="Remove meal"
+                            className="shrink-0 opacity-0 group-hover/meal:opacity-100 text-slate/30 hover:text-red-500 transition-all cursor-pointer"
                           >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                              />
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            Remove
                           </button>
                         </div>
-                      ) : (
-                        <div className="text-center py-3">
-                          <p className="text-xs text-slate/60 mb-2">
-                            No meal planned
-                          </p>
-                          <button
-                            onClick={() => setSelectingDay(key)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-terracotta bg-terracotta/8 hover:bg-terracotta/15 transition-colors cursor-pointer"
-                          >
-                            <svg
-                              className="w-3.5 h-3.5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 4.5v15m7.5-7.5h-15"
-                              />
-                            </svg>
-                            Add
-                          </button>
-                        </div>
-                      )}
+                      ))}
+                      {/* Add button */}
+                      <button
+                        onClick={() => setSelectingDay(key)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-terracotta bg-terracotta/8 hover:bg-terracotta/15 transition-colors cursor-pointer"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Add
+                      </button>
                     </div>
                   </div>
                 );
@@ -671,7 +661,7 @@ export default function MealPlannerPage() {
             {mealPlan && Object.keys(mealPlan.meals).length > 0 && (
               <div className="mt-6 text-center">
                 <Link
-                  href={`/shopping-list?recipes=${Object.values(mealPlan.meals).map((m) => m!.recipeId).join(",")}`}
+                  href={`/shopping-list?recipes=${Object.values(mealPlan.meals).flatMap((arr) => arr!.map((m) => m.recipeId)).join(",")}`}
                   className="inline-flex items-center gap-2 rounded-xl bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-dark"
                 >
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -699,18 +689,22 @@ export default function MealPlannerPage() {
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
                         {DAYS.map(({ key, short }) => {
-                          const meal = plan.meals[key];
+                          const meals = plan.meals[key] ?? [];
                           return (
                             <div key={key} className="rounded-lg bg-cream/60 p-2.5">
                               <p className="font-sans text-[10px] font-semibold text-slate/60 uppercase mb-1.5">{short}</p>
-                              {meal ? (
-                                <Link href={`/recipes/${meal.slug}`} className="block">
-                                  {meal.image && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={meal.image} alt="" className="w-full aspect-square rounded-md object-cover mb-1.5" />
-                                  )}
-                                  <p className="font-sans text-xs font-medium text-charcoal leading-tight line-clamp-2 hover:text-terracotta transition-colors">{meal.title}</p>
-                                </Link>
+                              {meals.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {meals.map((m, i) => (
+                                    <Link key={`${m.recipeId}-${i}`} href={`/recipes/${m.slug}`} className="block">
+                                      {m.image && (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={m.image} alt="" className="w-full aspect-square rounded-md object-cover mb-1" />
+                                      )}
+                                      <p className="font-sans text-xs font-medium text-charcoal leading-tight line-clamp-2 hover:text-terracotta transition-colors">{m.title}</p>
+                                    </Link>
+                                  ))}
+                                </div>
                               ) : (
                                 <p className="font-sans text-[10px] text-slate/40 italic">No meal</p>
                               )}
