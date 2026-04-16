@@ -69,6 +69,7 @@ export interface EditLogEntry {
 
 export interface Recipe {
   id: string;
+  householdId?: string;
   slug: string;
   title: string;
   description: string;
@@ -105,6 +106,7 @@ export interface Recipe {
 
 export interface Member {
   id: string;
+  householdId?: string;
   order: number;
   name: string;
   title: string;
@@ -220,6 +222,7 @@ export interface EventMenuComment {
 
 export interface RecipeCollection {
   id: string;
+  householdId?: string;
   name: string;
   description: string;
   createdBy: string;
@@ -263,6 +266,7 @@ export const TIP_CATEGORIES: { value: TipCategory; label: string; icon: string }
 
 export interface KitchenTip {
   id: string;
+  householdId?: string;
   title: string;
   content: string;
   category: TipCategory;
@@ -275,6 +279,7 @@ export interface KitchenTip {
 
 export interface AppNotification {
   id: string;
+  householdId?: string;
   type: "new-recipe" | "event-assignment";
   message: string;
   link: string;
@@ -289,4 +294,32 @@ export interface AppNotification {
 
 export interface UserPreferences {
   notifyNewRecipes: boolean;
+}
+
+// ── Multi-tenancy ──
+
+export interface HouseholdCustomisation {
+  brandName: string;
+  tagline: string;
+  primaryColor?: string;
+  logoUrl?: string;
+}
+
+export interface Household {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  customisation: HouseholdCustomisation;
+  plan: "free" | "premium";
+  createdAt: string;
+}
+
+export interface HouseholdMember {
+  id: string;
+  userId: string;
+  householdId: string;
+  displayName: string;
+  role: "owner" | "admin" | "member";
+  joinedAt: string;
 }

@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
-import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory, AppNotification, UserPreferences } from "./types";
+import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory, AppNotification, UserPreferences, Household, HouseholdMember, HouseholdCustomisation } from "./types";
 
 function recipesCollection() {
   return collection(getDb(), "recipes");
@@ -463,4 +463,95 @@ export async function getUserPreferences(uid: string): Promise<UserPreferences> 
 export async function updateUserPreferences(uid: string, prefs: Partial<UserPreferences>): Promise<void> {
   const docRef = doc(getDb(), "userPreferences", uid);
   await setDoc(docRef, prefs, { merge: true });
+}
+
+// ── Households ──
+
+function householdsCollection() {
+  return collection(getDb(), "households");
+}
+
+function householdMembersCollection() {
+  return collection(getDb(), "householdMembers");
+}
+
+export async function createHousehold(data: {
+  name: string;
+  slug: string;
+  ownerId: string;
+  ownerName: string;
+  customisation?: Partial<HouseholdCustomisation>;
+}): Promise<Household> {
+  const createdAt = new Date().toISOString();
+  const household: Omit<Household, "id"> = {
+    name: data.name,
+    slug: data.slug,
+    ownerId: data.ownerId,
+    customisation: {
+      brandName: data.customisation?.brandName ?? data.name,
+      tagline: data.customisation?.tagline ?? "Family Recipes Worth Catching",
+      ...(data.customisation?.primaryColor ? { primaryColor: data.customisation.primaryColor } : {}),
+      ...(data.customisation?.logoUrl ? { logoUrl: data.customisation.logoUrl } : {}),
+    },
+    plan: "free",
+    createdAt,
+  };
+  const docRef = await addDoc(householdsCollection(), household);
+
+  // Add owner as first member
+  await addDoc(householdMembersCollection(), {
+    userId: data.ownerId,
+    householdId: docRef.id,
+    displayName: data.ownerName,
+    role: "owner",
+    joinedAt: createdAt,
+  });
+
+  return { ...household, id: docRef.id };
+}
+
+export async function getHousehold(id: string): Promise<Household | null> {
+  const snap = await getDoc(doc(getDb(), "households", id));
+  return snap.exists() ? { ...snap.data(), id: snap.id } as Household : null;
+}
+
+export async function getHouseholdBySlug(slug: string): Promise<Household | null> {
+  const q = query(householdsCollection(), where("slug", "==", slug));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { ...d.data(), id: d.id } as Household;
+}
+
+export async function updateHousehold(id: string, data: Partial<Omit<Household, "id" | "createdAt">>): Promise<void> {
+  const docRef = doc(getDb(), "households", id);
+  await updateDoc(docRef, data as Record<string, unknown>);
+}
+
+export async function getUserHouseholds(userId: string): Promise<HouseholdMember[]> {
+  const q = query(householdMembersCollection(), where("userId", "==", userId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id } as HouseholdMember));
+}
+
+export async function getHouseholdMembers(householdId: string): Promise<HouseholdMember[]> {
+  const q = query(householdMembersCollection(), where("householdId", "==", householdId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id } as HouseholdMember));
+}
+
+export async function addHouseholdMember(data: { userId: string; householdId: string; displayName: string; role: "admin" | "member" }): Promise<HouseholdMember> {
+  const joinedAt = new Date().toISOString();
+  const payload = { ...data, joinedAt };
+  const docRef = await addDoc(householdMembersCollection(), payload);
+  return { ...payload, id: docRef.id };
+}
+
+export async function removeHouseholdMember(memberId: string): Promise<void> {
+  await deleteDoc(doc(getDb(), "householdMembers", memberId));
+}
+
+export async function isSlugAvailable(slug: string): Promise<boolean> {
+  const existing = await getHouseholdBySlug(slug);
+  return !existing;
 }
