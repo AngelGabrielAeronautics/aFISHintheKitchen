@@ -14,7 +14,8 @@ export default function EditHistory({ entries, contributedBy }: EditHistoryProps
 
   if (entries.length === 0) return null;
 
-  const visible = showAll ? entries : entries.slice(-3);
+  const sorted = [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const visible = showAll ? sorted : sorted.slice(0, 3);
 
   return (
     <div data-component="edit-history" className="mt-6 border-t border-cream-dark/30 pt-6">
