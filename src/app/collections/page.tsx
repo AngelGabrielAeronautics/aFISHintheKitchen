@@ -37,9 +37,10 @@ export default function CollectionsPage() {
   }, [recipes]);
 
   const filteredRecipes = useMemo(() => {
-    if (!recipeSearch.trim()) return recipes;
+    const sorted = [...recipes].sort((a, b) => a.title.localeCompare(b.title));
+    if (!recipeSearch.trim()) return sorted;
     const lower = recipeSearch.toLowerCase();
-    return recipes.filter(
+    return sorted.filter(
       (r) =>
         r.title.toLowerCase().includes(lower) ||
         r.tags.some((t) => t.toLowerCase().includes(lower))

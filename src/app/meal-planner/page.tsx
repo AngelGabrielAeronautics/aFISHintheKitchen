@@ -132,9 +132,10 @@ function RecipeSearchModal({
   }, [onClose]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return recipes;
+    const sorted = [...recipes].sort((a, b) => a.title.localeCompare(b.title));
+    if (!search.trim()) return sorted;
     const q = search.toLowerCase();
-    return recipes.filter((r) => r.title.toLowerCase().includes(q));
+    return sorted.filter((r) => r.title.toLowerCase().includes(q));
   }, [search, recipes]);
 
   return (
