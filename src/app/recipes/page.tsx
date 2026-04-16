@@ -47,6 +47,8 @@ function RecipesContent() {
   const [filterProtein, setFilterProtein] = useState<Protein | "all">(proteinParam as Protein | "all");
   const [filterStatus, setFilterStatus] = useState<"all" | "must-try" | "tried" | "not-tried">("all");
   const [filterSeason, setFilterSeason] = useState<Season | "all">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const recipesPerPage = 12;
 
   // Derive unique contributors from all recipes
   const contributors = useMemo(() => {
@@ -177,6 +179,17 @@ function RecipesContent() {
 
     return results;
   }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein, filterStatus, filterSeason, user]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [recipes, filterCook, filterDifficulty, filterMaxTime, filterSort, filterIngredient, filterProtein, filterStatus, filterSeason, activeCategory, searchQuery]);
+
+  const totalPages = Math.ceil(filteredRecipes.length / recipesPerPage);
+  const paginatedRecipes = filteredRecipes.slice(
+    (currentPage - 1) * recipesPerPage,
+    currentPage * recipesPerPage
+  );
 
   function clearAllFilters() {
     setSearchQuery("");
@@ -524,17 +537,55 @@ function RecipesContent() {
           <>
             {/* Recipe count */}
             <p className="mt-6 font-sans text-sm text-slate">
-              Showing {filteredRecipes.length}{" "}
+              Showing {Math.min((currentPage - 1) * recipesPerPage + 1, filteredRecipes.length)}&ndash;{Math.min(currentPage * recipesPerPage, filteredRecipes.length)} of {filteredRecipes.length}{" "}
               {filteredRecipes.length === 1 ? "recipe" : "recipes"}
             </p>
 
             {/* Recipe grid */}
-            {filteredRecipes.length > 0 ? (
+            {paginatedRecipes.length > 0 ? (
+              <>
               <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filteredRecipes.map((recipe) => (
+                {paginatedRecipes.map((recipe) => (
                   <RecipeCard key={recipe.id} recipe={recipe} />
                 ))}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-10 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setCurrentPage((p) => Math.max(1, p - 1)); window.scrollTo(0, 0); }}
+                    disabled={currentPage === 1}
+                    className="rounded-lg px-3 py-2 font-sans text-sm font-medium text-slate hover:bg-cream-dark/30 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => { setCurrentPage(page); window.scrollTo(0, 0); }}
+                      className={`rounded-lg px-3 py-2 font-sans text-sm font-medium transition-colors cursor-pointer ${
+                        page === currentPage
+                          ? "bg-terracotta text-white"
+                          : "text-slate hover:bg-cream-dark/30"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => { setCurrentPage((p) => Math.min(totalPages, p + 1)); window.scrollTo(0, 0); }}
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg px-3 py-2 font-sans text-sm font-medium text-slate hover:bg-cream-dark/30 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+              </>
             ) : (
               <div className="mt-16 flex flex-col items-center gap-4 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-cream-dark/20">
