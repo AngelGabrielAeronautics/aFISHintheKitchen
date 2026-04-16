@@ -359,11 +359,40 @@ export async function getAllTips(): Promise<KitchenTip[]> {
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
 }
 
-export async function addTip(data: { title: string; content: string; category: TipCategory; author: string }): Promise<KitchenTip> {
+export async function getTipsForRecipe(recipeId: string): Promise<KitchenTip[]> {
+  const q = query(tipsCollection(), where("linkedRecipeIds", "array-contains", recipeId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
+}
+
+export async function addTip(data: { title: string; content: string; category: TipCategory; author: string; images?: string[]; video?: string; linkedRecipes?: { id: string; title: string; slug: string }[] }): Promise<KitchenTip> {
   const createdAt = new Date().toISOString();
-  const payload = { ...data, createdAt };
+  const payload: Record<string, unknown> = {
+    title: data.title,
+    content: data.content,
+    category: data.category,
+    author: data.author,
+    createdAt,
+  };
+  if (data.images && data.images.length > 0) payload.images = data.images;
+  if (data.video) payload.video = data.video;
+  if (data.linkedRecipes && data.linkedRecipes.length > 0) {
+    payload.linkedRecipes = data.linkedRecipes;
+    payload.linkedRecipeIds = data.linkedRecipes.map((r) => r.id);
+  }
   const docRef = await addDoc(tipsCollection(), payload);
-  return { ...payload, id: docRef.id };
+  return { ...data, createdAt, id: docRef.id };
+}
+
+export async function uploadTipFile(file: File, tipId: string): Promise<string> {
+  const storageRef = ref(getFirebaseStorage(), `tip-images/${tipId}/${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+}
+
+export async function updateTip(id: string, data: Partial<Omit<KitchenTip, "id" | "createdAt">>): Promise<void> {
+  const docRef = doc(getDb(), "tips", id);
+  await updateDoc(docRef, data as Record<string, unknown>);
 }
 
 export async function deleteTip(id: string): Promise<void> {

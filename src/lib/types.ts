@@ -256,5 +256,8 @@ export interface KitchenTip {
   content: string;
   category: TipCategory;
   author: string;
+  images?: string[];
+  video?: string;
+  linkedRecipes?: { id: string; title: string; slug: string }[];
   createdAt: string;
 }

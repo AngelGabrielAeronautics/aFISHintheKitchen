@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getRecipeBySlug } from "@/lib/firebase-recipes";
+import { getRecipeBySlug, getTipsForRecipe } from "@/lib/firebase-recipes";
 import Toast from "@/components/Toast";
 import { getCategoryBySlug, formatTime, HEAT_ICONS, HEAT_LABELS, DIFFICULTY_ICONS } from "@/lib/types";
-import type { Recipe } from "@/lib/types";
+import type { Recipe, KitchenTip } from "@/lib/types";
 import Image from "next/image";
 import Avatar from "@/components/Avatar";
 import RecipePreferences from "@/components/RecipePreferences";
@@ -22,6 +22,7 @@ export default function RecipePage() {
   const [copied, setCopied] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [linkedTips, setLinkedTips] = useState<KitchenTip[]>([]);
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
@@ -41,6 +42,7 @@ export default function RecipePage() {
       .then((r) => {
         if (r) {
           setRecipe(r);
+          getTipsForRecipe(r.id).then(setLinkedTips).catch(() => {});
         } else {
           setNotFound(true);
         }
@@ -575,6 +577,40 @@ export default function RecipePage() {
                 Your browser does not support video playback.
               </video>
             )}
+          </div>
+        )}
+
+        {/* Linked Tips */}
+        {linkedTips.length > 0 && (
+          <div className="mt-10">
+            <h2 className="font-serif text-xl font-bold text-charcoal">
+              Tips & Tricks
+            </h2>
+            <div className="mt-4 space-y-3">
+              {linkedTips.map((tip) => (
+                <div key={tip.id} className="rounded-xl bg-warm-white p-4 ring-1 ring-cream-dark/30">
+                  <h4 className="font-sans text-sm font-semibold text-charcoal">{tip.title}</h4>
+                  <p className="mt-1 font-sans text-sm leading-relaxed text-slate whitespace-pre-line">{tip.content}</p>
+                  {tip.images && tip.images.length > 0 && (
+                    <div className="mt-2 flex gap-2">
+                      {tip.images.map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" className="h-16 w-24 rounded-lg object-cover ring-1 ring-cream-dark/30" />
+                      ))}
+                    </div>
+                  )}
+                  {tip.video && (
+                    <div className="mt-2">
+                      <video src={tip.video} controls className="w-full max-w-xs rounded-lg ring-1 ring-cream-dark/30" />
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
+                    <Avatar name={tip.author} size="sm" ring />
+                    <span className="font-sans text-xs text-slate">{tip.author}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
