@@ -66,8 +66,8 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
         </svg>
       </button>
 
-      {/* Step number for instructions */}
-      {multiline && (
+      {/* Step number for instructions (skip for section headers) */}
+      {multiline && !value.startsWith("## ") && (
         <span className="flex-shrink-0 w-6 mt-3 text-center text-sm font-medium text-slate/50">
           {index + 1}.
         </span>
@@ -75,7 +75,15 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
 
       {/* Input + optional image */}
       <div className="flex-1">
-        {multiline ? (
+        {value.startsWith("## ") ? (
+          <input
+            type="text"
+            value={value.slice(3)}
+            onChange={(e) => onChange(`## ${e.target.value}`)}
+            placeholder="Section name (e.g. For the Crust)"
+            className={`${inputClasses} w-full !font-semibold !text-charcoal !bg-cream-dark/20 !border-terracotta/30`}
+          />
+        ) : multiline ? (
           <textarea
             rows={2}
             value={value}
@@ -156,6 +164,7 @@ interface SortableListProps {
   images?: Record<string, string>;
   onImageSelect?: (index: number, file: File) => void;
   onImageRemove?: (index: number) => void;
+  onAddSection?: () => void;
 }
 
 export default function SortableList({
@@ -171,6 +180,7 @@ export default function SortableList({
   images,
   onImageSelect,
   onImageRemove,
+  onAddSection,
 }: SortableListProps) {
   const itemIds = items.map((_, i) => `item-${i}`);
 
@@ -217,16 +227,30 @@ export default function SortableList({
         </SortableContext>
       </DndContext>
 
-      <button
-        type="button"
-        onClick={onAdd}
-        className="inline-flex items-center gap-2 text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer mt-3"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-        {addLabel}
-      </button>
+      <div className="flex gap-4 mt-3">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="inline-flex items-center gap-2 text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {addLabel}
+        </button>
+        {onAddSection && (
+          <button
+            type="button"
+            onClick={onAddSection}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate hover:text-charcoal transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+            </svg>
+            Add Section
+          </button>
+        )}
+      </div>
     </>
   );
 }

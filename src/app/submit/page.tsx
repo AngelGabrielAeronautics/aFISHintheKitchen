@@ -747,6 +747,7 @@ export default function SubmitRecipePage() {
               placeholderPrefix="Ingredient"
               addLabel="Add Ingredient"
               inputClasses={inputClasses}
+              onAddSection={() => setIngredients((prev) => [...prev, "## "])}
             />
 
             {errors.ingredients && (
@@ -769,6 +770,7 @@ export default function SubmitRecipePage() {
               placeholderPrefix="Step"
               addLabel="Add Step"
               multiline
+              onAddSection={() => setInstructions((prev) => [...prev, "## "])}
               inputClasses={inputClasses}
               images={Object.fromEntries(Object.entries(stepImages).map(([k, v]) => [k, v.preview]))}
               onImageSelect={handleStepImageSelect}

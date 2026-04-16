@@ -842,6 +842,7 @@ export default function EditRecipePage() {
               placeholderPrefix="Ingredient"
               addLabel="Add Ingredient"
               inputClasses={inputClasses}
+              onAddSection={() => setIngredients((prev) => [...prev, "## "])}
             />
 
             {errors.ingredients && (
@@ -864,6 +865,7 @@ export default function EditRecipePage() {
               placeholderPrefix="Step"
               addLabel="Add Step"
               multiline
+              onAddSection={() => setInstructions((prev) => [...prev, "## "])}
               inputClasses={inputClasses}
               images={stepImages}
               onImageSelect={handleStepImageSelect}

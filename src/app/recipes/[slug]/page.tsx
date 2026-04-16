@@ -447,26 +447,37 @@ export default function RecipePage() {
               Instructions
             </h2>
             <ol className="recipe-instructions mt-6 space-y-6">
-              {recipe.instructions.map((step, index) => (
-                <li key={index} className="flex gap-4">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-terracotta font-sans text-sm font-bold text-white">
-                    {index + 1}
-                  </span>
-                  <div className="pt-1 flex-1">
-                    <p className="font-sans text-sm leading-relaxed text-slate">
-                      {step}
-                    </p>
-                    {recipe.instructionImages?.[String(index)] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={recipe.instructionImages[String(index)]}
-                        alt={`Step ${index + 1}`}
-                        className="mt-3 rounded-xl shadow-sm max-h-64 object-cover"
-                      />
-                    )}
-                  </div>
-                </li>
-              ))}
+              {(() => {
+                let stepNum = 0;
+                return recipe.instructions.map((step, index) =>
+                  step.startsWith("## ") ? (
+                    <li key={index} className="pt-2 first:pt-0 list-none">
+                      <h3 className="font-serif text-lg font-bold text-charcoal border-b border-cream-dark/30 pb-1">
+                        {step.slice(3)}
+                      </h3>
+                    </li>
+                  ) : (
+                    <li key={index} className="flex gap-4">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-terracotta font-sans text-sm font-bold text-white">
+                        {++stepNum}
+                      </span>
+                      <div className="pt-1 flex-1">
+                        <p className="font-sans text-sm leading-relaxed text-slate">
+                          {step}
+                        </p>
+                        {recipe.instructionImages?.[String(index)] && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={recipe.instructionImages[String(index)]}
+                            alt={`Step ${stepNum}`}
+                            className="mt-3 rounded-xl shadow-sm max-h-64 object-cover"
+                          />
+                        )}
+                      </div>
+                    </li>
+                  )
+                );
+              })()}
             </ol>
           </div>
 
@@ -512,27 +523,26 @@ export default function RecipePage() {
                 </Link>
               </div>
               <ul className="mt-5 space-y-3">
-                {recipe.ingredients.map((ingredient, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cream-dark/50 bg-cream/50 transition-colors hover:border-terracotta/50 hover:bg-terracotta/5">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        className="h-3 w-3 text-transparent"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                    <span className="font-sans text-sm leading-snug text-charcoal">
-                      {ingredient}
-                    </span>
-                  </li>
-                ))}
+                {recipe.ingredients.map((ingredient, index) =>
+                  ingredient.startsWith("## ") ? (
+                    <li key={index} className="pt-3 first:pt-0">
+                      <h4 className="font-serif text-sm font-bold text-charcoal border-b border-cream-dark/30 pb-1">
+                        {ingredient.slice(3)}
+                      </h4>
+                    </li>
+                  ) : (
+                    <li key={index} className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cream-dark/50 bg-cream/50 transition-colors hover:border-terracotta/50 hover:bg-terracotta/5">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 text-transparent">
+                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                      <span className="font-sans text-sm leading-snug text-charcoal">
+                        {ingredient}
+                      </span>
+                    </li>
+                  )
+                )}
               </ul>
             </div>
           </div>
