@@ -61,6 +61,14 @@ export default function Header() {
 
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-1">
+            {!loading && !user ? (
+              <Link
+                href="/auth"
+                className="ml-2 px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors"
+              >
+                Sign In
+              </Link>
+            ) : <>
             {primaryLinks.map((link) => (
               link.href === "/" && pathname === "/" ? null : (
                 <Link
@@ -143,9 +151,15 @@ export default function Header() {
                 )}
               </>
             )}
+            </>}
           </nav>
 
           {/* Mobile menu button */}
+          {!loading && !user ? (
+            <Link href="/auth" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
+              Sign In
+            </Link>
+          ) : (
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -176,6 +190,7 @@ export default function Header() {
               )}
             </svg>
           </button>
+          )}
         </div>
       </div>
 

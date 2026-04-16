@@ -10,8 +10,28 @@ import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
 import Avatar from "@/components/Avatar";
 import { useHousehold } from "@/context/HouseholdContext";
+import { useAuth } from "@/context/AuthContext";
+import LandingPage from "@/components/LandingPage";
 
 export default function HomePage() {
+  const { user, loading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-cream">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+      </main>
+    );
+  }
+
+  if (!user) {
+    return <LandingPage />;
+  }
+
+  return <HomeContent />;
+}
+
+function HomeContent() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
