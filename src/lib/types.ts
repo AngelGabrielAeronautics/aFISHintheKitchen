@@ -226,6 +226,7 @@ export interface RecipeCollection {
   recipeIds: string[];
   assignments?: Record<string, string[]>; // recipeId -> up to 3 family member names
   comments?: EventMenuComment[];
+  editHistory?: EditLogEntry[];
   createdAt: string;
 }
 

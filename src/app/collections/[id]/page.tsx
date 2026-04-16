@@ -11,10 +11,11 @@ import {
   deleteCollection,
   createNotification,
 } from "@/lib/firebase-recipes";
-import type { RecipeCollection, Recipe, EventMenuComment } from "@/lib/types";
+import type { RecipeCollection, Recipe, EventMenuComment, EditLogEntry } from "@/lib/types";
 import { FAMILY_MEMBERS } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
 import Avatar from "@/components/Avatar";
+import EditHistory from "@/components/EditHistory";
 
 export default function CollectionDetailPage() {
   const params = useParams();
@@ -42,6 +43,9 @@ export default function CollectionDetailPage() {
   const [newComment, setNewComment] = useState("");
   const [addingComment, setAddingComment] = useState(false);
 
+  // Edit history
+  const [editHistory, setEditHistory] = useState<EditLogEntry[]>([]);
+
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -67,6 +71,7 @@ export default function CollectionDetailPage() {
         }
         setAssignments(migrated);
         setComments(found.comments ?? []);
+        setEditHistory(found.editHistory ?? []);
       }
       setAllRecipes(recs);
       setLoading(false);
@@ -113,6 +118,15 @@ export default function CollectionDetailPage() {
     );
   }
 
+  function logEdit(summary: string) {
+    if (!collection) return;
+    const editor = user?.displayName || user?.email || "Unknown";
+    const entry: EditLogEntry = { editor, date: new Date().toISOString(), summary };
+    const updated = [...editHistory, entry];
+    setEditHistory(updated);
+    updateCollection(collection.id, { editHistory: updated }).catch(() => {});
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!collection || !editName.trim()) return;
@@ -123,6 +137,15 @@ export default function CollectionDetailPage() {
         description: editDesc.trim(),
         recipeIds: editRecipeIds,
       });
+      const changes: string[] = [];
+      if (editName.trim() !== collection.name) changes.push("Updated name");
+      if (editDesc.trim() !== collection.description) changes.push("Updated description");
+      const added = editRecipeIds.filter((id) => !collection.recipeIds.includes(id)).length;
+      const removed = collection.recipeIds.filter((id) => !editRecipeIds.includes(id)).length;
+      if (added > 0) changes.push(`Added ${added} recipe${added > 1 ? "s" : ""}`);
+      if (removed > 0) changes.push(`Removed ${removed} recipe${removed > 1 ? "s" : ""}`);
+      if (changes.length > 0) logEdit(changes.join(", "));
+
       setCollection({
         ...collection,
         name: editName.trim(),
@@ -152,7 +175,7 @@ export default function CollectionDetailPage() {
       setCollection({ ...collection, assignments: next });
       updateCollection(collection.id, { assignments: next }).catch(() => {});
 
-      // Notify the newly assigned person
+      // Notify and log
       if (member && member !== previous) {
         const recipe = recipeMap.get(recipeId);
         const assignedBy = user?.displayName || user?.email || "Someone";
@@ -162,6 +185,10 @@ export default function CollectionDetailPage() {
           link: `/collections/${collection.id}`,
           authorName: assignedBy,
         }).catch(() => {});
+        logEdit(`Assigned ${member} to ${recipe?.title ?? "a recipe"}`);
+      } else if (!member && previous) {
+        const recipe = recipeMap.get(recipeId);
+        logEdit(`Unassigned ${previous} from ${recipe?.title ?? "a recipe"}`);
       }
     }
   }
@@ -521,6 +548,14 @@ export default function CollectionDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Edit History */}
+      {!editing && collection && (
+        <EditHistory
+          entries={editHistory}
+          contributedBy={collection.createdBy}
+        />
       )}
     </main>
   );
