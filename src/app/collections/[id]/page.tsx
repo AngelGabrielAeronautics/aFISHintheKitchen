@@ -11,7 +11,9 @@ import {
   deleteCollection,
 } from "@/lib/firebase-recipes";
 import type { RecipeCollection, Recipe } from "@/lib/types";
+import { FAMILY_MEMBERS } from "@/lib/types";
 import RecipeCard from "@/components/RecipeCard";
+import Avatar from "@/components/Avatar";
 
 export default function CollectionDetailPage() {
   const params = useParams();
@@ -31,6 +33,9 @@ export default function CollectionDetailPage() {
   const [recipeSearch, setRecipeSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Assignments
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -48,6 +53,7 @@ export default function CollectionDetailPage() {
         setNotFound(true);
       } else {
         setCollection(found);
+        setAssignments(found.assignments ?? {});
       }
       setAllRecipes(recs);
       setLoading(false);
@@ -116,6 +122,20 @@ export default function CollectionDetailPage() {
     }
   }
 
+  async function handleAssign(recipeId: string, member: string) {
+    const next = { ...assignments };
+    if (member) {
+      next[recipeId] = member;
+    } else {
+      delete next[recipeId];
+    }
+    setAssignments(next);
+    if (collection) {
+      setCollection({ ...collection, assignments: next });
+      updateCollection(collection.id, { assignments: next }).catch(() => {});
+    }
+  }
+
   async function handleDelete() {
     if (!collection) return;
     setDeleting(true);
@@ -139,16 +159,16 @@ export default function CollectionDetailPage() {
     return (
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center">
         <h1 className="font-serif text-2xl font-bold text-charcoal mb-2">
-          Collection not found
+          Event menu not found
         </h1>
         <p className="font-sans text-sm text-slate mb-6">
-          This collection may have been deleted.
+          This event menu may have been deleted.
         </p>
         <Link
           href="/collections"
           className="text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors"
         >
-          Back to Collections
+          Back to Event Menus
         </Link>
       </main>
     );
@@ -175,7 +195,7 @@ export default function CollectionDetailPage() {
             clipRule="evenodd"
           />
         </svg>
-        All Collections
+        All Event Menus
       </Link>
 
       {/* Editing mode */}
@@ -185,7 +205,7 @@ export default function CollectionDetailPage() {
           className="mb-10 rounded-xl bg-white p-6 shadow-sm ring-1 ring-charcoal/5"
         >
           <h2 className="font-serif text-xl font-bold text-charcoal mb-4">
-            Edit Collection
+            Edit Event Menu
           </h2>
 
           <div className="grid gap-4 sm:grid-cols-2 mb-4">
@@ -298,7 +318,7 @@ export default function CollectionDetailPage() {
                   onClick={startEdit}
                   className="px-4 py-2 rounded-lg bg-cream-dark/40 text-charcoal text-sm font-medium hover:bg-cream-dark/60 transition-colors cursor-pointer"
                 >
-                  Edit Collection
+                  Edit Menu
                 </button>
                 {confirmDelete ? (
                   <div className="flex items-center gap-2">
@@ -322,7 +342,7 @@ export default function CollectionDetailPage() {
                     onClick={() => setConfirmDelete(true)}
                     className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors cursor-pointer"
                   >
-                    Delete Collection
+                    Delete Menu
                   </button>
                 )}
               </div>
@@ -337,7 +357,7 @@ export default function CollectionDetailPage() {
           {collectionRecipes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <p className="font-sans text-sm text-slate">
-                This collection has no recipes yet.
+                This event menu has no recipes yet.
               </p>
               {user && (
                 <button
@@ -351,7 +371,29 @@ export default function CollectionDetailPage() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {collectionRecipes.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
+                <div key={recipe.id}>
+                  <RecipeCard recipe={recipe} />
+                  {/* Assignment */}
+                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-warm-white px-3 py-2 ring-1 ring-cream-dark/30">
+                    {assignments[recipe.id] ? (
+                      <Avatar name={assignments[recipe.id]} size="sm" ring />
+                    ) : (
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5 text-slate/30">
+                        <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" />
+                      </svg>
+                    )}
+                    <select
+                      value={assignments[recipe.id] ?? ""}
+                      onChange={(e) => handleAssign(recipe.id, e.target.value)}
+                      className="flex-1 bg-transparent font-sans text-xs text-charcoal outline-none cursor-pointer"
+                    >
+                      <option value="">Assign to...</option>
+                      {FAMILY_MEMBERS.map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               ))}
             </div>
           )}

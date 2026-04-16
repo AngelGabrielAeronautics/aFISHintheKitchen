@@ -100,10 +100,10 @@ export default function CollectionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
         <div>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-charcoal">
-            Collections
+            Event Menus
           </h1>
           <p className="mt-2 font-sans text-sm text-slate">
-            Curated groups of recipes for any occasion.
+            Plan a meal for birthdays, holidays, or any family gathering — and assign who&rsquo;s making what.
           </p>
         </div>
         {user && (
@@ -111,7 +111,7 @@ export default function CollectionsPage() {
             onClick={() => setShowForm(!showForm)}
             className="self-start sm:self-auto px-5 py-2.5 rounded-lg bg-terracotta text-white text-sm font-medium hover:bg-terracotta-dark transition-colors cursor-pointer"
           >
-            {showForm ? "Cancel" : "Create Collection"}
+            {showForm ? "Cancel" : "Create Event Menu"}
           </button>
         )}
       </div>
@@ -123,7 +123,7 @@ export default function CollectionsPage() {
           className="mb-10 rounded-xl bg-white p-6 shadow-sm ring-1 ring-charcoal/5"
         >
           <h2 className="font-serif text-xl font-bold text-charcoal mb-4">
-            New Collection
+            New Event Menu
           </h2>
 
           <div className="grid gap-4 sm:grid-cols-2 mb-4">
@@ -136,7 +136,7 @@ export default function CollectionsPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                placeholder="e.g. Weeknight Dinners"
+                placeholder="e.g. Sam's Birthday Braai"
                 className="w-full rounded-lg border border-cream-dark/60 bg-cream/40 px-3 py-2 text-sm text-charcoal placeholder:text-slate/50 focus:outline-none focus:ring-2 focus:ring-terracotta/30"
               />
             </div>
@@ -199,7 +199,7 @@ export default function CollectionsPage() {
             disabled={submitting || !name.trim()}
             className="px-5 py-2.5 rounded-lg bg-terracotta text-white text-sm font-medium hover:bg-terracotta-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {submitting ? "Creating..." : "Create Collection"}
+            {submitting ? "Creating..." : "Create Event Menu"}
           </button>
         </form>
       )}
@@ -223,11 +223,10 @@ export default function CollectionsPage() {
             <path d="M15 4v4" />
           </svg>
           <h2 className="font-serif text-xl font-bold text-charcoal mb-2">
-            No collections yet
+            No event menus yet
           </h2>
           <p className="font-sans text-sm text-slate max-w-sm">
-            Collections let you group recipes together for meal planning, holidays,
-            or just your favourites. Sign in to create the first one.
+            Create an event menu for birthdays, holidays, or dinner parties — pick the recipes and assign who&rsquo;s cooking.
           </p>
         </div>
       ) : (

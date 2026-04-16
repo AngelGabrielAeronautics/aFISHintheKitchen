@@ -17,7 +17,7 @@ const primaryLinks = [
 const moreLinks = [
   { href: "/meal-planner", label: "Meal Planner" },
   { href: "/shopping-list", label: "Shopping List" },
-  { href: "/collections", label: "Collections" },
+  { href: "/collections", label: "Event Menus" },
   { href: "/tips", label: "Tips & Tricks" },
   { href: "/members", label: "The Family" },
 ];

@@ -217,6 +217,7 @@ export interface RecipeCollection {
   description: string;
   createdBy: string;
   recipeIds: string[];
+  assignments?: Record<string, string>; // recipeId -> family member name
   createdAt: string;
 }
 
