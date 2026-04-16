@@ -40,6 +40,7 @@ function ShoppingListContent() {
     } catch { return "by-recipe"; }
   });
   const [copied, setCopied] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   // Persist state to localStorage
   useEffect(() => {
@@ -117,10 +118,10 @@ function ShoppingListContent() {
   }
 
   function handleClear() {
-    if (!confirm("Clear all selections and start over?")) return;
     setSelectedIds(new Set());
     setCheckedIngredients(new Set());
     setViewMode("by-recipe");
+    setShowClearModal(false);
     try {
       localStorage.removeItem("shoppingListIds");
       localStorage.removeItem("shoppingListChecked");
@@ -552,7 +553,7 @@ function ShoppingListContent() {
                   </button>
                   <button
                     type="button"
-                    onClick={handleClear}
+                    onClick={() => setShowClearModal(true)}
                     className="px-4 py-2 rounded-lg border border-gold-light text-slate text-sm font-medium hover:text-charcoal hover:bg-cream-dark/40 transition-colors cursor-pointer"
                   >
                     Clear all
@@ -563,6 +564,37 @@ function ShoppingListContent() {
           </div>
         </div>
       </div>
+      {/* Clear confirmation modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-charcoal/60 backdrop-blur-sm" onClick={() => setShowClearModal(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-charcoal/10 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-terracotta/10">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-terracotta">
+                <path d="M1 1.75A.75.75 0 0 1 1.75 1h1.628a1.75 1.75 0 0 1 1.734 1.51L5.18 3a65.25 65.25 0 0 1 13.36 1.412.75.75 0 0 1 .58.875 48.645 48.645 0 0 1-1.618 6.2.75.75 0 0 1-.712.513H6a2.503 2.503 0 0 0-2.292 1.5H17.25a.75.75 0 0 1 0 1.5H2.76a.75.75 0 0 1-.748-.807 4.002 4.002 0 0 1 2.716-3.486L3.626 2.716a.25.25 0 0 0-.248-.216H1.75A.75.75 0 0 1 1 1.75ZM6 17.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM15.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+              </svg>
+            </div>
+            <h3 className="font-serif text-lg font-bold text-charcoal">Clear shopping list?</h3>
+            <p className="mt-2 font-sans text-sm text-slate">This will remove all selected recipes and checked items.</p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 rounded-lg border border-cream-dark px-4 py-2.5 font-sans text-sm font-medium text-slate transition-colors hover:bg-cream-dark/20 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="flex-1 rounded-lg bg-terracotta px-4 py-2.5 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark cursor-pointer"
+              >
+                Clear all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
