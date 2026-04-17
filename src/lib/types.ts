@@ -87,6 +87,10 @@ export interface Recipe {
   instructionImages?: Record<string, string>;
   video?: string;
   contributedBy: string;
+  // Firebase Auth uid of the creator. Optional for legacy/imported
+  // recipes; required on recipes added via addRecipe(). Rules use this
+  // to restrict non-social edits + deletes to the creator.
+  createdByUid?: string;
   story?: string;
   originalSource?: string;
   tags: string[];

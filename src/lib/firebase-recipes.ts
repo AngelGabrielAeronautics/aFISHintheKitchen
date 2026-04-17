@@ -73,11 +73,12 @@ export async function searchRecipes(queryStr: string, householdId?: string): Pro
   return all.filter((recipe) => matchesRecipeQuery(recipe, queryStr));
 }
 
-export async function addRecipe(
-  recipe: Omit<Recipe, "id" | "slug" | "createdAt">
-): Promise<Recipe> {
-  const slug = slugify(recipe.title);
+export type NewRecipeInput = Omit<Recipe, "id" | "slug" | "createdAt" | "createdByUid"> & {
+  createdByUid: string;
+};
 
+export async function addRecipe(recipe: NewRecipeInput): Promise<Recipe> {
+  const slug = slugify(recipe.title);
   const createdAt = new Date().toISOString();
 
   const data = { ...recipe, slug, createdAt };

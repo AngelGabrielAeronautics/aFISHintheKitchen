@@ -358,6 +358,9 @@ export default function EditRecipePage() {
       const coreChanged = ingredientsChanged || instructionsChanged;
 
       if (!isOriginalAuthor && coreChanged) {
+        if (!user) {
+          throw new Error("You need to be signed in to fork a recipe.");
+        }
         // Fork: create a new version of the recipe
         const versionTitle = `${recipe.title} — ${editor}'s Version`;
         const forkedData: Record<string, unknown> = {
@@ -365,6 +368,7 @@ export default function EditRecipePage() {
           description,
           category,
           difficulty,
+          createdByUid: user.uid,
           prepTime: Number(prepTime),
           cookTime: Number(cookTime),
           servings: Number(servings),

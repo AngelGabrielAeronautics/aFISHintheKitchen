@@ -309,9 +309,15 @@ export default function SubmitRecipePage() {
       }
 
       // Build recipe data
+      if (!user) {
+        setErrors({ submit: "You need to be signed in to submit a recipe." });
+        return;
+      }
+
       const recipeData: Parameters<typeof addRecipe>[0] = {
         title,
         description,
+        createdByUid: user.uid,
         category: category as Category,
         difficulty: difficulty as "Easy" | "Medium" | "Hard",
         protein: protein as Protein,
