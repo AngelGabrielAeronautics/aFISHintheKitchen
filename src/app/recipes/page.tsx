@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   getAllRecipes,
@@ -94,13 +95,13 @@ function RecipesContent() {
         setLoading(false);
       }
     },
-    []
+    [householdId]
   );
 
   // Fetch all recipes once for category counts and contributor list
   useEffect(() => {
     getAllRecipes(householdId ?? undefined).then(setAllRecipes).catch(() => {});
-  }, []);
+  }, [householdId]);
 
   const categoryCounts = allRecipes.reduce<Record<string, number>>((acc, r) => {
     acc[r.category] = (acc[r.category] || 0) + 1;
@@ -222,9 +223,11 @@ function RecipesContent() {
           download
           className="group mt-5 inline-flex items-center gap-4 rounded-xl bg-terracotta/10 px-5 py-3 transition-colors hover:bg-terracotta/20"
         >
-          <img
+          <Image
             src="/kookbook-cover.png"
             alt="The Kookbook cover"
+            width={277}
+            height={196}
             className="h-14 w-auto rounded shadow-sm"
           />
           <div className="text-left">

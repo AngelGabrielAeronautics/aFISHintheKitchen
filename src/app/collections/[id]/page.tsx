@@ -82,7 +82,7 @@ export default function CollectionDetailPage() {
       setLoading(false);
     }
     load();
-  }, [collectionId]);
+  }, [collectionId, householdId]);
 
   const recipeMap = useMemo(() => {
     const map = new Map<string, Recipe>();

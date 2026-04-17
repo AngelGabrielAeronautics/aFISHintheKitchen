@@ -313,6 +313,10 @@ export interface Household {
   customisation: HouseholdCustomisation;
   plan: "free" | "premium";
   createdAt: string;
+  recipeOfWeek?: {
+    weekId: string;
+    recipeId: string;
+  };
 }
 
 export interface HouseholdMember {

@@ -31,6 +31,7 @@ interface MealAssignment {
 
 interface MealPlan {
   weekId: string;
+  householdId: string;
   userId: string;
   userName: string;
   meals: Partial<Record<DayKey, MealAssignment[]>>;
@@ -101,7 +102,7 @@ function planDocId(uid: string, weekId: string) {
   return `${uid}_${weekId}`;
 }
 
-async function loadMealPlan(uid: string, userName: string, weekId: string): Promise<MealPlan> {
+async function loadMealPlan(uid: string, userName: string, weekId: string, householdId: string): Promise<MealPlan> {
   // Try new per-user doc first
   const snap = await getDoc(doc(getDb(), "mealPlans", planDocId(uid, weekId)));
   if (snap.exists()) {
@@ -115,7 +116,7 @@ async function loadMealPlan(uid: string, userName: string, weekId: string): Prom
         meals[day as DayKey] = [val as MealAssignment];
       }
     }
-    return { ...data, meals };
+    return { ...data, householdId: data.householdId ?? householdId, meals };
   }
   // Fallback: try old shared doc (weekId only, no uid prefix)
   const oldSnap = await getDoc(doc(getDb(), "mealPlans", weekId));
@@ -129,17 +130,21 @@ async function loadMealPlan(uid: string, userName: string, weekId: string): Prom
         meals[day as DayKey] = [val as MealAssignment];
       }
     }
-    return { weekId, userId: uid, userName, meals };
+    return { weekId, householdId, userId: uid, userName, meals };
   }
-  return { weekId, userId: uid, userName, meals: {} };
+  return { weekId, householdId, userId: uid, userName, meals: {} };
 }
 
 async function saveMealPlan(plan: MealPlan): Promise<void> {
   await setDoc(doc(getDb(), "mealPlans", planDocId(plan.userId, plan.weekId)), plan);
 }
 
-async function loadFamilyPlans(weekId: string): Promise<MealPlan[]> {
-  const q = query(collection(getDb(), "mealPlans"), where("weekId", "==", weekId));
+async function loadFamilyPlans(weekId: string, householdId: string): Promise<MealPlan[]> {
+  const q = query(
+    collection(getDb(), "mealPlans"),
+    where("householdId", "==", householdId),
+    where("weekId", "==", weekId),
+  );
   const snap = await getDocs(q);
   return snap.docs.map((d) => {
     const data = d.data() as MealPlan;
@@ -304,7 +309,6 @@ export default function MealPlannerPage() {
   const [familyPlans, setFamilyPlans] = useState<MealPlan[]>([]);
   const [viewMode, setViewMode] = useState<"mine" | "family">("mine");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loadingPlan, setLoadingPlan] = useState(true);
   const [loadingRecipes, setLoadingRecipes] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectingDay, setSelectingDay] = useState<DayKey | null>(null);
@@ -313,6 +317,7 @@ export default function MealPlannerPage() {
   const todayWeekId = getWeekId(new Date());
   const todayDayKey = getTodayDayKey();
   const isCurrentWeek = weekId === todayWeekId;
+  const loadingPlan = !mealPlan || mealPlan.weekId !== weekId || mealPlan.householdId !== householdId;
 
   // Load recipes once
   useEffect(() => {
@@ -327,28 +332,26 @@ export default function MealPlannerPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, householdId]);
 
   // Load meal plan when week changes
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid || !householdId) return;
     const userName = user.displayName || user.email || "Unknown";
     let cancelled = false;
-    setLoadingPlan(true);
     Promise.all([
-      loadMealPlan(user.uid, userName, weekId),
-      loadFamilyPlans(weekId),
+      loadMealPlan(user.uid, userName, weekId, householdId),
+      loadFamilyPlans(weekId, householdId),
     ]).then(([myPlan, allPlans]) => {
       if (!cancelled) {
         setMealPlan(myPlan);
         setFamilyPlans(allPlans.filter((p) => p.userId !== user.uid && Object.keys(p.meals).length > 0));
-        setLoadingPlan(false);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [weekId, user]);
+  }, [weekId, user, householdId]);
 
   function navigateWeek(offset: number) {
     setCurrentMonday((prev) => {

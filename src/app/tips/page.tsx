@@ -30,7 +30,6 @@ export default function TipsPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string>("");
   const [linkedRecipes, setLinkedRecipes] = useState<{ id: string; title: string; slug: string }[]>([]);
-  const [recipeSearch, setRecipeSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -49,7 +48,6 @@ export default function TipsPage() {
   const [editNewVideo, setEditNewVideo] = useState<File | null>(null);
   const [editNewVideoPreview, setEditNewVideoPreview] = useState("");
   const [editLinkedRecipes, setEditLinkedRecipes] = useState<{ id: string; title: string; slug: string }[]>([]);
-  const [editRecipeSearch, setEditRecipeSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -57,23 +55,7 @@ export default function TipsPage() {
       .then(([t, r]) => { setTips(t); setAllRecipes(r); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
-
-  const recipeSearchResults = useMemo(() => {
-    if (!recipeSearch.trim()) return [];
-    const q = recipeSearch.toLowerCase();
-    return allRecipes
-      .filter((r) => r.title.toLowerCase().includes(q) && !linkedRecipes.some((lr) => lr.id === r.id))
-      .slice(0, 5);
-  }, [allRecipes, recipeSearch, linkedRecipes]);
-
-  const editRecipeSearchResults = useMemo(() => {
-    if (!editRecipeSearch.trim()) return [];
-    const q = editRecipeSearch.toLowerCase();
-    return allRecipes
-      .filter((r) => r.title.toLowerCase().includes(q) && !editLinkedRecipes.some((lr) => lr.id === r.id))
-      .slice(0, 5);
-  }, [allRecipes, editRecipeSearch, editLinkedRecipes]);
+  }, [householdId]);
 
   const filteredTips = useMemo(() => {
     if (!searchQuery.trim()) return tips;
@@ -155,7 +137,6 @@ export default function TipsPage() {
       setVideoFile(null);
       setVideoPreview("");
       setLinkedRecipes([]);
-      setRecipeSearch("");
       setShowForm(false);
     } catch {
       setFormError("Something went wrong. Please try again.");
@@ -190,7 +171,6 @@ export default function TipsPage() {
     setEditNewVideo(null);
     setEditNewVideoPreview("");
     setEditLinkedRecipes(tip.linkedRecipes ?? []);
-    setEditRecipeSearch("");
   }
 
   function cancelEditing() {
@@ -200,7 +180,6 @@ export default function TipsPage() {
     setEditNewVideo(null);
     setEditNewVideoPreview("");
     setEditLinkedRecipes([]);
-    setEditRecipeSearch("");
   }
 
   function handleEditPhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {

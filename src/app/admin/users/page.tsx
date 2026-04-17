@@ -60,7 +60,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  }, [householdId]);
 
   useEffect(() => {
     if (!loading && !user) {

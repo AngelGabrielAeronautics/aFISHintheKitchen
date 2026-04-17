@@ -27,7 +27,7 @@ export default function NotificationBell() {
       getNotifications(householdId ?? undefined, 20).then(setNotifications).catch(() => {});
     }, 60_000);
     return () => clearInterval(interval);
-  }, [uid]);
+  }, [uid, householdId]);
 
   // Close on outside click
   useEffect(() => {

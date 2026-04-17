@@ -72,6 +72,14 @@
         { "fieldPath": "householdId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "mealPlans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "householdId", "order": "ASCENDING" },
+        { "fieldPath": "weekId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -43,6 +43,13 @@ export default function SettingsPage() {
       .finally(() => setLoadingMembers(false));
   }, [householdId]);
 
+  useEffect(() => {
+    if (!authLoading && !householdLoading) {
+      if (!user) router.push("/auth");
+      else if (!household) router.push("/setup");
+    }
+  }, [authLoading, householdLoading, user, household, router]);
+
   if (authLoading || householdLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
@@ -50,13 +57,6 @@ export default function SettingsPage() {
       </main>
     );
   }
-
-  useEffect(() => {
-    if (!authLoading && !householdLoading) {
-      if (!user) router.push("/auth");
-      else if (!household) router.push("/setup");
-    }
-  }, [authLoading, householdLoading, user, household, router]);
 
   if (!user || !household || !householdId) return null;
 

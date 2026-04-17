@@ -152,7 +152,7 @@ export default function EditRecipePage() {
     }
 
     fetchRecipe();
-  }, [slug]);
+  }, [slug, householdId]);
 
   // --- Ingredient helpers ---
   function updateIngredient(index: number, value: string) {

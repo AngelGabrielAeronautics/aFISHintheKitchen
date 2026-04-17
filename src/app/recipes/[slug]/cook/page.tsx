@@ -279,7 +279,7 @@ export default function CookModePage() {
       .then((r) => setRecipe(r))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, householdId]);
 
   // Set page title
   useEffect(() => {

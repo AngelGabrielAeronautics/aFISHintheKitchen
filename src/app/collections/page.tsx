@@ -30,7 +30,7 @@ export default function CollectionsPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [householdId]);
 
   const recipeMap = useMemo(() => {
     const map = new Map<string, Recipe>();

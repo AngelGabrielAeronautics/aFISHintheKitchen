@@ -55,7 +55,7 @@ export default function RecipePage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [slug]);
+  }, [slug, householdId]);
 
   useEffect(() => {
     if (recipe) {

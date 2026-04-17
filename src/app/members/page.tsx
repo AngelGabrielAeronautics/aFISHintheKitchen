@@ -54,7 +54,7 @@ export default function MembersPage() {
       .then(setMembers)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [householdId]);
 
   function startEdit(member: Member) {
     setEditingId(member.id);

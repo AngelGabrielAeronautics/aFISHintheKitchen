@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, DIFFICULTY_ICONS, type Recipe, formatTime, getCategoryBySlug } from "@/lib/types";
-import { getAllRecipes } from "@/lib/firebase-recipes";
+import { getAllRecipes, updateHousehold } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
 import Avatar from "@/components/Avatar";
@@ -43,6 +43,23 @@ export default function HomePage() {
   return <HomeContent />;
 }
 
+// ISO 8601 week id, aligned to Monday (e.g. "2026-W16")
+function getIsoWeekId(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  const weekNum =
+    1 +
+    Math.round(
+      ((d.getTime() - week1.getTime()) / 86400000 -
+        3 +
+        ((week1.getDay() + 6) % 7)) /
+        7
+    );
+  return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+}
+
 function HomeContent() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,8 +74,10 @@ function HomeContent() {
   const [filterMaxTime, setFilterMaxTime] = useState("");
   const [filterSort, setFilterSort] = useState("newest");
   const [rotwIconError, setRotwIconError] = useState(false);
+  const [sessionPick, setSessionPick] = useState<Recipe | null>(null);
+  const writtenWeekRef = useRef<string | null>(null);
   const router = useRouter();
-  const { householdId } = useHousehold();
+  const { household, householdId } = useHousehold();
 
   const contributors = [...new Set(allRecipes.map(r => r.contributedBy))].sort();
 
@@ -72,18 +91,41 @@ function HomeContent() {
     return sorted.slice(0, 6);
   }, [allRecipes]);
 
-  const [weekNumber] = useState(() => Math.floor(
-    (Date.now() - new Date("2026-01-01").getTime()) / (7 * 24 * 60 * 60 * 1000)
-  ));
-  const recipeOfTheWeek = useMemo(() => {
-    if (allRecipes.length === 0) return null;
-    const stable = [...allRecipes].sort((a, b) => a.id.localeCompare(b.id));
-    const withImages = stable.filter(
+  // Recipe of the week: pulled from the household doc so it stays stable for
+  // the whole week and is shared across family members. If the stored pick is
+  // for this week, use it; otherwise the effect below picks a new one and
+  // writes it back.
+  const cachedRecipeOfWeek = useMemo<Recipe | null>(() => {
+    if (!household || allRecipes.length === 0) return null;
+    const currentWeekId = getIsoWeekId(new Date());
+    const stored = household.recipeOfWeek;
+    if (stored?.weekId !== currentWeekId) return null;
+    return allRecipes.find((r) => r.id === stored.recipeId) ?? null;
+  }, [household, allRecipes]);
+
+  const recipeOfTheWeek = cachedRecipeOfWeek ?? sessionPick;
+
+  // When there's no cached pick for the current week, pick once and persist.
+  useEffect(() => {
+    if (cachedRecipeOfWeek || sessionPick) return;
+    if (!householdId || !household || allRecipes.length === 0) return;
+    const currentWeekId = getIsoWeekId(new Date());
+    if (writtenWeekRef.current === currentWeekId) return;
+
+    const withImages = allRecipes.filter(
       (r) => (r.images && r.images.length > 0) || r.image
     );
-    const pool = withImages.length > 0 ? withImages : stable;
-    return pool[Math.abs(weekNumber) % pool.length];
-  }, [allRecipes, weekNumber]);
+    const pool = withImages.length > 0 ? withImages : allRecipes;
+    if (pool.length === 0) return;
+
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    writtenWeekRef.current = currentWeekId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time init from async-loaded household state
+    setSessionPick(pick);
+    updateHousehold(householdId, {
+      recipeOfWeek: { weekId: currentWeekId, recipeId: pick.id },
+    }).catch(() => {});
+  }, [cachedRecipeOfWeek, sessionPick, householdId, household, allRecipes]);
 
   function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();
@@ -106,7 +148,7 @@ function HomeContent() {
       .then((all) => setAllRecipes(all))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [householdId]);
 
   return (
     <>
