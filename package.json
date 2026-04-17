@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "firebase emulators:exec --only firestore --project afk-test \"vitest run --config vitest.rules.config.ts\""
+    "test:rules": "firebase emulators:exec --only firestore,storage --project afk-test \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

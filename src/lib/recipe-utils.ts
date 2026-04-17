@@ -6,7 +6,7 @@ export function slugify(title: string): string {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .trim();
+    .replace(/^-+|-+$/g, "");
 }
 
 export function matchesRecipeQuery(recipe: Recipe, query: string): boolean {

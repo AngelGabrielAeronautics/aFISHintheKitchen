@@ -41,14 +41,14 @@ describe("slugify", () => {
     expect(slugify("3-bean chilli")).toBe("3-bean-chilli");
   });
 
-  it("returns empty string for empty input", () => {
+  it("returns empty string for empty and whitespace-only input", () => {
     expect(slugify("")).toBe("");
+    expect(slugify("   ")).toBe("");
   });
 
-  it("currently returns a lone hyphen for whitespace-only input (known quirk)", () => {
-    // .trim() only strips whitespace, not the hyphens produced by the \s+ -> '-' pass.
-    // Pinning this so we notice if/when slugify is tightened to return "".
-    expect(slugify("   ")).toBe("-");
+  it("strips leading and trailing hyphens from punctuation-heavy titles", () => {
+    expect(slugify("-- Stew --")).toBe("stew");
+    expect(slugify("!!! chicken !!!")).toBe("chicken");
   });
 
   it("strips accented characters (ASCII-only)", () => {
