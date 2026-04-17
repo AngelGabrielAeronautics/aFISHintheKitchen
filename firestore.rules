@@ -43,15 +43,42 @@ service cloud.firestore {
     }
 
     // Recipes
-    // NOTE: update/delete remain auth-only because recipes carry social
-    // fields (lovedBy/dislikedBy/triedBy/mustTry/notes) that any signed-in
-    // user legitimately mutates via arrayUnion/arrayRemove, AND recipes have
-    // no createdByUid field yet. Tightening these needs a data migration.
-    // The [known-permissive] tests in firestore.rules.test.ts pin this.
+    // The rules are migration-friendly: recipes written before
+    // createdByUid was introduced ("legacy") remain fully mutable by any
+    // authenticated user, while new recipes enforce creator-ownership for
+    // non-social edits and deletes. Social fields (love/dislike/tried/
+    // must-try/notes/editHistory) can always be updated by any auth user.
     match /recipes/{recipeId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+
+      // On create, if createdByUid is supplied it must equal the caller.
+      // Left optional so the existing seed flow (which doesn't set it)
+      // keeps working until the backfill lands.
+      allow create: if request.auth != null
+                    && (!('createdByUid' in request.resource.data)
+                        || request.resource.data.createdByUid == request.auth.uid);
+
+      // Updates:
+      //   - Legacy recipes (no createdByUid) stay legacy — no ownership
+      //     can be silently stamped on via update.
+      //   - Creator can edit anything on their own recipe.
+      //   - Anyone can update ONLY social fields on a recipe that has a
+      //     creator, via arrayUnion/arrayRemove.
+      allow update: if request.auth != null && (
+        (!('createdByUid' in resource.data)
+          && !('createdByUid' in request.resource.data))
+        || (('createdByUid' in resource.data)
+          && resource.data.createdByUid == request.auth.uid)
+        || (('createdByUid' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['lovedBy','dislikedBy','triedBy','mustTry','notes','editHistory']))
+      );
+
+      // Delete: legacy open, creator only for post-migration recipes.
+      allow delete: if request.auth != null && (
+        !('createdByUid' in resource.data)
+        || resource.data.createdByUid == request.auth.uid
+      );
     }
 
     // Family members / profiles

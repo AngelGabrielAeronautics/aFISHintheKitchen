@@ -57,7 +57,7 @@ async function seed(
   });
 }
 
-describe("recipes collection", () => {
+describe("recipes collection — reads", () => {
   it("allows unauthenticated reads (public catalog)", async () => {
     await seed("recipes", "r1", { title: "Bread", householdId: "h1" });
     await assertSucceeds(getDoc(doc(anonDb(), "recipes", "r1")));
@@ -68,22 +68,121 @@ describe("recipes collection", () => {
       setDoc(doc(anonDb(), "recipes", "r1"), { title: "Hack" })
     );
   });
+});
 
-  it("allows any authenticated user to create a recipe", async () => {
+describe("recipes collection — create", () => {
+  it("allows creating a recipe with no createdByUid (legacy / seed flow)", async () => {
     await assertSucceeds(
       setDoc(doc(aliceDb(), "recipes", "r1"), { title: "Alice's loaf" })
     );
   });
 
-  it("[deferred] lets any authenticated user delete any recipe", async () => {
-    // Intentionally deferred: recipes carry social fields (lovedBy,
-    // dislikedBy, triedBy, mustTry, notes) that any signed-in user
-    // legitimately mutates via arrayUnion/arrayRemove, and there is no
-    // `createdByUid` field yet to split "owner-only edit" from "social
-    // edit". Tightening needs a data migration to backfill createdByUid.
-    // Pinned so that when the migration lands, this test is updated.
-    await seed("recipes", "r1", { title: "Alice's", contributedBy: "alice" });
+  it("allows creating a recipe with createdByUid that matches the caller", async () => {
+    await assertSucceeds(
+      setDoc(doc(aliceDb(), "recipes", "r1"), {
+        title: "Alice's loaf",
+        createdByUid: "alice",
+      })
+    );
+  });
+
+  it("denies creating a recipe that claims someone else's createdByUid", async () => {
+    await assertFails(
+      setDoc(doc(bobDb(), "recipes", "r1"), {
+        title: "Bob's spoof",
+        createdByUid: "alice",
+      })
+    );
+  });
+});
+
+describe("recipes collection — delete", () => {
+  it("allows any auth user to delete a legacy recipe (no createdByUid)", async () => {
+    await seed("recipes", "r1", { title: "Legacy", contributedBy: "alice" });
     await assertSucceeds(deleteDoc(doc(bobDb(), "recipes", "r1")));
+  });
+
+  it("allows the creator to delete their own recipe", async () => {
+    await seed("recipes", "r1", { title: "Alice's", createdByUid: "alice" });
+    await assertSucceeds(deleteDoc(doc(aliceDb(), "recipes", "r1")));
+  });
+
+  it("denies a non-creator from deleting a post-migration recipe", async () => {
+    await seed("recipes", "r1", { title: "Alice's", createdByUid: "alice" });
+    await assertFails(deleteDoc(doc(bobDb(), "recipes", "r1")));
+  });
+});
+
+describe("recipes collection — update", () => {
+  it("lets the creator update any field on their recipe", async () => {
+    await seed("recipes", "r1", {
+      title: "Alice's",
+      description: "old",
+      createdByUid: "alice",
+    });
+    await assertSucceeds(
+      updateDoc(doc(aliceDb(), "recipes", "r1"), { description: "new" })
+    );
+  });
+
+  it("denies a non-creator from changing non-social fields", async () => {
+    await seed("recipes", "r1", {
+      title: "Alice's",
+      description: "old",
+      createdByUid: "alice",
+    });
+    await assertFails(
+      updateDoc(doc(bobDb(), "recipes", "r1"), { description: "hacked" })
+    );
+  });
+
+  it("lets any auth user update ONLY social fields (lovedBy/triedBy/...)", async () => {
+    await seed("recipes", "r1", {
+      title: "Alice's",
+      createdByUid: "alice",
+      lovedBy: [],
+      triedBy: [],
+    });
+    await assertSucceeds(
+      updateDoc(doc(bobDb(), "recipes", "r1"), { lovedBy: ["Bob"] })
+    );
+  });
+
+  it("denies a non-creator from mixing a non-social field into a social update", async () => {
+    await seed("recipes", "r1", {
+      title: "Alice's",
+      description: "old",
+      createdByUid: "alice",
+      lovedBy: [],
+    });
+    await assertFails(
+      updateDoc(doc(bobDb(), "recipes", "r1"), {
+        lovedBy: ["Bob"],
+        description: "hacked",
+      })
+    );
+  });
+
+  it("denies a non-creator from claiming ownership of a legacy recipe via update", async () => {
+    // Existing doc has no createdByUid; attacker tries to stamp themselves.
+    await seed("recipes", "r1", { title: "Legacy" });
+    await assertFails(
+      updateDoc(doc(bobDb(), "recipes", "r1"), { createdByUid: "bob" })
+    );
+  });
+
+  it("denies a non-creator from removing an existing createdByUid", async () => {
+    await seed("recipes", "r1", { title: "Alice's", createdByUid: "alice" });
+    await assertFails(
+      updateDoc(doc(bobDb(), "recipes", "r1"), { createdByUid: null })
+    );
+  });
+
+  it("lets any auth user update any field on a legacy recipe (stays legacy)", async () => {
+    await seed("recipes", "r1", { title: "Legacy", description: "old" });
+    await assertSucceeds(
+      updateDoc(doc(bobDb(), "recipes", "r1"), { description: "updated" })
+    );
   });
 });
 
