@@ -8,9 +8,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
 import { getAllRecipes } from "@/lib/firebase-recipes";
 import type { Recipe } from "@/lib/types";
+import {
+  combineIngredients,
+  byRecipeIngredientKey,
+  combinedIngredientKey,
+  formatShoppingListText,
+  type ShoppingListViewMode,
+} from "@/lib/shopping-list";
 import Avatar from "@/components/Avatar";
 
-type ViewMode = "by-recipe" | "combined";
+type ViewMode = ShoppingListViewMode;
 
 function ShoppingListContent() {
   const { user, loading: authLoading } = useAuth();
@@ -79,21 +86,10 @@ function ShoppingListContent() {
   );
 
   // Combine ingredients across recipes, merging exact duplicates (case-insensitive)
-  const combinedIngredients = useMemo(() => {
-    const map = new Map<string, { display: string; recipes: string[] }>();
-    for (const recipe of selectedRecipes) {
-      for (const ing of recipe.ingredients) {
-        const key = ing.toLowerCase().trim();
-        const existing = map.get(key);
-        if (existing) {
-          existing.recipes.push(recipe.title);
-        } else {
-          map.set(key, { display: ing, recipes: [recipe.title] });
-        }
-      }
-    }
-    return Array.from(map.values());
-  }, [selectedRecipes]);
+  const combinedIngredients = useMemo(
+    () => combineIngredients(selectedRecipes),
+    [selectedRecipes]
+  );
 
   function toggleRecipe(id: string) {
     setSelectedIds((prev) => {
@@ -132,29 +128,12 @@ function ShoppingListContent() {
   }
 
   function handleCopyList() {
-    let text = "";
-    if (viewMode === "by-recipe") {
-      for (const recipe of selectedRecipes) {
-        text += `${recipe.title}\n`;
-        for (const ing of recipe.ingredients) {
-          const key = `${recipe.id}::${ing}`;
-          const checked = checkedIngredients.has(key);
-          text += `  ${checked ? "[x]" : "[ ]"} ${ing}\n`;
-        }
-        text += "\n";
-      }
-    } else {
-      text += "Combined Shopping List\n\n";
-      for (const item of combinedIngredients) {
-        const checked = checkedIngredients.has(`combined::${item.display}`);
-        text += `${checked ? "[x]" : "[ ]"} ${item.display}`;
-        if (item.recipes.length > 1) {
-          text += ` (${item.recipes.join(", ")})`;
-        }
-        text += "\n";
-      }
-    }
-    navigator.clipboard.writeText(text.trim()).then(() => {
+    const text = formatShoppingListText(
+      viewMode,
+      selectedRecipes,
+      checkedIngredients
+    );
+    navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -422,7 +401,7 @@ function ShoppingListContent() {
                           </div>
                           <ul className="space-y-1.5 ml-1">
                             {recipe.ingredients.map((ing, idx) => {
-                              const key = `${recipe.id}::${ing}`;
+                              const key = byRecipeIngredientKey(recipe.id, ing);
                               const isChecked =
                                 checkedIngredients.has(key);
                               return (
@@ -475,7 +454,7 @@ function ShoppingListContent() {
                   ) : (
                     <ul className="space-y-1.5">
                       {combinedIngredients.map((item, idx) => {
-                        const key = `combined::${item.display}`;
+                        const key = combinedIngredientKey(item.display);
                         const isChecked = checkedIngredients.has(key);
                         return (
                           <li key={idx}>
