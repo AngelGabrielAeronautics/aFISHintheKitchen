@@ -1,12 +1,19 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { messagesCreate } = vi.hoisted(() => ({ messagesCreate: vi.fn() }));
+const { messagesCreate, verifyIdToken } = vi.hoisted(() => ({
+  messagesCreate: vi.fn(),
+  verifyIdToken: vi.fn(),
+}));
 
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class MockAnthropic {
     messages = { create: messagesCreate };
   },
+}));
+
+vi.mock("@/lib/firebase-admin", () => ({
+  getAdminAuth: () => ({ verifyIdToken }),
 }));
 
 // Silence expected error logs from the route's catch block.
@@ -43,9 +50,13 @@ function successResponse() {
   };
 }
 
-function makeRequest(formData: FormData): NextRequest {
+function makeRequest(formData: FormData, headers: Record<string, string> = {}): NextRequest {
   return new NextRequest("http://localhost/api/import-recipe", {
     method: "POST",
+    headers: {
+      Authorization: "Bearer valid-token",
+      ...headers,
+    },
     body: formData,
   });
 }
@@ -62,9 +73,63 @@ function formWithImage(
 
 beforeEach(() => {
   messagesCreate.mockReset();
+  verifyIdToken.mockReset();
+  // Default: valid token for most tests. Auth-specific tests override this.
+  verifyIdToken.mockResolvedValue({ uid: "test-uid" });
 });
 
-describe("POST /api/import-recipe", () => {
+describe("POST /api/import-recipe — authentication", () => {
+  it("returns 401 when no Authorization header is present", async () => {
+    const req = new NextRequest("http://localhost/api/import-recipe", {
+      method: "POST",
+      body: formWithImage("x", "r.jpg", "image/jpeg"),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: "Authentication required",
+    });
+    expect(verifyIdToken).not.toHaveBeenCalled();
+    expect(messagesCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for a malformed Authorization header", async () => {
+    const req = new NextRequest("http://localhost/api/import-recipe", {
+      method: "POST",
+      headers: { Authorization: "NotBearer xxx" },
+      body: formWithImage("x", "r.jpg", "image/jpeg"),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    expect(verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when the ID token is invalid", async () => {
+    verifyIdToken.mockRejectedValueOnce(new Error("expired"));
+    const res = await POST(
+      makeRequest(formWithImage("x", "r.jpg", "image/jpeg"))
+    );
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: "Invalid or expired token",
+    });
+    expect(messagesCreate).not.toHaveBeenCalled();
+  });
+
+  it("calls verifyIdToken with the bearer token from the header", async () => {
+    messagesCreate.mockResolvedValueOnce(successResponse());
+    const req = new NextRequest("http://localhost/api/import-recipe", {
+      method: "POST",
+      headers: { Authorization: "Bearer my-id-token" },
+      body: formWithImage("x", "r.jpg", "image/jpeg"),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(verifyIdToken).toHaveBeenCalledWith("my-id-token");
+  });
+});
+
+describe("POST /api/import-recipe — input validation", () => {
   it("returns 400 when no image is provided", async () => {
     const res = await POST(makeRequest(new FormData()));
     expect(res.status).toBe(400);
@@ -72,6 +137,39 @@ describe("POST /api/import-recipe", () => {
     expect(messagesCreate).not.toHaveBeenCalled();
   });
 
+  it("rejects non-image MIME types with 400 (closes previous [known-risk])", async () => {
+    const res = await POST(
+      makeRequest(formWithImage("%PDF", "r.pdf", "application/pdf"))
+    );
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: "Unsupported image type. Use JPEG, PNG, GIF, or WebP.",
+    });
+    expect(messagesCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects octet-stream / missing MIME type", async () => {
+    const res = await POST(
+      makeRequest(formWithImage("x", "r.bin", "application/octet-stream"))
+    );
+    expect(res.status).toBe(400);
+    expect(messagesCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects images over the 10MB size cap with 413", async () => {
+    const big = new Uint8Array(10 * 1024 * 1024 + 1);
+    const res = await POST(
+      makeRequest(formWithImage(big, "huge.jpg", "image/jpeg"))
+    );
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toEqual({
+      error: "Image is too large. Maximum 10MB.",
+    });
+    expect(messagesCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/import-recipe — happy path", () => {
   it("forwards the image to Claude and returns the parsed recipe", async () => {
     messagesCreate.mockResolvedValueOnce(successResponse());
     const res = await POST(
@@ -102,27 +200,9 @@ describe("POST /api/import-recipe", () => {
     const arg = messagesCreate.mock.calls[0][0];
     expect(arg.messages[0].content[0].source.media_type).toBe(expected);
   });
+});
 
-  it("[known-risk] silently treats non-image MIME types as image/jpeg", async () => {
-    // There's no MIME allow-list: a PDF (or anything else) is still forwarded
-    // to Claude with media_type "image/jpeg". Pinning this so tightening the
-    // input validation forces the test to be updated.
-    messagesCreate.mockResolvedValueOnce(successResponse());
-    await POST(makeRequest(formWithImage("%PDF", "r.pdf", "application/pdf")));
-    const arg = messagesCreate.mock.calls[0][0];
-    expect(arg.messages[0].content[0].source.media_type).toBe("image/jpeg");
-  });
-
-  it("[known-risk] does not require authentication", async () => {
-    // The route has no auth check — any anonymous caller can spend Anthropic
-    // credits. Pinning this so adding an auth gate forces the test to update.
-    messagesCreate.mockResolvedValueOnce(successResponse());
-    const res = await POST(
-      makeRequest(formWithImage("x", "r.jpg", "image/jpeg"))
-    );
-    expect(res.status).toBe(200);
-  });
-
+describe("POST /api/import-recipe — error branches", () => {
   it("returns 500 when the model reply contains no text block", async () => {
     messagesCreate.mockResolvedValueOnce({ content: [] });
     const res = await POST(

@@ -75,7 +75,13 @@ describe("recipes collection", () => {
     );
   });
 
-  it("[known-permissive] lets any authenticated user delete any recipe (no owner check)", async () => {
+  it("[deferred] lets any authenticated user delete any recipe", async () => {
+    // Intentionally deferred: recipes carry social fields (lovedBy,
+    // dislikedBy, triedBy, mustTry, notes) that any signed-in user
+    // legitimately mutates via arrayUnion/arrayRemove, and there is no
+    // `createdByUid` field yet to split "owner-only edit" from "social
+    // edit". Tightening needs a data migration to backfill createdByUid.
+    // Pinned so that when the migration lands, this test is updated.
     await seed("recipes", "r1", { title: "Alice's", contributedBy: "alice" });
     await assertSucceeds(deleteDoc(doc(bobDb(), "recipes", "r1")));
   });
@@ -107,9 +113,12 @@ describe("userPreferences collection", () => {
 });
 
 describe("invitedUsers collection", () => {
-  it("[known-risk] allows unauthenticated read (email enumeration)", async () => {
-    // Documents current posture: anyone can enumerate the invite list.
-    // Pinning this so tightening the rule (e.g. auth-only) forces this test to update.
+  it("[deferred] allows unauthenticated read (email enumeration)", async () => {
+    // Intentionally deferred: the sign-up flow calls isEmailAllowed() at
+    // src/app/auth/page.tsx:129 BEFORE the user authenticates, so the read
+    // must be public. Tightening to auth-only breaks onboarding; the
+    // proper fix is to replace this lookup with an opaque invite-token
+    // flow. Pinned so that when the flow is redesigned, this test updates.
     await seed("invitedUsers", "alice@example.com", {
       role: "member",
       householdId: "h1",
@@ -134,25 +143,47 @@ describe("households collection", () => {
     await assertFails(getDoc(doc(anonDb(), "households", "h1")));
   });
 
-  it("[known-permissive] lets any authenticated user update any household (no owner check)", async () => {
-    // Rule only checks request.auth != null; bob can overwrite alice's household.
+  it("lets a user create a household they own", async () => {
+    await assertSucceeds(
+      setDoc(doc(aliceDb(), "households", "h1"), {
+        name: "Smith",
+        ownerId: "alice",
+      })
+    );
+  });
+
+  it("denies creating a household owned by someone else", async () => {
+    await assertFails(
+      setDoc(doc(bobDb(), "households", "h1"), {
+        name: "Smith",
+        ownerId: "alice",
+      })
+    );
+  });
+
+  it("lets the owner update their household", async () => {
     await seed("households", "h1", { name: "Smith", ownerId: "alice" });
     await assertSucceeds(
+      updateDoc(doc(aliceDb(), "households", "h1"), { name: "Smith Family" })
+    );
+  });
+
+  it("denies update by a non-owner (closes the previous [known-permissive])", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await assertFails(
       updateDoc(doc(bobDb(), "households", "h1"), { name: "Hacked" })
+    );
+  });
+
+  it("denies silent ownership transfer via update", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await assertFails(
+      updateDoc(doc(aliceDb(), "households", "h1"), { ownerId: "bob" })
     );
   });
 });
 
 describe("householdMembers collection", () => {
-  it("[known-permissive] lets any authenticated user delete any membership record", async () => {
-    await seed("householdMembers", "m1", {
-      userId: "alice",
-      householdId: "h1",
-      role: "member",
-    });
-    await assertSucceeds(deleteDoc(doc(bobDb(), "householdMembers", "m1")));
-  });
-
   it("denies unauthenticated create", async () => {
     await assertFails(
       setDoc(doc(anonDb(), "householdMembers", "m1"), {
@@ -160,6 +191,69 @@ describe("householdMembers collection", () => {
         householdId: "h1",
       })
     );
+  });
+
+  it("lets a user create their own membership (auto-join from invite)", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await assertSucceeds(
+      setDoc(doc(aliceDb(), "householdMembers", "m1"), {
+        userId: "alice",
+        householdId: "h1",
+        role: "member",
+      })
+    );
+  });
+
+  it("lets the household owner create a membership for someone else", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await assertSucceeds(
+      setDoc(doc(aliceDb(), "householdMembers", "m1"), {
+        userId: "bob",
+        householdId: "h1",
+        role: "member",
+      })
+    );
+  });
+
+  it("denies a non-owner from creating a membership for someone else", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await assertFails(
+      setDoc(doc(bobDb(), "householdMembers", "m1"), {
+        userId: "charlie",
+        householdId: "h1",
+        role: "member",
+      })
+    );
+  });
+
+  it("lets a user delete their own membership (leaving)", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await seed("householdMembers", "m1", {
+      userId: "bob",
+      householdId: "h1",
+      role: "member",
+    });
+    await assertSucceeds(deleteDoc(doc(bobDb(), "householdMembers", "m1")));
+  });
+
+  it("lets the household owner remove any member", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await seed("householdMembers", "m1", {
+      userId: "bob",
+      householdId: "h1",
+      role: "member",
+    });
+    await assertSucceeds(deleteDoc(doc(aliceDb(), "householdMembers", "m1")));
+  });
+
+  it("denies a non-owner from deleting someone else's membership (closes the previous [known-permissive])", async () => {
+    await seed("households", "h1", { name: "Smith", ownerId: "alice" });
+    await seed("householdMembers", "m1", {
+      userId: "alice",
+      householdId: "h1",
+      role: "owner",
+    });
+    await assertFails(deleteDoc(doc(bobDb(), "householdMembers", "m1")));
   });
 });
 

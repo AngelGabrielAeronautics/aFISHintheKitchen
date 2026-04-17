@@ -184,10 +184,20 @@ export default function SubmitRecipePage() {
     setImportError("");
 
     try {
+      if (!user) {
+        setImportError("You need to be signed in to import a recipe.");
+        return;
+      }
+
+      const token = await user.getIdToken();
       const formData = new FormData();
       formData.append("image", file);
 
-      const res = await fetch("/api/import-recipe", { method: "POST", body: formData });
+      const res = await fetch("/api/import-recipe", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
       const data = await res.json();
 
       if (data.error) {
