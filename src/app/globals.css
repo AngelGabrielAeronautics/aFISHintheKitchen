@@ -15,22 +15,22 @@
   --color-gold: #8B7B4A;
   --color-gold-light: #C4B88A;
   --color-navy: #1A2E1A;
-  --font-serif: "Neuton", Georgia, serif;
+  --font-serif: "Francois One", sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
-}
-
-@font-face {
-  font-family: "Playfair Display";
-  font-style: normal;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
 }
 
 body {
   background: var(--color-cream);
   color: var(--color-charcoal);
   font-family: var(--font-sans);
+}
+
+/* Francois One ships a single weight (400). Headings use font-bold/semibold,
+   so disable weight synthesis to render the real face cleanly instead of
+   faux-bolding (which smears this heavy condensed font). Italic synthesis is
+   left on for the serif tagline. */
+.font-serif {
+  font-synthesis-weight: none;
 }
 
 /* Toast animation */

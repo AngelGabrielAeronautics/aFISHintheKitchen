@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Neuton, Inter } from "next/font/google";
+import { Francois_One, Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
@@ -7,11 +7,11 @@ import ContinueCooking from "@/components/ContinueCooking";
 import ScrollToTop from "@/components/ScrollToTop";
 import "./globals.css";
 
-const neuton = Neuton({
+const francoisOne = Francois_One({
   variable: "--font-serif",
   subsets: ["latin"],
   display: "swap",
-  weight: ["200", "300", "400", "700", "800"],
+  weight: "400", // Francois One ships a single weight
 });
 
 const inter = Inter({
@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${neuton.variable} ${inter.variable} h-full antialiased`}
+      className={`${francoisOne.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cream text-charcoal font-sans">
         <Providers>
