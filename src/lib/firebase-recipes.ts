@@ -24,10 +24,14 @@ function recipesCollection() {
 }
 
 export async function getAllRecipes(householdId?: string): Promise<Recipe[]> {
-  const constraints = householdId
-    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
-    : [orderBy("createdAt", "desc")];
-  const q = query(recipesCollection(), ...constraints);
+  // Household-scoped only: without an id we return nothing rather than leaking
+  // every household's recipes (callers pass undefined while the household loads).
+  if (!householdId) return [];
+  const q = query(
+    recipesCollection(),
+    where("householdId", "==", householdId),
+    orderBy("createdAt", "desc")
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
 }
@@ -50,19 +54,24 @@ export async function getRecipesByCategory(
   category: string,
   householdId?: string
 ): Promise<Recipe[]> {
-  const constraints = householdId
-    ? [where("householdId", "==", householdId), where("category", "==", category), orderBy("createdAt", "desc")]
-    : [where("category", "==", category), orderBy("createdAt", "desc")];
-  const q = query(recipesCollection(), ...constraints);
+  if (!householdId) return [];
+  const q = query(
+    recipesCollection(),
+    where("householdId", "==", householdId),
+    where("category", "==", category),
+    orderBy("createdAt", "desc")
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
 }
 
 export async function getFeaturedRecipes(householdId?: string): Promise<Recipe[]> {
-  const constraints = householdId
-    ? [where("householdId", "==", householdId), where("featured", "==", true)]
-    : [where("featured", "==", true)];
-  const q = query(recipesCollection(), ...constraints);
+  if (!householdId) return [];
+  const q = query(
+    recipesCollection(),
+    where("householdId", "==", householdId),
+    where("featured", "==", true)
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
 }
@@ -264,10 +273,12 @@ function collectionsCollection() {
 }
 
 export async function getAllCollections(householdId?: string): Promise<RecipeCollection[]> {
-  const constraints = householdId
-    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
-    : [orderBy("createdAt", "desc")];
-  const q = query(collectionsCollection(), ...constraints);
+  if (!householdId) return [];
+  const q = query(
+    collectionsCollection(),
+    where("householdId", "==", householdId),
+    orderBy("createdAt", "desc")
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as RecipeCollection));
 }
@@ -387,10 +398,12 @@ function tipsCollection() {
 }
 
 export async function getAllTips(householdId?: string): Promise<KitchenTip[]> {
-  const constraints = householdId
-    ? [where("householdId", "==", householdId), orderBy("createdAt", "desc")]
-    : [orderBy("createdAt", "desc")];
-  const q = query(tipsCollection(), ...constraints);
+  if (!householdId) return [];
+  const q = query(
+    tipsCollection(),
+    where("householdId", "==", householdId),
+    orderBy("createdAt", "desc")
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
 }

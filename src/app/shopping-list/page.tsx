@@ -60,7 +60,7 @@ function ShoppingListContent() {
         setRecipes(all);
       })
       .finally(() => setLoadingRecipes(false));
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, householdId]);
 
   const filteredRecipes = useMemo(() => {
     if (!search.trim()) return recipes;

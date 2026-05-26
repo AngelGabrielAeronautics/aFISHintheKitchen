@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, FAMILY_MEMBERS, SEASONS, type Season } from "@/lib/types";
@@ -12,6 +12,11 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import UnsavedChangesModal from "@/components/UnsavedChangesModal";
 import { addRecipe, uploadRecipeImage, createNotification } from "@/lib/firebase-recipes";
 import { useHousehold } from "@/context/HouseholdContext";
+import ImageDropzone from "@/components/ImageDropzone";
+import ImagePreviewGrid from "@/components/ImagePreviewGrid";
+import { readFileAsDataURL, type RecipePhoto } from "@/lib/image-utils";
+
+const MAX_PHOTOS = 6;
 
 interface FormErrors {
   title?: string;
@@ -67,9 +72,7 @@ export default function SubmitRecipePage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoType, setVideoType] = useState<"link" | "upload">("link");
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
+  const [photos, setPhotos] = useState<RecipePhoto[]>([]);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
@@ -82,7 +85,7 @@ export default function SubmitRecipePage() {
     description.trim() !== "" ||
     ingredients.some((i) => i.trim()) ||
     instructions.some((i) => i.trim()) ||
-    photoFiles.length > 0
+    photos.length > 0
   );
   const { showPrompt, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
@@ -139,40 +142,29 @@ export default function SubmitRecipePage() {
   }
 
   // --- Photo helpers ---
-  function handlePhotoSelect(file: File | undefined) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setErrors((prev) => ({ ...prev, photo: "Please select an image file." }));
-      return;
-    }
-    if (photoFiles.length >= 5) {
-      setErrors((prev) => ({ ...prev, photo: "Maximum 5 images allowed." }));
-      return;
-    }
+  async function handleAddPhotos(files: File[]) {
+    const newPhotos: RecipePhoto[] = await Promise.all(
+      files.map(async (file) => ({
+        id: crypto.randomUUID(),
+        kind: "new" as const,
+        file,
+        preview: await readFileAsDataURL(file),
+      }))
+    );
+    setPhotos((prev) => [...prev, ...newPhotos].slice(0, MAX_PHOTOS));
+  }
+
+  function setPhotoError(message: string | null) {
     setErrors((prev) => {
       const next = { ...prev };
-      delete next.photo;
+      if (message) next.photo = message;
+      else delete next.photo;
       return next;
     });
-    setPhotoFiles((prev) => [...prev, file]);
-    const reader = new FileReader();
-    reader.onload = (e) => setPhotoPreviews((prev) => [...prev, e.target?.result as string]);
-    reader.readAsDataURL(file);
   }
 
-  function handleFileInput(e: ChangeEvent<HTMLInputElement>) {
-    handlePhotoSelect(e.target.files?.[0]);
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragging(false);
-    handlePhotoSelect(e.dataTransfer.files?.[0]);
-  }
-
-  function removePhoto(index: number) {
-    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
-    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+  function removePhoto(id: string) {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
   }
 
   // --- Validation ---
@@ -278,10 +270,11 @@ export default function SubmitRecipePage() {
         .replace(/-+/g, "-")
         .trim();
 
-      // Upload images if provided
+      // Upload images if provided, preserving the displayed order (first = cover).
       const imageUrls: string[] = [];
-      for (const file of photoFiles) {
-        const url = await uploadRecipeImage(file, slugFromTitle);
+      for (const photo of photos) {
+        if (photo.kind !== "new") continue;
+        const url = await uploadRecipeImage(photo.file, slugFromTitle);
         imageUrls.push(url);
       }
 
@@ -373,8 +366,7 @@ export default function SubmitRecipePage() {
     setIngredients([...INITIAL_INGREDIENTS]);
     setInstructions([...INITIAL_INSTRUCTIONS]);
     setTags("");
-    setPhotoFiles([]);
-    setPhotoPreviews([]);
+    setPhotos([]);
     setErrors({});
     setSubmitted(false);
     setSavedSlug(null);
@@ -966,69 +958,24 @@ export default function SubmitRecipePage() {
               )}
             </div>
 
-            {/* Photo Upload — up to 5 */}
+            {/* Photo Upload — up to 6 */}
             <div>
               <label className={labelClasses}>
                 Recipe Photos{" "}
-                <span className="text-slate/50 font-normal">(up to 5)</span>
+                <span className="text-slate/50 font-normal">(up to 6)</span>
               </label>
 
-              {/* Existing previews */}
-              {photoPreviews.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  {photoPreviews.map((preview, index) => (
-                    <div key={index} className="relative rounded-lg overflow-hidden border border-gold-light">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={preview}
-                        alt={`Recipe photo ${index + 1}`}
-                        className="w-full h-32 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                        aria-label={`Remove photo ${index + 1}`}
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <ImagePreviewGrid photos={photos} onReorder={setPhotos} onRemove={removePhoto} />
 
-              {/* Upload zone — show if under 3 photos */}
-              {photoFiles.length < 5 && (
-                <label
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  className={`flex flex-col items-center justify-center w-full h-32 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-                    isDragging
-                      ? "border-terracotta bg-terracotta-light/20"
-                      : "border-gold-light bg-warm-white hover:border-terracotta/50"
-                  }`}
-                >
-                  <svg className="w-8 h-8 text-slate/40 mb-2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                  </svg>
-                  <p className="text-xs text-slate/60">
-                    {photoFiles.length === 0 ? "Add photos" : `Add another (${5 - photoFiles.length} remaining)`}{" "}
-                    — <span className="text-terracotta font-medium">browse</span>
-                  </p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileInput}
-                    className="hidden"
-                  />
-                </label>
+              <ImageDropzone
+                count={photos.length}
+                max={MAX_PHOTOS}
+                onFiles={handleAddPhotos}
+                onError={setPhotoError}
+              />
+
+              {photos.length > 1 && (
+                <p className="mt-2 text-xs text-slate/50">Drag to reorder — the first photo is the cover.</p>
               )}
               {errors.photo && (
                 <p className={errorClasses}>{errors.photo}</p>

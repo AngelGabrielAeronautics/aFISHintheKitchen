@@ -12,6 +12,7 @@ import Avatar from "@/components/Avatar";
 import RecipePreferences from "@/components/RecipePreferences";
 import RecipeNotes from "@/components/RecipeNotes";
 import EditHistory from "@/components/EditHistory";
+import RecipeGallery from "@/components/RecipeGallery";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
 
@@ -186,26 +187,7 @@ export default function RecipePage() {
       {/* Recipe images — full width */}
       <div className="print-hide mx-auto max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
         {recipe.images && recipe.images.length > 0 ? (
-          <div className="relative">
-            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {recipe.images.map((url, index) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={index}
-                  src={url}
-                  alt={`${recipe.title} — photo ${index + 1}`}
-                  className="w-full shrink-0 snap-center object-cover rounded-2xl shadow-md aspect-[16/9]"
-                />
-              ))}
-            </div>
-            {recipe.images.length > 1 && (
-              <div className="mt-2 flex justify-center gap-1.5">
-                {recipe.images.map((_, index) => (
-                  <span key={index} className="h-1.5 w-1.5 rounded-full bg-slate/30" />
-                ))}
-              </div>
-            )}
-          </div>
+          <RecipeGallery images={recipe.images} title={recipe.title} />
         ) : recipe.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

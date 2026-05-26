@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { CATEGORIES, FAMILY_MEMBERS, SEASONS, type Season } from "@/lib/types";
@@ -20,6 +20,12 @@ import {
   addRecipe,
 } from "@/lib/firebase-recipes";
 import { useHousehold } from "@/context/HouseholdContext";
+import ImageDropzone from "@/components/ImageDropzone";
+import ImagePreviewGrid from "@/components/ImagePreviewGrid";
+import { readFileAsDataURL, type RecipePhoto } from "@/lib/image-utils";
+import { getYouTubeId, getYouTubeThumbnail } from "@/lib/video-utils";
+
+const MAX_PHOTOS = 6;
 
 interface FormErrors {
   title?: string;
@@ -41,7 +47,7 @@ export default function EditRecipePage() {
   const { slug } = useParams<{ slug: string }>();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { householdId } = useHousehold();
+  const { householdId, loading: householdLoading } = useHousehold();
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loadingRecipe, setLoadingRecipe] = useState(true);
@@ -71,10 +77,7 @@ export default function EditRecipePage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoType, setVideoType] = useState<"link" | "upload">("link");
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
+  const [photos, setPhotos] = useState<RecipePhoto[]>([]);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -89,13 +92,21 @@ export default function EditRecipePage() {
     ingredients.filter(i => i.trim()).join() !== recipe.ingredients.join() ||
     instructions.filter(i => i.trim()).join() !== recipe.instructions.join() ||
     story !== (recipe.story || "") ||
-    photoFiles.length > 0
+    photos.some((p) => p.kind === "new") ||
+    photos.flatMap((p) => (p.kind === "existing" ? [p.url] : [])).join() !==
+      (recipe.images && recipe.images.length > 0
+        ? recipe.images
+        : recipe.image
+        ? [recipe.image]
+        : []
+      ).join()
   );
   const { showPrompt, confirmLeave, cancelLeave } = useUnsavedChanges(isDirty);
 
-  // Fetch recipe on mount
+  // Fetch recipe on mount — wait for the household so we scope to it and don't
+  // briefly load a same-slug recipe from another household.
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || householdLoading) return;
 
     async function fetchRecipe() {
       setLoadingRecipe(true);
@@ -139,11 +150,15 @@ export default function EditRecipePage() {
           fetched.instructions.length > 0 ? [...fetched.instructions] : [""]
         );
         setTags(fetched.tags.join(", "));
-        if (fetched.images && fetched.images.length > 0) {
-          setExistingImages(fetched.images);
-        } else if (fetched.image) {
-          setExistingImages([fetched.image]);
-        }
+        const loadedImages =
+          fetched.images && fetched.images.length > 0
+            ? fetched.images
+            : fetched.image
+            ? [fetched.image]
+            : [];
+        setPhotos(
+          loadedImages.map((url) => ({ id: crypto.randomUUID(), kind: "existing", url }))
+        );
       } catch {
         setNotFound(true);
       } finally {
@@ -152,7 +167,7 @@ export default function EditRecipePage() {
     }
 
     fetchRecipe();
-  }, [slug, householdId]);
+  }, [slug, householdId, householdLoading]);
 
   // --- Ingredient helpers ---
   function updateIngredient(index: number, value: string) {
@@ -198,46 +213,29 @@ export default function EditRecipePage() {
   }
 
   // --- Photo helpers ---
-  const totalPhotos = existingImages.length + photoFiles.length;
+  async function handleAddPhotos(files: File[]) {
+    const newPhotos: RecipePhoto[] = await Promise.all(
+      files.map(async (file) => ({
+        id: crypto.randomUUID(),
+        kind: "new" as const,
+        file,
+        preview: await readFileAsDataURL(file),
+      }))
+    );
+    setPhotos((prev) => [...prev, ...newPhotos].slice(0, MAX_PHOTOS));
+  }
 
-  function handlePhotoSelect(file: File | undefined) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setErrors((prev) => ({ ...prev, photo: "Please select an image file." }));
-      return;
-    }
-    if (totalPhotos >= 5) {
-      setErrors((prev) => ({ ...prev, photo: "Maximum 5 images allowed." }));
-      return;
-    }
+  function setPhotoError(message: string | null) {
     setErrors((prev) => {
       const next = { ...prev };
-      delete next.photo;
+      if (message) next.photo = message;
+      else delete next.photo;
       return next;
     });
-    setPhotoFiles((prev) => [...prev, file]);
-    const reader = new FileReader();
-    reader.onload = (e) => setPhotoPreviews((prev) => [...prev, e.target?.result as string]);
-    reader.readAsDataURL(file);
   }
 
-  function handleFileInput(e: ChangeEvent<HTMLInputElement>) {
-    handlePhotoSelect(e.target.files?.[0]);
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragging(false);
-    handlePhotoSelect(e.dataTransfer.files?.[0]);
-  }
-
-  function removeExistingImage(index: number) {
-    setExistingImages((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function removeNewPhoto(index: number) {
-    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
-    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+  function removePhoto(id: string) {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
   }
 
   // --- Validation ---
@@ -293,13 +291,15 @@ export default function EditRecipePage() {
     });
 
     try {
-      // Upload new images
-      const newImageUrls: string[] = [];
-      for (const file of photoFiles) {
-        const url = await uploadRecipeImage(file, recipe.slug);
-        newImageUrls.push(url);
+      // Upload new images, preserving the displayed order (first = cover).
+      const allImages: string[] = [];
+      for (const photo of photos) {
+        if (photo.kind === "existing") {
+          allImages.push(photo.url);
+        } else {
+          allImages.push(await uploadRecipeImage(photo.file, recipe.slug));
+        }
       }
-      const allImages = [...existingImages, ...newImageUrls];
 
       const recipeData: Record<string, unknown> = {
         title,
@@ -934,18 +934,42 @@ export default function EditRecipePage() {
               </div>
 
               {videoType === "link" ? (
-                <input
-                  type="url"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="Paste a YouTube or video URL"
-                  className={inputClasses}
-                />
+                <>
+                  <input
+                    type="url"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="Paste a YouTube or video URL"
+                    className={inputClasses}
+                  />
+                  {getYouTubeId(videoUrl) && (
+                    <a
+                      href={videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative mt-3 block rounded-lg overflow-hidden border border-gold-light max-w-xs"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getYouTubeThumbnail(getYouTubeId(videoUrl)!)}
+                        alt="Video thumbnail"
+                        className="w-full aspect-video object-cover"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-charcoal/20 group-hover:bg-charcoal/10 transition-colors">
+                        <span className="flex items-center justify-center w-12 h-12 rounded-full bg-charcoal/60 text-white">
+                          <svg className="w-6 h-6 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </span>
+                    </a>
+                  )}
+                </>
               ) : (
                 <>
                   {videoPreview ? (
                     <div className="relative rounded-lg overflow-hidden border border-gold-light">
-                      <video src={videoPreview} controls className="w-full max-h-48" />
+                      <video src={videoPreview} controls preload="metadata" className="w-full max-h-48" />
                       <button
                         type="button"
                         onClick={() => { setVideoFile(null); setVideoPreview(null); setVideoUrl(""); }}
@@ -985,66 +1009,20 @@ export default function EditRecipePage() {
             <div>
               <label className={labelClasses}>
                 Recipe Photos{" "}
-                <span className="text-slate/50 font-normal">(up to 5)</span>
+                <span className="text-slate/50 font-normal">(up to 6)</span>
               </label>
 
-              {/* Existing + new previews */}
-              {(existingImages.length > 0 || photoPreviews.length > 0) && (
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  {existingImages.map((url, index) => (
-                    <div key={`existing-${index}`} className="relative rounded-lg overflow-hidden border border-gold-light">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={`Recipe photo ${index + 1}`} className="w-full h-32 object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeExistingImage(index)}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                  {photoPreviews.map((preview, index) => (
-                    <div key={`new-${index}`} className="relative rounded-lg overflow-hidden border border-gold-light">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={preview} alt={`New photo ${index + 1}`} className="w-full h-32 object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeNewPhoto(index)}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-charcoal/70 hover:bg-charcoal rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <ImagePreviewGrid photos={photos} onReorder={setPhotos} onRemove={removePhoto} />
 
-              {totalPhotos < 5 && (
-                <label
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  className={`flex flex-col items-center justify-center w-full h-32 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-                    isDragging
-                      ? "border-terracotta bg-terracotta-light/20"
-                      : "border-gold-light bg-warm-white hover:border-terracotta/50"
-                  }`}
-                >
-                  <svg className="w-8 h-8 text-slate/40 mb-2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                  </svg>
-                  <p className="text-xs text-slate/60">
-                    {totalPhotos === 0 ? "Add photos" : `Add another (${5 - totalPhotos} remaining)`}{" "}
-                    — <span className="text-terracotta font-medium">browse</span>
-                  </p>
-                  <input type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
-                </label>
+              <ImageDropzone
+                count={photos.length}
+                max={MAX_PHOTOS}
+                onFiles={handleAddPhotos}
+                onError={setPhotoError}
+              />
+
+              {photos.length > 1 && (
+                <p className="mt-2 text-xs text-slate/50">Drag to reorder — the first photo is the cover.</p>
               )}
               {errors.photo && (
                 <p className={errorClasses}>{errors.photo}</p>

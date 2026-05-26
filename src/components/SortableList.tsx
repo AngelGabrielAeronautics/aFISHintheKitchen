@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { validateImageFile, IMAGE_ACCEPT_ATTR } from "@/lib/image-utils";
 import {
   DndContext,
   closestCenter,
@@ -50,6 +52,20 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
     zIndex: isDragging ? 10 : undefined,
     opacity: isDragging ? 0.8 : 1,
   };
+
+  const [imgError, setImgError] = useState<string | null>(null);
+  const [imgDragOver, setImgDragOver] = useState(false);
+
+  function handleStepFile(file: File | undefined) {
+    if (!file || !onImageSelect) return;
+    const error = validateImageFile(file);
+    if (error) {
+      setImgError(error);
+      return;
+    }
+    setImgError(null);
+    onImageSelect(file);
+  }
 
   return (
     <div ref={setNodeRef} style={style} className={`flex items-start gap-1.5 ${isDragging ? "shadow-lg rounded-lg" : ""}`}>
@@ -122,13 +138,25 @@ function SortableItem({ id, index, value, onChange, onRemove, canRemove, placeho
                 )}
               </div>
             ) : (
-              <label className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-medium text-slate/40 hover:text-slate/70 hover:bg-cream-dark/20 transition-colors cursor-pointer">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                  <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clipRule="evenodd" />
-                </svg>
-                Add photo
-                <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) onImageSelect(e.target.files[0]); }} className="hidden" />
-              </label>
+              <>
+                <label
+                  onDragOver={(e) => { e.preventDefault(); setImgDragOver(true); }}
+                  onDragLeave={() => setImgDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setImgDragOver(false); handleStepFile(e.dataTransfer.files?.[0]); }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-medium transition-colors cursor-pointer ${
+                    imgDragOver
+                      ? "text-terracotta bg-terracotta-light/20"
+                      : "text-slate/40 hover:text-slate/70 hover:bg-cream-dark/20"
+                  }`}
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                    <path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clipRule="evenodd" />
+                  </svg>
+                  Add photo
+                  <input type="file" accept={IMAGE_ACCEPT_ATTR} onChange={(e) => { handleStepFile(e.target.files?.[0]); e.target.value = ""; }} className="hidden" />
+                </label>
+                {imgError && <p className="mt-1 text-[10px] text-red-500">{imgError}</p>}
+              </>
             )}
           </div>
         )}

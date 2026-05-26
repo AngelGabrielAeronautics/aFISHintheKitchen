@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, DIFFICULTY_ICONS, type Recipe, formatTime, getCategoryBySlug } from "@/lib/types";
-import { getAllRecipes, updateHousehold } from "@/lib/firebase-recipes";
+import { getAllRecipes } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
 import Avatar from "@/components/Avatar";
@@ -60,6 +60,17 @@ function getIsoWeekId(date: Date): string {
   return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
 }
 
+// Deterministic FNV-1a string hash, used to pick a recipe of the week without
+// any stored state — the same week always maps to the same recipe.
+function hashString(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 function HomeContent() {
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,10 +85,8 @@ function HomeContent() {
   const [filterMaxTime, setFilterMaxTime] = useState("");
   const [filterSort, setFilterSort] = useState("newest");
   const [rotwIconError, setRotwIconError] = useState(false);
-  const [sessionPick, setSessionPick] = useState<Recipe | null>(null);
-  const writtenWeekRef = useRef<string | null>(null);
   const router = useRouter();
-  const { household, householdId } = useHousehold();
+  const { householdId } = useHousehold();
 
   const contributors = [...new Set(allRecipes.map(r => r.contributedBy))].sort();
 
@@ -91,41 +100,23 @@ function HomeContent() {
     return sorted.slice(0, 6);
   }, [allRecipes]);
 
-  // Recipe of the week: pulled from the household doc so it stays stable for
-  // the whole week and is shared across family members. If the stored pick is
-  // for this week, use it; otherwise the effect below picks a new one and
-  // writes it back.
-  const cachedRecipeOfWeek = useMemo<Recipe | null>(() => {
-    if (!household || allRecipes.length === 0) return null;
-    const currentWeekId = getIsoWeekId(new Date());
-    const stored = household.recipeOfWeek;
-    if (stored?.weekId !== currentWeekId) return null;
-    return allRecipes.find((r) => r.id === stored.recipeId) ?? null;
-  }, [household, allRecipes]);
-
-  const recipeOfTheWeek = cachedRecipeOfWeek ?? sessionPick;
-
-  // When there's no cached pick for the current week, pick once and persist.
-  useEffect(() => {
-    if (cachedRecipeOfWeek || sessionPick) return;
-    if (!householdId || !household || allRecipes.length === 0) return;
-    const currentWeekId = getIsoWeekId(new Date());
-    if (writtenWeekRef.current === currentWeekId) return;
-
+  // Recipe of the week: chosen deterministically from this household's recipes
+  // for the current ISO week. No stored state, so it's identical for every
+  // family member and only changes when the week rolls over.
+  const recipeOfTheWeek = useMemo<Recipe | null>(() => {
+    if (allRecipes.length === 0) return null;
+    const weekId = getIsoWeekId(new Date());
     const withImages = allRecipes.filter(
       (r) => (r.images && r.images.length > 0) || r.image
     );
     const pool = withImages.length > 0 ? withImages : allRecipes;
-    if (pool.length === 0) return;
-
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    writtenWeekRef.current = currentWeekId;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time init from async-loaded household state
-    setSessionPick(pick);
-    updateHousehold(householdId, {
-      recipeOfWeek: { weekId: currentWeekId, recipeId: pick.id },
-    }).catch(() => {});
-  }, [cachedRecipeOfWeek, sessionPick, householdId, household, allRecipes]);
+    // Pick the recipe whose hash for this week is highest. Stable as recipes are
+    // added — a new recipe only changes the pick if it happens to out-hash the
+    // current winner.
+    return pool.reduce((best, r) =>
+      hashString(weekId + r.id) > hashString(weekId + best.id) ? r : best
+    );
+  }, [allRecipes]);
 
   function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();

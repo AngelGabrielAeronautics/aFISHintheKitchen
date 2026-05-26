@@ -167,7 +167,7 @@ export default function CookModePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [timers, setTimers] = useState<Record<number, StepTimer>>({});
-  const { householdId } = useHousehold();
+  const { householdId, loading: householdLoading } = useHousehold();
   const [restoredState, setRestoredState] = useState(false);
 
   // Restore saved state from localStorage on mount (multi-session)
@@ -272,14 +272,15 @@ export default function CookModePage() {
   // Wake lock
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
-  // Fetch recipe
+  // Fetch recipe — wait for the household so we scope to it and don't briefly
+  // load a same-slug recipe from another household.
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || householdLoading) return;
     getRecipeBySlug(slug, householdId ?? undefined)
       .then((r) => setRecipe(r))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
-  }, [slug, householdId]);
+  }, [slug, householdId, householdLoading]);
 
   // Set page title
   useEffect(() => {
