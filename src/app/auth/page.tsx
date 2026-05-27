@@ -14,7 +14,6 @@ import {
 import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { isEmailAllowed } from "@/lib/firebase-recipes";
 
 type AuthMode = "signin" | "signup" | "reset";
 
@@ -137,15 +136,9 @@ export default function AuthPage() {
     setSubmitting(true);
 
     try {
-      const allowed = await isEmailAllowed(email);
-      if (!allowed) {
-        setError(
-          "This email hasn't been invited yet. Ask a family member to send you an invite."
-        );
-        setSubmitting(false);
-        return;
-      }
-
+      // Open self-serve signup: anyone can create an account. If they were
+      // invited, joinHouseholdFromInvite adds them to that book; otherwise they
+      // go on to start their own (subscribe/trial gate lands with billing).
       const credential = await createUserWithEmailAndPassword(
         getFirebaseAuth(),
         email,
@@ -321,7 +314,7 @@ export default function AuthPage() {
                     : "text-slate hover:text-charcoal"
                 }`}
               >
-                Claim Account
+                Sign Up
               </button>
             </div>
           )}
@@ -333,10 +326,10 @@ export default function AuthPage() {
             </h2>
           )}
 
-          {/* Claim account note */}
+          {/* Sign-up note */}
           {mode === "signup" && (
             <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
-              This cookbook is invite-only. You&rsquo;ll need an invitation from a family member to create an account. If you haven&rsquo;t been invited yet, ask the family admin.
+              Create an account to start your own cookbook with a free trial. Invited by family? Sign up with the email they invited and you&rsquo;ll join their cookbook automatically.
             </div>
           )}
 
@@ -490,7 +483,7 @@ export default function AuthPage() {
                 disabled={submitting}
                 className="w-full rounded-lg bg-terracotta px-4 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark focus:outline-none focus:ring-2 focus:ring-terracotta/50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submitting ? "Creating account..." : "Claim Account"}
+                {submitting ? "Creating account..." : "Create Account"}
               </button>
             </form>
           )}
@@ -530,13 +523,13 @@ export default function AuthPage() {
           <p className="mt-6 text-center font-sans text-sm text-slate">
             {mode === "signin" && (
               <>
-                Been invited?{" "}
+                New here?{" "}
                 <button
                   type="button"
                   onClick={() => switchMode("signup")}
                   className="font-medium text-terracotta hover:text-terracotta-dark transition-colors"
                 >
-                  Claim your account
+                  Create an account
                 </button>
               </>
             )}

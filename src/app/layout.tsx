@@ -6,6 +6,7 @@ import Providers from "@/components/Providers";
 import ContinueCooking from "@/components/ContinueCooking";
 import ScrollToTop from "@/components/ScrollToTop";
 import HouseholdStateGate from "@/components/HouseholdStateGate";
+import EmailVerificationGate from "@/components/EmailVerificationGate";
 import "./globals.css";
 
 const francoisOne = Francois_One({
@@ -73,6 +74,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-cream text-charcoal font-sans">
         <Providers>
           <ScrollToTop />
+          <EmailVerificationGate />
           <HouseholdStateGate />
           <Header />
           <main className="flex-1">{children}</main>
