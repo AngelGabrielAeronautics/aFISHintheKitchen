@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import Reveal from "@/components/Reveal";
 
 const FEATURES = [
   {
@@ -64,32 +65,72 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-cream">
       {/* Hero */}
-      <section className="relative isolate overflow-hidden py-24 sm:py-32 md:py-40">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-terracotta-light/20 via-cream to-sage-light/20" />
+      <section className="relative isolate overflow-hidden bg-charcoal py-24 sm:py-32 md:py-40">
+        {/* Background video */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden="true"
+          className="absolute inset-0 -z-20 h-full w-full object-cover"
+        >
+          <source src="/landing-hero.mp4" type="video/mp4" />
+        </video>
+        {/* Dark scrim so the headline stays readable over the video */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-charcoal/75 via-charcoal/55 to-charcoal/75" />
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <Image
             src="/logo.png"
             alt="Logo"
-            width={80}
-            height={80}
-            className="mx-auto h-20 w-20 rounded-full shadow-md"
+            width={160}
+            height={160}
+            className="reveal-pop mx-auto h-40 w-40 rounded-full shadow-md"
+            style={{ animationDelay: "1.1s" }}
           />
-          <h1 className="mt-6 font-serif text-4xl font-bold tracking-tight text-charcoal sm:text-5xl md:text-6xl">
-            Your family&rsquo;s recipes,<br />all in one place
+          <h1 className="mt-6 font-serif text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl">
+            <span className="block">
+              {["Your", "family’s", "recipes,"].map((word, i) => (
+                <span
+                  key={word}
+                  className="reveal-word"
+                  style={{ animationDelay: `${0.1 + i * 0.08}s`, marginRight: "0.25em" }}
+                >
+                  {word}
+                </span>
+              ))}
+            </span>
+            <span className="block">
+              {["all", "in", "one", "place"].map((word, i) => (
+                <span
+                  key={word}
+                  className="reveal-word"
+                  style={{ animationDelay: `${0.4 + i * 0.08}s`, marginRight: "0.25em" }}
+                >
+                  {word}
+                </span>
+              ))}
+            </span>
           </h1>
-          <p className="mt-6 mx-auto max-w-2xl font-sans text-lg leading-relaxed text-slate">
+          <p
+            className="reveal mt-6 mx-auto max-w-2xl font-sans text-lg leading-relaxed text-cream/90"
+            style={{ animationDelay: "0.85s" }}
+          >
             Collect your family&rsquo;s best recipes, plan meals together, assign dishes for gatherings, and cook with step-by-step guidance. A private cookbook built for families who love food.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div
+            className="reveal mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+            style={{ animationDelay: "1.7s" }}
+          >
             <Link
               href="/auth"
-              className="rounded-xl bg-terracotta px-8 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-dark"
+              className="rounded-xl bg-terracotta px-8 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-terracotta-dark hover:shadow-lg"
             >
               Get Started Free
             </Link>
             <Link
               href="/auth"
-              className="rounded-xl bg-white px-8 py-3.5 font-sans text-base font-semibold text-charcoal shadow-sm ring-1 ring-cream-dark/40 transition-colors hover:bg-cream-dark/20"
+              className="rounded-xl bg-white px-8 py-3.5 font-sans text-base font-semibold text-charcoal shadow-sm ring-1 ring-cream-dark/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-cream-dark/20 hover:shadow-md"
             >
               Sign In
             </Link>
@@ -100,28 +141,29 @@ export default function LandingPage() {
       {/* Features */}
       <section className="bg-warm-white py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center font-serif text-3xl font-bold text-charcoal sm:text-4xl">
-            Everything your family kitchen needs
-          </h2>
-          <p className="mt-4 text-center font-sans text-sm text-slate max-w-2xl mx-auto">
-            More than just a recipe book. Plan, shop, cook, and share — together.
-          </p>
+          <Reveal>
+            <h2 className="text-center font-serif text-3xl font-bold text-charcoal sm:text-4xl">
+              Everything your family kitchen needs
+            </h2>
+            <p className="mt-4 text-center font-sans text-sm text-slate max-w-2xl mx-auto">
+              More than just a recipe book. Plan, shop, cook, and share — together.
+            </p>
+          </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className="rounded-2xl bg-cream/60 p-6 ring-1 ring-cream-dark/20"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-terracotta/10 text-terracotta">
-                  {feature.icon}
+            {FEATURES.map((feature, i) => (
+              <Reveal key={feature.title} delay={i * 0.08}>
+                <div className="group h-full rounded-2xl bg-cream/60 p-6 ring-1 ring-cream-dark/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-terracotta/20">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-terracotta/10 text-terracotta transition-transform duration-300 group-hover:scale-110">
+                    {feature.icon}
+                  </div>
+                  <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">
+                    {feature.title}
+                  </h3>
+                  <p className="mt-2 font-sans text-sm leading-relaxed text-slate">
+                    {feature.description}
+                  </p>
                 </div>
-                <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 font-sans text-sm leading-relaxed text-slate">
-                  {feature.description}
-                </p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -129,7 +171,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="py-16 sm:py-24">
-        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+        <Reveal className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="font-serif text-3xl font-bold text-charcoal sm:text-4xl">
             Start your family cookbook today
           </h2>
@@ -138,11 +180,11 @@ export default function LandingPage() {
           </p>
           <Link
             href="/auth"
-            className="mt-8 inline-block rounded-xl bg-terracotta px-8 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-dark"
+            className="mt-8 inline-block rounded-xl bg-terracotta px-8 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-terracotta-dark hover:shadow-lg"
           >
             Create Your Cookbook
           </Link>
-        </div>
+        </Reveal>
       </section>
     </div>
   );

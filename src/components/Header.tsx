@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -27,8 +27,21 @@ const allLinks = [...primaryLinks, ...moreLinks];
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { user, loading } = useAuth();
+
+  // On the public landing page the nav is hidden over the hero and slides in
+  // once the user scrolls. Elsewhere it's a normal sticky header.
+  const isLanding = pathname === "/" && !user;
+
+  useEffect(() => {
+    if (!isLanding) return;
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLanding]);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -37,7 +50,17 @@ export default function Header() {
 
 
   return (
-    <header className="sticky top-0 z-50 bg-warm-white/50 backdrop-blur-md border-b border-gold-light/50">
+    <header
+      className={`z-50 bg-warm-white/50 backdrop-blur-md border-b border-gold-light/50 ${
+        isLanding
+          ? `fixed inset-x-0 top-0 transition-all duration-300 ${
+              scrolled
+                ? "translate-y-0 opacity-100"
+                : "-translate-y-full opacity-0 pointer-events-none"
+            }`
+          : "sticky top-0"
+      }`}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-18 sm:h-20">
           {/* Logo */}
