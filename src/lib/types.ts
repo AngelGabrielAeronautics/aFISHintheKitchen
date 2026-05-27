@@ -305,13 +305,24 @@ export interface HouseholdCustomisation {
   logoUrl?: string;
 }
 
+// Mirrored access state, advanced by the lapse-ladder scheduled job so rules and
+// UI can gate with a single read. "active" covers paid, trialing, and the grace window.
+export type HouseholdAccessState = "active" | "read_only" | "suspended";
+
 export interface Household {
   id: string;
   name: string;
   slug: string;
   ownerId: string;
+  // Denormalised member uids so security rules can authorise with one read
+  // (rules can't run queries). Maintained alongside the householdMembers docs.
+  memberIds: string[];
   customisation: HouseholdCustomisation;
-  plan: "free" | "premium";
+  /** @deprecated superseded by the owner's Subscription + accessState */
+  plan?: "free" | "premium";
+  accessState?: HouseholdAccessState; // undefined treated as "active" (legacy docs)
+  stateChangedAt?: string;
+  deleteAfter?: string; // set when suspended; hard-deleted ~1 year later
   createdAt: string;
   recipeOfWeek?: {
     weekId: string;
@@ -319,11 +330,37 @@ export interface Household {
   };
 }
 
+export type HouseholdRole = "owner" | "member";
+
 export interface HouseholdMember {
   id: string;
   userId: string;
   householdId: string;
   displayName: string;
-  role: "owner" | "admin" | "member";
+  role: HouseholdRole;
   joinedAt: string;
+}
+
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "incomplete";
+
+// One subscription per paying user; pays for exactly one owned cookbook.
+export interface Subscription {
+  userId: string; // doc id
+  householdId: string; // the one book this subscription pays for
+  provider: "stripe" | "paddle" | null; // chosen at the billing milestone
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  status: SubscriptionStatus;
+  plan: "monthly" | "annual" | null;
+  trialEndsAt?: string;
+  currentPeriodEnd?: string;
+  hasUsedTrial: boolean; // enforces one trial ever
+  extraSeats: number; // paid add-on beyond the base 5
+  lapsedAt?: string; // when the unpaid ladder started; cleared on recovery
+  updatedAt: string;
 }

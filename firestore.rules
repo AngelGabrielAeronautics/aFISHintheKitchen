@@ -1,78 +1,172 @@
 rules_version = '2';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// A Fish in the Kitchen — household-private, subscription-gated access model.
+// Mirrors src/lib/access.ts. See the project_subscription_model spec.
+//
+// ⚠️ DO NOT DEPLOY until these preconditions are met (otherwise users get locked
+//    out or can't join):
+//   1. Every existing household doc has `memberIds` (array of member uids) and
+//      `accessState` backfilled. New docs already set these.
+//   2. The invite-accept / join step runs SERVER-SIDE via the Admin SDK (which
+//      bypasses these rules), because joining adds a uid to the owner's
+//      household doc — which members aren't allowed to write here.
+//   3. Subscription writes happen server-side (webhooks via Admin SDK).
+// Test in the Firebase Console Rules Playground / emulator before deploying.
+// ─────────────────────────────────────────────────────────────────────────────
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Households
-    match /households/{householdId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Household membership
-    match /householdMembers/{memberId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null;
+    function email() {
+      return request.auth.token.email.lower();
     }
 
-    // Recipes
-    match /recipes/{recipeId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+    function isSuperAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/config/superAdmins)
+        && email() in get(/databases/$(database)/documents/config/superAdmins).data.emails;
     }
 
-    // Family members / profiles
-    match /members/{memberId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+    // Read a household doc's data (used for membership / owner / state checks).
+    function hh(hid) {
+      return get(/databases/$(database)/documents/households/$(hid)).data;
+    }
+    function householdExists(hid) {
+      return exists(/databases/$(database)/documents/households/$(hid));
     }
 
-    // Meal plans
-    match /mealPlans/{planId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    function isMember(hid) {
+      return isSignedIn() && householdExists(hid) && request.auth.uid in hh(hid).memberIds;
+    }
+    function isOwner(hid) {
+      return isSignedIn() && householdExists(hid) && request.auth.uid == hh(hid).ownerId;
+    }
+    function stateOf(hid) {
+      // Legacy docs without accessState are treated as active.
+      return ("accessState" in hh(hid)) ? hh(hid).accessState : "active";
     }
 
-    // Event menus (collections)
-    match /collections/{collectionId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+    // Members may read their household's data unless it's suspended.
+    function canRead(hid) {
+      return isSuperAdmin() || (isMember(hid) && stateOf(hid) != "suspended");
+    }
+    // Members may write only while the household is fully active (not read-only / suspended).
+    function canWrite(hid) {
+      return isSuperAdmin() || (isMember(hid) && stateOf(hid) == "active");
     }
 
-    // Tips & Tricks
-    match /tips/{tipId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+    // ── Households ──
+    match /households/{hid} {
+      allow read: if isSuperAdmin()
+        || (isSignedIn() && request.auth.uid in resource.data.memberIds
+            && resource.data.accessState != "suspended");
+      // A user may create only their own household, with themselves as sole member/owner.
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid];
+      // Only the owner edits settings/billing fields; members never write the household doc.
+      // (Adding/removing members is done server-side via the Admin SDK.)
+      allow update: if isSuperAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+      allow delete: if isSuperAdmin();
     }
 
-    // Notifications
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+    // ── Household members (the join table) ──
+    match /householdMembers/{id} {
+      allow read: if isSuperAdmin()
+        || (isSignedIn()
+            && (resource.data.userId == request.auth.uid || isMember(resource.data.householdId)));
+      // Creating memberships (owner + invite-accept) is server-side only.
+      allow create: if isSuperAdmin();
+      // Owner can remove members; a member can remove themselves (leave).
+      allow delete: if isSuperAdmin()
+        || isOwner(resource.data.householdId)
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isSuperAdmin();
     }
 
-    // User preferences
+    // ── Subscriptions (one per user) ──
+    match /subscriptions/{userId} {
+      allow read: if isSuperAdmin() || (isSignedIn() && request.auth.uid == userId);
+      // All writes via Admin SDK (checkout / webhooks). Clients never write directly.
+      allow write: if isSuperAdmin();
+    }
+
+    // ── Recipes — household-private ──
+    match /recipes/{id} {
+      allow read: if canRead(resource.data.householdId);
+      allow create: if canWrite(request.resource.data.householdId);
+      allow update, delete: if canWrite(resource.data.householdId);
+    }
+
+    // ── Family member profiles ──
+    match /members/{id} {
+      allow read: if canRead(resource.data.householdId);
+      allow create: if canWrite(request.resource.data.householdId);
+      allow update, delete: if canWrite(resource.data.householdId);
+    }
+
+    // ── Meal plans (per user, within a household) ──
+    match /mealPlans/{id} {
+      allow read: if canRead(resource.data.householdId);
+      allow create: if canWrite(request.resource.data.householdId)
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if canWrite(resource.data.householdId)
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Event menus / collections ──
+    match /collections/{id} {
+      allow read: if canRead(resource.data.householdId);
+      allow create: if canWrite(request.resource.data.householdId);
+      allow update, delete: if canWrite(resource.data.householdId);
+    }
+
+    // ── Tips & tricks ──
+    match /tips/{id} {
+      allow read: if canRead(resource.data.householdId);
+      allow create: if canWrite(request.resource.data.householdId);
+      allow update, delete: if canWrite(resource.data.householdId);
+    }
+
+    // ── Notifications ──
+    match /notifications/{id} {
+      allow read: if canRead(resource.data.householdId);
+      allow create: if canWrite(request.resource.data.householdId);
+      allow update: if canRead(resource.data.householdId); // mark-as-read
+      allow delete: if canWrite(resource.data.householdId);
+    }
+
+    // ── Invited users (doc id = invitee email, lowercased) ──
+    match /invitedUsers/{inviteEmail} {
+      // The invitee can read their own invite; the inviting household's owner can manage.
+      allow read: if isSignedIn()
+        && (inviteEmail == email()
+            || isSuperAdmin()
+            || (resource != null && isOwner(resource.data.householdId)));
+      allow create: if isSuperAdmin()
+        || (isSignedIn() && isOwner(request.resource.data.householdId));
+      // The invitee may mark themselves registered; owner/super admin may manage.
+      allow update: if isSuperAdmin()
+        || isOwner(resource.data.householdId)
+        || (isSignedIn() && inviteEmail == email());
+      allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
+    }
+
+    // ── User preferences (private to the user) ──
     match /userPreferences/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Invited users
-    match /invitedUsers/{email} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-
-    // Global config
+    // ── Global config ──
     match /config/{docId} {
-      allow read: if true;
+      // Clients read superAdmins/settings to gate UI; writes are server/super-admin only.
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
     }
   }
 }

@@ -26,7 +26,8 @@ export default function SettingsPage() {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const isOwner = membership?.role === "owner";
-  const isAdmin = membership?.role === "owner" || membership?.role === "admin";
+  // Only the owner manages a cookbook now (the "admin" role was retired).
+  const isAdmin = isOwner;
 
   useEffect(() => {
     if (household) {

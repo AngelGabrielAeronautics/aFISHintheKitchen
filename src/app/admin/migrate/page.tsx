@@ -37,11 +37,13 @@ export default function MigratePage() {
         name: "A Fish in the Kitchen",
         slug: "coppard-kitchen",
         ownerId: user!.uid,
+        memberIds: [user!.uid],
         customisation: {
           brandName: "A Fish in the Kitchen",
           tagline: "Family Recipes Worth Catching",
         },
         plan: "premium" as const,
+        accessState: "active" as const,
         createdAt: new Date().toISOString(),
       };
 

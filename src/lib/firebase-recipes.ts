@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getDb, getFirebaseStorage } from "./firebase";
-import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory, AppNotification, UserPreferences, Household, HouseholdMember, HouseholdCustomisation } from "./types";
+import type { Recipe, Member, RecipeNote, EditLogEntry, RecipeCollection, KitchenTip, TipCategory, AppNotification, UserPreferences, Household, HouseholdMember, HouseholdCustomisation, Subscription } from "./types";
 
 function recipesCollection() {
   return collection(getDb(), "recipes");
@@ -523,6 +523,7 @@ export async function createHousehold(data: {
     name: data.name,
     slug: data.slug,
     ownerId: data.ownerId,
+    memberIds: [data.ownerId],
     customisation: {
       brandName: data.customisation?.brandName ?? data.name,
       tagline: data.customisation?.tagline ?? "Family Recipes Worth Catching",
@@ -530,6 +531,7 @@ export async function createHousehold(data: {
       ...(data.customisation?.logoUrl ? { logoUrl: data.customisation.logoUrl } : {}),
     },
     plan: "free",
+    accessState: "active",
     createdAt,
   };
   const docRef = await addDoc(householdsCollection(), household);
@@ -576,18 +578,71 @@ export async function getHouseholdMembers(householdId: string): Promise<Househol
   return snap.docs.map((d) => ({ ...d.data(), id: d.id } as HouseholdMember));
 }
 
-export async function addHouseholdMember(data: { userId: string; householdId: string; displayName: string; role: "admin" | "member" }): Promise<HouseholdMember> {
+export async function addHouseholdMember(data: { userId: string; householdId: string; displayName: string; role: "member" }): Promise<HouseholdMember> {
   const joinedAt = new Date().toISOString();
   const payload = { ...data, joinedAt };
   const docRef = await addDoc(householdMembersCollection(), payload);
+  // Keep the denormalised memberIds in sync for security-rule lookups.
+  await updateDoc(doc(getDb(), "households", data.householdId), {
+    memberIds: arrayUnion(data.userId),
+  });
   return { ...payload, id: docRef.id };
 }
 
 export async function removeHouseholdMember(memberId: string): Promise<void> {
-  await deleteDoc(doc(getDb(), "householdMembers", memberId));
+  const ref = doc(getDb(), "householdMembers", memberId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const m = snap.data() as HouseholdMember;
+    await updateDoc(doc(getDb(), "households", m.householdId), {
+      memberIds: arrayRemove(m.userId),
+    });
+  }
+  await deleteDoc(ref);
 }
 
 export async function isSlugAvailable(slug: string): Promise<boolean> {
   const existing = await getHouseholdBySlug(slug);
   return !existing;
+}
+
+// ── Subscriptions (one per paying user, keyed by userId) ──
+export async function getSubscription(userId: string): Promise<Subscription | null> {
+  const snap = await getDoc(doc(getDb(), "subscriptions", userId));
+  return snap.exists() ? ({ ...snap.data(), userId: snap.id } as Subscription) : null;
+}
+
+export async function upsertSubscription(
+  userId: string,
+  data: Partial<Omit<Subscription, "userId">>
+): Promise<void> {
+  await setDoc(
+    doc(getDb(), "subscriptions", userId),
+    { ...data, updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+}
+
+// ── Seat / guest-book counting (mirrors src/lib/access.ts limits) ──
+// Seats used = active members (excluding owner) + outstanding pending invites.
+export async function countHouseholdSeats(householdId: string): Promise<number> {
+  const members = await getHouseholdMembers(householdId);
+  const activeMembers = members.filter((m) => m.role === "member").length;
+  const invites = await getInvitedUsers(householdId);
+  const pending = invites.filter((i) => i.status === "pending").length;
+  return activeMembers + pending;
+}
+
+// Guest books = memberships where the user is a member (not the owner).
+export async function countGuestBooks(userId: string): Promise<number> {
+  const memberships = await getUserHouseholds(userId);
+  return memberships.filter((m) => m.role === "member").length;
+}
+
+// ── Platform super admin (separate from a cookbook owner) ──
+export async function isSuperAdmin(email: string): Promise<boolean> {
+  const snap = await getDoc(doc(getDb(), "config", "superAdmins"));
+  if (!snap.exists()) return false;
+  const emails: string[] = snap.data().emails ?? [];
+  return emails.includes(email.toLowerCase().trim());
 }
