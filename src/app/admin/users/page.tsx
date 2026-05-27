@@ -8,9 +8,12 @@ import {
   addInvitedUser,
   removeInvitedUser,
   getAdminEmails,
+  countHouseholdSeats,
+  getSubscription,
   type InvitedUser,
 } from "@/lib/firebase-recipes";
 import { useHousehold } from "@/context/HouseholdContext";
+import { MAX_SEATS } from "@/lib/access";
 
 /*
   Firestore rules needed (deploy manually):
@@ -31,7 +34,7 @@ import { useHousehold } from "@/context/HouseholdContext";
 export default function AdminUsersPage() {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
-  const { householdId } = useHousehold();
+  const { household, householdId } = useHousehold();
 
   const [users, setUsers] = useState<InvitedUser[]>([]);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
@@ -93,13 +96,60 @@ export default function AdminUsersPage() {
     setSubmitting(true);
 
     try {
+      // Seat soft-block (UX). The hard cap is enforced server-side at join, but
+      // catch it here so owners aren't surprised after an invitee tries to accept.
+      if (householdId) {
+        const [used, sub] = await Promise.all([
+          countHouseholdSeats(householdId),
+          user ? getSubscription(user.uid) : Promise.resolve(null),
+        ]);
+        const limit = MAX_SEATS + (sub?.extraSeats ?? 0);
+        if (used >= limit) {
+          // TODO(billing): offer an "add extra seats" upgrade once that add-on exists.
+          setError(
+            `You've used all ${limit} member seats. Remove a member (or a pending invite) to free one up.`
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
       await addInvitedUser({
         email: trimmedEmail,
         name: trimmedName,
         invitedBy: user?.displayName ?? "Unknown",
         ...(householdId ? { householdId } : {}),
       });
-      setSuccessMessage(`Invitation added for ${trimmedName} (${trimmedEmail})`);
+
+      let emailSent = false;
+      try {
+        const token = await user?.getIdToken();
+        if (token) {
+          const res = await fetch("/api/send-invite", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              email: trimmedEmail,
+              name: trimmedName,
+              inviterName: user?.displayName || user?.email || "A family member",
+              householdName: household?.customisation?.brandName,
+              signupUrl: `${window.location.origin}/auth`,
+            }),
+          });
+          emailSent = res.ok;
+        }
+      } catch {
+        // Fall through — allow-list entry still succeeded
+      }
+
+      setSuccessMessage(
+        emailSent
+          ? `Invitation sent to ${trimmedName} (${trimmedEmail})`
+          : `${trimmedName} (${trimmedEmail}) is allow-listed, but the email failed to send. Share the signup link with them directly.`
+      );
       setInviteName("");
       setInviteEmail("");
       await fetchData();
