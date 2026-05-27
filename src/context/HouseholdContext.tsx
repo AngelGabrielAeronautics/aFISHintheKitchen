@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { getUserHouseholds, getHousehold } from "@/lib/firebase-recipes";
-import type { Household, HouseholdMember } from "@/lib/types";
+import type { Household, HouseholdMember, HouseholdAccessState } from "@/lib/types";
+import { resolveAccess, type Access } from "@/lib/access";
 
 interface HouseholdContextValue {
   household: Household | null;
@@ -11,6 +12,8 @@ interface HouseholdContextValue {
   membership: HouseholdMember | null;
   allMemberships: HouseholdMember[];
   loading: boolean;
+  accessState: HouseholdAccessState; // active by default / for legacy docs
+  access: Access; // what the current user can do here (view/edit/manage)
   switchHousehold: (id: string) => void;
 }
 
@@ -20,6 +23,8 @@ const HouseholdContext = createContext<HouseholdContextValue>({
   membership: null,
   allMemberships: [],
   loading: true,
+  accessState: "active",
+  access: { canView: false, canEdit: false, canManage: false, reason: "not_a_member" },
   switchHousehold: () => {},
 });
 
@@ -28,7 +33,7 @@ export function useHousehold() {
 }
 
 export default function HouseholdProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSuperAdmin } = useAuth();
   const [household, setHousehold] = useState<Household | null>(null);
   const [membership, setMembership] = useState<HouseholdMember | null>(null);
   const [allMemberships, setAllMemberships] = useState<HouseholdMember[]>([]);
@@ -91,6 +96,9 @@ export default function HouseholdProvider({ children }: { children: React.ReactN
     setLoading(true);
   }
 
+  const accessState: HouseholdAccessState = household?.accessState ?? "active";
+  const access = resolveAccess({ household, membership, isSuperAdmin });
+
   return (
     <HouseholdContext.Provider
       value={{
@@ -99,6 +107,8 @@ export default function HouseholdProvider({ children }: { children: React.ReactN
         membership,
         allMemberships,
         loading,
+        accessState,
+        access,
         switchHousehold,
       }}
     >
