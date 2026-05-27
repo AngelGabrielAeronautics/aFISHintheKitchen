@@ -14,10 +14,7 @@ import {
 import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { isEmailAllowed, markUserRegistered, addHouseholdMember, getUserHouseholds } from "@/lib/firebase-recipes";
-import type { InvitedUser } from "@/lib/firebase-recipes";
-import { doc, getDoc } from "firebase/firestore";
-import { getDb } from "@/lib/firebase";
+import { isEmailAllowed } from "@/lib/firebase-recipes";
 
 type AuthMode = "signin" | "signup" | "reset";
 
@@ -43,24 +40,38 @@ function getErrorMessage(code: string): string {
   }
 }
 
-async function autoJoinHouseholdFromInvite(uid: string, email: string, displayName: string): Promise<void> {
+// Joins the signed-in user to the household they were invited to, server-side
+// (the Admin SDK route enforces seat/book caps and bypasses the locked rules).
+async function joinHouseholdFromInvite(): Promise<{ ok: boolean; error?: string }> {
   try {
-    const inviteDoc = await getDoc(doc(getDb(), "invitedUsers", email.toLowerCase().trim()));
-    if (!inviteDoc.exists()) return;
-    const invite = inviteDoc.data() as InvitedUser;
-    if (!invite.householdId) return;
-
-    // Check if already a member
-    const existing = await getUserHouseholds(uid);
-    if (existing.some((m) => m.householdId === invite.householdId)) return;
-
-    await addHouseholdMember({
-      userId: uid,
-      householdId: invite.householdId!,
-      displayName,
-      role: "member",
+    const current = getFirebaseAuth().currentUser;
+    if (!current) return { ok: false, error: "no_user" };
+    const token = await current.getIdToken();
+    const res = await fetch("/api/join", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
     });
-  } catch { /* silently fail */ }
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: data.error ?? "join_failed" };
+  } catch {
+    return { ok: false, error: "join_failed" };
+  }
+}
+
+// Maps a join error to a user-facing message. Returns null for non-errors
+// (e.g. no_invite — expected for owners/self-serve signups).
+function joinErrorMessage(error?: string): string | null {
+  switch (error) {
+    case "guest_book_limit":
+      return "You're already in the maximum of 3 cookbooks. Leave one before joining another.";
+    case "seat_limit":
+      return "That cookbook is full. Ask the owner to free up a spot, then try again.";
+    case "household_inactive":
+      return "That cookbook is currently inactive. Ask the owner to reactivate it.";
+    default:
+      return null;
+  }
 }
 
 export default function AuthPage() {
@@ -144,8 +155,13 @@ export default function AuthPage() {
         displayName: displayName.trim(),
       });
       await sendEmailVerification(credential.user);
-      await markUserRegistered(email);
-      await autoJoinHouseholdFromInvite(credential.user.uid, email, displayName.trim());
+      const join = await joinHouseholdFromInvite();
+      const joinMsg = joinErrorMessage(join.error);
+      if (!join.ok && joinMsg) {
+        setError(joinMsg);
+        setSubmitting(false);
+        return;
+      }
       setSuccessMessage(
         `We've sent a verification email to ${email}. Please check your inbox.`
       );
@@ -181,9 +197,14 @@ export default function AuthPage() {
     setSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(getFirebaseAuth(), provider);
-      const u = result.user;
-      await autoJoinHouseholdFromInvite(u.uid, u.email ?? "", u.displayName ?? u.email ?? "");
+      await signInWithPopup(getFirebaseAuth(), provider);
+      const join = await joinHouseholdFromInvite();
+      const joinMsg = joinErrorMessage(join.error);
+      if (!join.ok && joinMsg) {
+        setError(joinMsg);
+        setSubmitting(false);
+        return;
+      }
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
@@ -202,9 +223,14 @@ export default function AuthPage() {
       const provider = new OAuthProvider("apple.com");
       provider.addScope("email");
       provider.addScope("name");
-      const result = await signInWithPopup(getFirebaseAuth(), provider);
-      const u = result.user;
-      await autoJoinHouseholdFromInvite(u.uid, u.email ?? "", u.displayName ?? u.email ?? "");
+      await signInWithPopup(getFirebaseAuth(), provider);
+      const join = await joinHouseholdFromInvite();
+      const joinMsg = joinErrorMessage(join.error);
+      if (!join.ok && joinMsg) {
+        setError(joinMsg);
+        setSubmitting(false);
+        return;
+      }
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
