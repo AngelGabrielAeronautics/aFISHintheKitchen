@@ -75,6 +75,7 @@ const FAQS = [
 type Feature = {
   title: string;
   description: string;
+  frontImage?: string;
   backImage?: string;
   backVideo?: string;
   icon: ReactNode;
@@ -84,6 +85,7 @@ const FEATURES: Feature[] = [
   {
     title: "Family Recipes",
     description: "Collect and organise your family's best recipes in one beautiful place. Add photos, videos, ingredients, and step-by-step instructions.",
+    frontImage: "/card-family-recipes.jpg",
     backVideo: "/card-family-recipes.mp4",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
@@ -103,6 +105,7 @@ const FEATURES: Feature[] = [
   {
     title: "Meal Planning",
     description: "Plan your family's meals for the week. Each member has their own plan, and you can see what everyone else is cooking.",
+    frontImage: "/card-meal-planning.jpg",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
         <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
@@ -246,17 +249,32 @@ function FeatureCard({
           onToggle();
         }
       }}
-      className={`flip-card group h-72 cursor-pointer sm:h-80 ${flipped ? "is-flipped" : ""}`}
+      className={`flip-card group cursor-pointer ${flipped ? "aspect-[9/16] is-flipped" : "aspect-square"}`}
     >
       <div className="flip-card-inner">
-          {/* Front */}
-          <div className="flip-card-face rounded-2xl bg-cream/60 p-6 ring-1 ring-cream-dark/20 transition-shadow duration-300 group-hover:shadow-lg group-hover:ring-terracotta/20">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-terracotta/10 text-terracotta transition-transform duration-300 group-hover:scale-110">
+          {/* Front — always wears the dark green treatment so the cards read as a
+              uniform set; backImage / frontImage simply sandwich underneath the gradient. */}
+          <div className="flip-card-face isolate overflow-hidden rounded-2xl bg-terracotta-dark p-6 ring-1 ring-terracotta/30 transition-shadow duration-300 group-hover:shadow-lg group-hover:ring-terracotta/50">
+            {feature.frontImage && (
+              <Image
+                src={feature.frontImage}
+                alt=""
+                aria-hidden="true"
+                fill
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                className="-z-10 object-cover"
+              />
+            )}
+            {/* Green fade — readable text up top, image (where present) shows through below. */}
+            <div className="absolute inset-0 -z-10 bg-gradient-to-b from-charcoal/80 via-terracotta-dark/85 to-terracotta/55" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cream text-terracotta transition-transform duration-300 group-hover:scale-110">
               {feature.icon}
             </div>
-            <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">{feature.title}</h3>
-            <p className="mt-2 font-sans text-sm leading-relaxed text-slate">{feature.description}</p>
-            <span className="absolute bottom-4 right-4 font-sans text-[10px] uppercase tracking-wider text-slate/40">
+            <h3 className="mt-4 font-serif text-lg font-bold text-cream">{feature.title}</h3>
+            <p className="mt-2 font-sans text-sm leading-relaxed text-cream/85">
+              {feature.description}
+            </p>
+            <span className="absolute bottom-4 right-4 font-sans text-[10px] uppercase tracking-wider text-cream/60">
               Tap to preview
             </span>
           </div>
@@ -429,7 +447,7 @@ export default function LandingPage() {
               More than just a recipe book. Plan, shop, cook, and share — together.
             </p>
           </Reveal>
-          <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-14 grid grid-cols-1 items-start gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
               <FeatureCard
                 key={feature.title}

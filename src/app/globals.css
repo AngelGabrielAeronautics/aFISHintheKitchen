@@ -105,7 +105,11 @@ body {
 
 /* 3D flip card — toggle .is-flipped on the .flip-card to rotate the inner.
    Pair with two absolutely-positioned .flip-card-face children (one .flip-card-back). */
-.flip-card { perspective: 1200px; }
+.flip-card {
+  perspective: 1200px;
+  /* Smooth grow/shrink between aspect-square (closed) and aspect-[9/16] (open). */
+  transition: aspect-ratio 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
 .flip-card-inner {
   position: relative;
   width: 100%;
