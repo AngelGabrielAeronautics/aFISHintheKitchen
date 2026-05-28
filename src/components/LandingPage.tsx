@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
@@ -23,19 +23,26 @@ const HOW_IT_WORKS = [
   },
 ];
 
-// TODO: placeholder pricing — set the real numbers + currency at the billing milestone.
-const PLAN = {
-  currency: "R",
-  monthly: 99,
-  annual: 990, // ~2 months free
-  perks: [
-    "You + up to 5 family members",
-    "Unlimited recipes, photos & videos",
-    "Meal planning & shopping lists",
-    "Step-by-step cooking mode",
-    "Event menus & kitchen tips",
-    "Private & ad-free, always",
-  ],
+const PLAN_PERKS = [
+  "You + up to 5 family members",
+  "Unlimited recipes, photos & videos",
+  "Meal planning & shopping lists",
+  "Step-by-step cooking mode",
+  "Event menus & kitchen tips",
+  "Private & ad-free, always",
+];
+
+// Locked prices per currency (no live FX — Stripe/Paddle let you set the real
+// charged amount per market at the billing milestone). Pricing rationale: R99
+// anchors against Netflix/Showmax in SA; international tiers approximate that
+// per local conventions. Refine when payment provider is wired.
+type CurrencyCode = "ZAR" | "USD" | "GBP" | "EUR" | "AUD";
+const PLAN_PRICES: Record<CurrencyCode, { prefix: string; monthly: string; annual: string }> = {
+  ZAR: { prefix: "R", monthly: "99", annual: "990" },
+  USD: { prefix: "$", monthly: "5.99", annual: "59" },
+  GBP: { prefix: "£", monthly: "4.99", annual: "49" },
+  EUR: { prefix: "€", monthly: "5.99", annual: "59" },
+  AUD: { prefix: "A$", monthly: "9.99", annual: "99" },
 };
 
 const FAQS = [
@@ -69,6 +76,7 @@ const FEATURES = [
   {
     title: "Family Recipes",
     description: "Collect and organise your family's best recipes in one beautiful place. Add photos, videos, ingredients, and step-by-step instructions.",
+    backImage: "/showcase-recipe.png",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
         <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
@@ -122,9 +130,86 @@ const FEATURES = [
   },
 ];
 
+function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
+  const [flipped, setFlipped] = useState(false);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={flipped}
+      aria-label={`${feature.title} — tap to flip for a preview`}
+      onClick={() => setFlipped((f) => !f)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setFlipped((f) => !f);
+        }
+      }}
+      className={`flip-card group h-72 cursor-pointer sm:h-80 ${flipped ? "is-flipped" : ""}`}
+    >
+      <div className="flip-card-inner">
+          {/* Front */}
+          <div className="flip-card-face rounded-2xl bg-cream/60 p-6 ring-1 ring-cream-dark/20 transition-shadow duration-300 group-hover:shadow-lg group-hover:ring-terracotta/20">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-terracotta/10 text-terracotta transition-transform duration-300 group-hover:scale-110">
+              {feature.icon}
+            </div>
+            <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">{feature.title}</h3>
+            <p className="mt-2 font-sans text-sm leading-relaxed text-slate">{feature.description}</p>
+            <span className="absolute bottom-4 right-4 font-sans text-[10px] uppercase tracking-wider text-slate/40">
+              Tap to preview
+            </span>
+          </div>
+          {/* Back */}
+          <div className="flip-card-face flip-card-back overflow-hidden rounded-2xl bg-charcoal ring-1 ring-cream-dark/20">
+            {feature.backImage ? (
+              <div className="relative h-full w-full">
+                <Image
+                  src={feature.backImage}
+                  alt={`${feature.title} preview`}
+                  fill
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-terracotta/40 via-charcoal to-sage/40 p-6 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-cream">
+                  {feature.icon}
+                </div>
+                <p className="mt-5 font-serif text-xl text-cream">{feature.title}</p>
+              </div>
+            )}
+            <span className="absolute bottom-3 right-3 rounded-md bg-charcoal/60 px-2 py-1 font-sans text-[10px] uppercase tracking-wider text-cream/80">
+              Tap to flip back
+            </span>
+          </div>
+        </div>
+      </div>
+  );
+}
+
 export default function LandingPage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [currency, setCurrency] = useState<CurrencyCode>("USD");
+
+  // Detect the visitor's country (Vercel edge header) and swap to their currency.
+  // Default USD holds until the fetch resolves; SA visitors swap to ZAR moments later.
+  useEffect(() => {
+    fetch("/api/geo")
+      .then((r) => r.json())
+      .then((d: { currency?: string }) => {
+        if (d.currency && d.currency in PLAN_PRICES) {
+          setCurrency(d.currency as CurrencyCode);
+        }
+      })
+      .catch(() => {
+        /* keep default */
+      });
+  }, []);
+
+  const price = PLAN_PRICES[currency];
 
   return (
     <div className="min-h-screen bg-cream">
@@ -241,20 +326,8 @@ export default function LandingPage() {
             </p>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((feature, i) => (
-              <Reveal key={feature.title} delay={i * 0.08}>
-                <div className="group h-full rounded-2xl bg-cream/60 p-6 ring-1 ring-cream-dark/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-terracotta/20">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-terracotta/10 text-terracotta transition-transform duration-300 group-hover:scale-110">
-                    {feature.icon}
-                  </div>
-                  <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-2 font-sans text-sm leading-relaxed text-slate">
-                    {feature.description}
-                  </p>
-                </div>
-              </Reveal>
+            {FEATURES.map((feature) => (
+              <FeatureCard key={feature.title} feature={feature} />
             ))}
           </div>
         </div>
@@ -323,18 +396,18 @@ export default function LandingPage() {
               <p className="font-serif text-xl font-bold text-charcoal">Family Plan</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-serif text-5xl font-bold text-charcoal">
-                  {PLAN.currency}
-                  {billing === "monthly" ? PLAN.monthly : PLAN.annual}
+                  {price.prefix}
+                  {billing === "monthly" ? price.monthly : price.annual}
                 </span>
                 <span className="font-sans text-sm text-slate">
                   /{billing === "monthly" ? "month" : "year"}
                 </span>
               </div>
               <p className="mt-1 font-sans text-xs text-slate/60">
-                14-day free trial, then billed {billing}. Cancel anytime.
+                14-day free trial, then billed {billing} in {currency}. Cancel anytime.
               </p>
               <ul className="mt-6 space-y-3">
-                {PLAN.perks.map((perk) => (
+                {PLAN_PERKS.map((perk) => (
                   <li key={perk} className="flex items-start gap-2.5 font-sans text-sm text-charcoal">
                     <svg
                       viewBox="0 0 20 20"
