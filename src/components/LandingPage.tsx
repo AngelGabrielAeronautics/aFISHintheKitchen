@@ -142,8 +142,8 @@ const FEATURES: Feature[] = [
 // fallback when a card has no preview, and as the intro overlay over a video.
 function BackPlaceholder({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-terracotta/40 via-charcoal to-sage/40 p-6 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-cream">
+    <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-terracotta via-charcoal to-sage p-6 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cream text-terracotta">
         {icon}
       </div>
       <p className="mt-5 font-serif text-xl text-cream">{title}</p>
@@ -151,8 +151,9 @@ function BackPlaceholder({ icon, title }: { icon: ReactNode; title: string }) {
   );
 }
 
-// Video back with a title-card intro: shows the placeholder briefly on each
-// flip-to-back AND on each loop, then fades out as the video plays.
+// Video back with a clean title-card sequence: placeholder shows alone, then
+// disappears, then the video plays. On loop (video ends), pause and replay
+// the same sequence. No fade-overlay — a hard handoff between the two states.
 function VideoBack({
   src,
   placeholder,
@@ -165,39 +166,45 @@ function VideoBack({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showIntro, setShowIntro] = useState(true);
 
-  // On flip-to-back: reset to the start and play. On flip-to-front: pause.
+  // On flip-to-back: reset, hold placeholder for ~600ms, then start the video.
+  // On flip-to-front: pause and reset (next flip starts the sequence over).
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (flipped) {
-      video.currentTime = 0;
-      void video.play().catch(() => {});
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show intro on each flip-to-back
-      setShowIntro(true);
-      const t = setTimeout(() => setShowIntro(false), 600);
-      return () => clearTimeout(t);
+    if (!flipped) {
+      video.pause();
+      return;
     }
     video.pause();
+    video.currentTime = 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show intro on each flip-to-back
+    setShowIntro(true);
+    const t = setTimeout(() => {
+      setShowIntro(false);
+      void video.play().catch(() => {});
+    }, 700);
+    return () => clearTimeout(t);
   }, [flipped]);
 
-  // Detect a loop (currentTime jumps backwards) and flash the intro again.
+  // No `loop` attribute on the video — handle the loop ourselves so each cycle
+  // shows the title card again before the video restarts.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    let last = 0;
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
-    function onTimeUpdate() {
+    function onEnded() {
       if (!video) return;
-      if (video.currentTime + 0.3 < last) {
-        setShowIntro(true);
-        if (hideTimer) clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => setShowIntro(false), 600);
-      }
-      last = video.currentTime;
+      video.currentTime = 0;
+      setShowIntro(true);
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        setShowIntro(false);
+        void video.play().catch(() => {});
+      }, 1500);
     }
-    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("ended", onEnded);
     return () => {
-      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("ended", onEnded);
       if (hideTimer) clearTimeout(hideTimer);
     };
   }, []);
@@ -208,36 +215,35 @@ function VideoBack({
         ref={videoRef}
         src={src}
         muted
-        loop
         playsInline
         aria-hidden="true"
         className="h-full w-full object-cover"
       />
-      <div
-        className={`absolute inset-0 transition-opacity duration-300 ${
-          showIntro ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        {placeholder}
-      </div>
+      {showIntro && <div className="intro-fade absolute inset-0 z-10">{placeholder}</div>}
     </>
   );
 }
 
-function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
-  const [flipped, setFlipped] = useState(false);
-
+function FeatureCard({
+  feature,
+  flipped,
+  onToggle,
+}: {
+  feature: (typeof FEATURES)[number];
+  flipped: boolean;
+  onToggle: () => void;
+}) {
   return (
     <div
       role="button"
       tabIndex={0}
       aria-pressed={flipped}
       aria-label={`${feature.title} — tap to flip for a preview`}
-      onClick={() => setFlipped((f) => !f)}
+      onClick={onToggle}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          setFlipped((f) => !f);
+          onToggle();
         }
       }}
       className={`flip-card group h-72 cursor-pointer sm:h-80 ${flipped ? "is-flipped" : ""}`}
@@ -288,6 +294,9 @@ export default function LandingPage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [currency, setCurrency] = useState<CurrencyCode>("USD");
+  // Only one feature card can be flipped open at a time, to avoid visual chaos
+  // (multiple videos playing, multiple title cards) when the grid is busy.
+  const [flippedFeature, setFlippedFeature] = useState<string | null>(null);
 
   // Detect the visitor's country (Vercel edge header) and swap to their currency.
   // Default USD holds until the fetch resolves; SA visitors swap to ZAR moments later.
@@ -422,7 +431,14 @@ export default function LandingPage() {
           </Reveal>
           <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => (
-              <FeatureCard key={feature.title} feature={feature} />
+              <FeatureCard
+                key={feature.title}
+                feature={feature}
+                flipped={flippedFeature === feature.title}
+                onToggle={() =>
+                  setFlippedFeature((current) => (current === feature.title ? null : feature.title))
+                }
+              />
             ))}
           </div>
         </div>

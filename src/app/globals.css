@@ -91,6 +91,18 @@ body {
   animation: word-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Title-card intro on a video-back: fade in, hold, fade out within ~1.5s. */
+@keyframes intro-fade {
+  0%, 100% { opacity: 0; }
+  25%, 75% { opacity: 1; }
+}
+.intro-fade {
+  animation: intro-fade 1500ms ease-in-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-fade { animation: none; opacity: 1; }
+}
+
 /* 3D flip card — toggle .is-flipped on the .flip-card to rotate the inner.
    Pair with two absolutely-positioned .flip-card-face children (one .flip-card-back). */
 .flip-card { perspective: 1200px; }
