@@ -344,17 +344,47 @@ export default function LandingPage() {
               Big photos, clear steps, and a layout that works whether you&rsquo;re planning on the couch or cooking at the stove.
             </p>
           </Reveal>
-          <Reveal delay={0.1} className="mt-12">
-            <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-cream-dark/30">
-              <Image
-                src="/showcase-recipe.png"
-                alt="A recipe shown in A Fish in the Kitchen"
-                width={1557}
-                height={828}
-                className="h-auto w-full"
-              />
-            </div>
-          </Reveal>
+          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2">
+            <Reveal>
+              <figure>
+                <div className="relative h-[480px] overflow-hidden rounded-2xl shadow-xl ring-1 ring-cream-dark/30 sm:h-[560px]">
+                  <div className="h-full overflow-y-auto overflow-x-hidden bg-cream-dark/10">
+                    <Image
+                      src="/showcase-home-page.png"
+                      alt="The home page of A Fish in the Kitchen"
+                      width={1436}
+                      height={1881}
+                      className="h-auto w-full"
+                    />
+                  </div>
+                  {/* Soft bottom fade hints "more to scroll." */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-cream/90 to-transparent" />
+                </div>
+                <figcaption className="mt-3 text-center font-sans text-xs uppercase tracking-wider text-slate/60">
+                  Home
+                </figcaption>
+              </figure>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <figure>
+                <div className="relative h-[480px] overflow-hidden rounded-2xl shadow-xl ring-1 ring-cream-dark/30 sm:h-[560px]">
+                  <div className="h-full overflow-y-auto overflow-x-hidden bg-cream-dark/10">
+                    <Image
+                      src="/showcase-recipe-page.png"
+                      alt="A recipe page in A Fish in the Kitchen"
+                      width={863}
+                      height={1680}
+                      className="h-auto w-full"
+                    />
+                  </div>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-cream/90 to-transparent" />
+                </div>
+                <figcaption className="mt-3 text-center font-sans text-xs uppercase tracking-wider text-slate/60">
+                  Recipe page
+                </figcaption>
+              </figure>
+            </Reveal>
+          </div>
         </div>
       </section>
 
