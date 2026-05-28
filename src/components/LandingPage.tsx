@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
@@ -72,11 +72,19 @@ const FAQS = [
   },
 ];
 
-const FEATURES = [
+type Feature = {
+  title: string;
+  description: string;
+  backImage?: string;
+  backVideo?: string;
+  icon: ReactNode;
+};
+
+const FEATURES: Feature[] = [
   {
     title: "Family Recipes",
     description: "Collect and organise your family's best recipes in one beautiful place. Add photos, videos, ingredients, and step-by-step instructions.",
-    backImage: "/showcase-recipe.png",
+    backVideo: "/card-family-recipes.mp4",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
         <path d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
@@ -130,6 +138,92 @@ const FEATURES = [
   },
 ];
 
+// Branded "title card" — the dark green back design. Reused as the standalone
+// fallback when a card has no preview, and as the intro overlay over a video.
+function BackPlaceholder({ icon, title }: { icon: ReactNode; title: string }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-terracotta/40 via-charcoal to-sage/40 p-6 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-cream">
+        {icon}
+      </div>
+      <p className="mt-5 font-serif text-xl text-cream">{title}</p>
+    </div>
+  );
+}
+
+// Video back with a title-card intro: shows the placeholder briefly on each
+// flip-to-back AND on each loop, then fades out as the video plays.
+function VideoBack({
+  src,
+  placeholder,
+  flipped,
+}: {
+  src: string;
+  placeholder: ReactNode;
+  flipped: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showIntro, setShowIntro] = useState(true);
+
+  // On flip-to-back: reset to the start and play. On flip-to-front: pause.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (flipped) {
+      video.currentTime = 0;
+      void video.play().catch(() => {});
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: show intro on each flip-to-back
+      setShowIntro(true);
+      const t = setTimeout(() => setShowIntro(false), 600);
+      return () => clearTimeout(t);
+    }
+    video.pause();
+  }, [flipped]);
+
+  // Detect a loop (currentTime jumps backwards) and flash the intro again.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    let last = 0;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    function onTimeUpdate() {
+      if (!video) return;
+      if (video.currentTime + 0.3 < last) {
+        setShowIntro(true);
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => setShowIntro(false), 600);
+      }
+      last = video.currentTime;
+    }
+    video.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, []);
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        src={src}
+        muted
+        loop
+        playsInline
+        aria-hidden="true"
+        className="h-full w-full object-cover"
+      />
+      <div
+        className={`absolute inset-0 transition-opacity duration-300 ${
+          showIntro ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {placeholder}
+      </div>
+    </>
+  );
+}
+
 function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
   const [flipped, setFlipped] = useState(false);
 
@@ -162,7 +256,13 @@ function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
           </div>
           {/* Back */}
           <div className="flip-card-face flip-card-back overflow-hidden rounded-2xl bg-charcoal ring-1 ring-cream-dark/20">
-            {feature.backImage ? (
+            {feature.backVideo ? (
+              <VideoBack
+                src={feature.backVideo}
+                flipped={flipped}
+                placeholder={<BackPlaceholder icon={feature.icon} title={feature.title} />}
+              />
+            ) : feature.backImage ? (
               <div className="relative h-full w-full">
                 <Image
                   src={feature.backImage}
@@ -173,12 +273,7 @@ function FeatureCard({ feature }: { feature: (typeof FEATURES)[number] }) {
                 />
               </div>
             ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-terracotta/40 via-charcoal to-sage/40 p-6 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-cream">
-                  {feature.icon}
-                </div>
-                <p className="mt-5 font-serif text-xl text-cream">{feature.title}</p>
-              </div>
+              <BackPlaceholder icon={feature.icon} title={feature.title} />
             )}
             <span className="absolute bottom-3 right-3 rounded-md bg-charcoal/60 px-2 py-1 font-sans text-[10px] uppercase tracking-wider text-cream/80">
               Tap to flip back
