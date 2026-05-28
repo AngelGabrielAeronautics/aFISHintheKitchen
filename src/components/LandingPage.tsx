@@ -476,6 +476,22 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Mission — short, plainspoken; link out to /our-story for the full thing */}
+      <section className="bg-warm-white py-16 sm:py-20">
+        <Reveal className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+          <p className="font-sans text-xs uppercase tracking-[0.2em] text-terracotta">Why this exists</p>
+          <p className="mt-5 font-serif text-2xl italic leading-snug text-charcoal sm:text-3xl">
+            Six years ago I moved 8,000 km from my parents. My daughter asked her grandfather to write his recipes down for her &mdash; and that became this app.
+          </p>
+          <Link
+            href="/our-story"
+            className="mt-7 inline-flex items-center gap-1 font-sans text-sm font-semibold text-terracotta transition-colors hover:text-terracotta-dark"
+          >
+            Read our story &rarr;
+          </Link>
+        </Reveal>
+      </section>
+
       {/* CTA */}
       <section className="py-16 sm:py-24">
         <Reveal className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">

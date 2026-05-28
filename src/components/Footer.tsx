@@ -25,11 +25,20 @@ export default function Footer() {
             <p className="text-sm text-slate italic">
               A Coppard & Fish Family Collection
             </p>
+            <p className="text-xs text-slate/60 italic">
+              Built on Poppie&rsquo;s Kookbook.
+            </p>
           </div>
 
           {/* Links */}
           <div className="flex flex-col items-center sm:items-end gap-3">
             <div className="flex items-center gap-6">
+              <Link
+                href="/our-story"
+                className="text-sm text-slate hover:text-terracotta transition-colors"
+              >
+                Our Story
+              </Link>
               <Link
                 href="/recipes"
                 className="text-sm text-slate hover:text-terracotta transition-colors"
