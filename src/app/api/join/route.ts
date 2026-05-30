@@ -91,6 +91,15 @@ export async function POST(req: NextRequest) {
     batch.update(inviteRef, { status: "registered", registeredAt: now });
     await batch.commit();
 
+    // The invite was sent to this email and the user accepted it from there, so
+    // they've already proven they control the address — mark them verified and
+    // skip the redundant email-verification gate.
+    try {
+      await getAdminAuth().updateUser(uid, { emailVerified: true });
+    } catch {
+      // Non-fatal: the verify-email gate's resend still works as a fallback.
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("join error:", err);

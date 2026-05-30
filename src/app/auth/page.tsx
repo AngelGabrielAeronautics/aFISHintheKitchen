@@ -157,7 +157,7 @@ function AuthPageContent() {
       await updateProfile(credential.user, {
         displayName: displayName.trim(),
       });
-      await sendEmailVerification(credential.user);
+
       const join = await joinHouseholdFromInvite();
       const joinMsg = joinErrorMessage(join.error);
       if (!join.ok && joinMsg) {
@@ -165,6 +165,19 @@ function AuthPageContent() {
         setSubmitting(false);
         return;
       }
+
+      if (join.ok) {
+        // Invited member — /api/join already marked them verified (the invite
+        // email proved they own the address). Refresh the session so the
+        // verify-email gate doesn't show, then go straight in.
+        await credential.user.reload();
+        await credential.user.getIdToken(true);
+        window.location.href = "/";
+        return;
+      }
+
+      // Self-serve signup (no invite) — they must verify their email.
+      await sendEmailVerification(credential.user);
       setSuccessMessage(
         `We've sent a verification email to ${email}. Please check your inbox.`
       );
