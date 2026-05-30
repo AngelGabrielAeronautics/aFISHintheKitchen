@@ -120,6 +120,15 @@ function AuthPageContent() {
 
     try {
       await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+      // If they arrived via an invite link, join them to that book (no-op if
+      // there's no invite, or if they're already a member).
+      const join = await joinHouseholdFromInvite();
+      const joinMsg = joinErrorMessage(join.error);
+      if (!join.ok && joinMsg) {
+        setError(joinMsg);
+        setSubmitting(false);
+        return;
+      }
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
@@ -185,7 +194,14 @@ function AuthPageContent() {
       setTimeout(() => router.push("/"), 3000);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
-      setError(getErrorMessage(code));
+      if (code === "auth/email-already-in-use") {
+        // They already have an account — guide them to sign in (which will then
+        // join them to the invited book). Email stays prefilled.
+        setMode("signin");
+        setError("You already have an account — sign in to continue.");
+      } else {
+        setError(getErrorMessage(code));
+      }
     } finally {
       setSubmitting(false);
     }

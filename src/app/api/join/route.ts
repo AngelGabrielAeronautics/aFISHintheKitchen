@@ -52,7 +52,17 @@ export async function POST(req: NextRequest) {
       .where("userId", "==", uid)
       .limit(1)
       .get();
-    if (!already.empty) return NextResponse.json({ ok: true, alreadyMember: true });
+    if (!already.empty) {
+      // Already a member — but if the invite was re-sent (back to pending) after
+      // they joined, reconcile it so the owner's list doesn't show them pending.
+      if (invite.status !== "registered") {
+        await inviteRef.set(
+          { status: "registered", registeredAt: new Date().toISOString() },
+          { merge: true }
+        );
+      }
+      return NextResponse.json({ ok: true, alreadyMember: true });
+    }
 
     // 4. Guest-book cap: how many books is this user already a (non-owner) member of?
     const myMemberships = await db
