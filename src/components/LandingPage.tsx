@@ -387,7 +387,7 @@ export default function LandingPage() {
             className="reveal mt-6 mx-auto max-w-2xl font-sans text-lg leading-relaxed text-cream/90"
             style={{ animationDelay: "0.85s" }}
           >
-            Collect your family&rsquo;s best recipes, plan meals together, assign dishes for gatherings, and cook with step-by-step guidance. A private cookbook built for families who love food.
+            Cooking together is one of the most human things we do. A private family cookbook to keep your recipes alive, cook them together even when you&rsquo;re apart, and gather everyone around the table again.
           </p>
           <div
             className="reveal mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
@@ -635,11 +635,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Mission — short, plainspoken; link out to /our-story for the full thing */}
+      {/* Mission — the thesis, then the personal origin; link out to /our-story. */}
       <section className="bg-warm-white py-16 sm:py-20">
         <Reveal className="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <p className="font-sans text-xs uppercase tracking-[0.2em] text-terracotta">Why this exists</p>
           <p className="mt-5 font-serif text-2xl italic leading-snug text-charcoal sm:text-3xl">
+            Sharing food is one of the most human things we do &mdash; and phones at the table are quietly pulling us away from it.
+          </p>
+          <p className="mx-auto mt-6 max-w-xl font-sans text-base leading-relaxed text-charcoal/80">
+            The flavours and smells of your childhood stay with you for life. This is a small way back to the table: keep your family&rsquo;s recipes alive, cook them together &mdash; even from far apart &mdash; and gather around them again.
+          </p>
+          <p className="mt-6 font-sans text-sm italic text-slate">
             Six years ago I moved 8,000 km from my parents. My daughter asked her grandfather to write his recipes down for her &mdash; and that became this app.
           </p>
           <Link

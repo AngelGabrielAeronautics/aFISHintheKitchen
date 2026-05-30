@@ -25,8 +25,21 @@ export const metadata = {
 export default function OurStoryPage() {
   return (
     <main className="bg-cream">
+      {/* Back link — a clear way out of the story page, before the reader commits. */}
+      <div className="mx-auto max-w-3xl px-4 pt-8 sm:px-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 font-sans text-sm font-medium text-slate transition-colors hover:text-charcoal"
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1 0 1.06L9.06 10l3.73 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.24a.75.75 0 0 1 0-1.06l4.25-4.24a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+          Back to home
+        </Link>
+      </div>
+
       {/* Opening */}
-      <section className="py-20 sm:py-28">
+      <section className="pb-20 pt-12 sm:pb-28 sm:pt-16">
         <Reveal className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <p className="font-sans text-xs uppercase tracking-[0.2em] text-terracotta">Our story</p>
           <h1 className="mt-4 font-serif text-4xl font-bold leading-tight text-charcoal sm:text-5xl md:text-6xl">
@@ -101,13 +114,16 @@ export default function OurStoryPage() {
             </h2>
             <div className="mt-6 space-y-6 font-sans text-lg leading-relaxed text-charcoal/90">
               <p>
-                Sharing food is one of the oldest things humans do. It&rsquo;s how families bond, how the day winds down, how stories get told. Long before kitchens, tribes sat around a fire and passed plates around.
+                Cooking and sharing food with the people you love is one of the most fundamentally human things we do. Long before kitchens, tribes gathered around a fire to cook, eat, and tell stories. It&rsquo;s how families bond and how the day winds down &mdash; it&rsquo;s wired into us.
               </p>
               <p>
-                Modern life &mdash; most of all the phones at the table &mdash; is quietly cutting into that ritual. We sit together but look elsewhere. We eat without really eating together.
+                And it runs deeper than habit. The smell of something your mum or your gran used to make can take you straight back to being a child. Those flavours live in your body; comfort food comforts because of the people and the memories baked into it.
               </p>
               <p>
-                This app is a small attempt to push back: to keep your family&rsquo;s recipes alive, to cook them together (even when you&rsquo;re apart), and to put the phones down around something worth gathering for.
+                Modern life &mdash; most of all the phones at the table &mdash; is quietly eroding that. We sit together but look elsewhere. We eat without really eating together, and a little of what makes us human slips away with it.
+              </p>
+              <p>
+                This app is a small push back: to keep your family&rsquo;s recipes alive, to cook them together even when you&rsquo;re apart, and to put the phones down and come back to the simple, healthy fundamentals &mdash; good food and the people around the table.
               </p>
             </div>
           </Reveal>
@@ -164,6 +180,14 @@ export default function OurStoryPage() {
           >
             Start your free trial
           </Link>
+          <p className="mt-6">
+            <Link
+              href="/"
+              className="font-sans text-sm font-medium text-slate transition-colors hover:text-charcoal"
+            >
+              Not yet &mdash; back to home
+            </Link>
+          </p>
         </Reveal>
       </section>
     </main>
