@@ -179,7 +179,12 @@ export default function SubmitRecipePage() {
       const formData = new FormData();
       formData.append("image", file);
 
-      const res = await fetch("/api/import-recipe", { method: "POST", body: formData });
+      const token = await user?.getIdToken();
+      const res = await fetch("/api/import-recipe", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
       const data = await res.json();
 
       if (data.error) {

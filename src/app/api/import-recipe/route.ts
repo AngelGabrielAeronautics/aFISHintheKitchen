@@ -1,5 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminAuth } from "@/lib/firebase-admin";
+
+export const runtime = "nodejs";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -38,6 +41,18 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
+    // Gate the metered Anthropic call behind a valid signed-in user — any
+    // member may import, but anonymous callers can't burn the API key.
+    const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    try {
+      await getAdminAuth().verifyIdToken(token);
+    } catch {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
 
@@ -84,9 +99,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No response from AI" }, { status: 500 });
     }
 
-    // Parse the JSON response
-    const jsonStr = textBlock.text.trim();
-    const recipe = JSON.parse(jsonStr);
+    // Parse the JSON response. The model is told to return raw JSON, but it
+    // can wrap it in markdown fences or fail to extract — handle both.
+    const jsonStr = textBlock.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    let recipe: unknown;
+    try {
+      recipe = JSON.parse(jsonStr);
+    } catch {
+      return NextResponse.json(
+        { error: "Could not read a recipe from this image. Please try a clearer photo." },
+        { status: 422 }
+      );
+    }
+
+    // The model signals a failed extraction with an { error } object — surface
+    // it as an error response rather than a 200 that looks like a recipe.
+    if (recipe && typeof recipe === "object" && "error" in recipe) {
+      return NextResponse.json(
+        { error: String((recipe as { error: unknown }).error) },
+        { status: 422 }
+      );
+    }
 
     return NextResponse.json(recipe);
   } catch (err) {
