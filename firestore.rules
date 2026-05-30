@@ -4,15 +4,16 @@ rules_version = '2';
 // A Fish in the Kitchen — household-private, subscription-gated access model.
 // Mirrors src/lib/access.ts. See the project_subscription_model spec.
 //
-// ⚠️ DO NOT DEPLOY until these preconditions are met (otherwise users get locked
-//    out or can't join):
-//   1. Every existing household doc has `memberIds` (array of member uids) and
-//      `accessState` backfilled. New docs already set these.
+// LIVE — deployed 2026-05-30. These rules require (and the app maintains) the
+// following invariants; breaking one locks users out:
+//   1. Every household doc has `memberIds` (array of member uids) and
+//      `accessState`. createHousehold sets these; /api/join keeps memberIds in
+//      sync. Legacy docs were backfilled via scripts/backfill-households.mjs.
 //   2. The invite-accept / join step runs SERVER-SIDE via the Admin SDK (which
 //      bypasses these rules), because joining adds a uid to the owner's
 //      household doc — which members aren't allowed to write here.
 //   3. Subscription writes happen server-side (webhooks via Admin SDK).
-// Test in the Firebase Console Rules Playground / emulator before deploying.
+// Re-test in the Rules Playground / emulator before changing.
 // ─────────────────────────────────────────────────────────────────────────────
 
 service cloud.firestore {
