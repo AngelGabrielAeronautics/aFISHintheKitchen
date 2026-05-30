@@ -29,7 +29,7 @@ export default function Header() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
 
   // On the public landing page the nav is hidden over the hero and slides in
   // once the user scrolls. Elsewhere it's a normal sticky header.
@@ -155,6 +155,20 @@ export default function Header() {
               )}
             </div>
 
+            {/* Super admin — platform backend, only for staff accounts */}
+            {isSuperAdmin && (
+              <Link
+                href="/superadmin"
+                className={`ml-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/superadmin")
+                    ? "text-terracotta bg-terracotta/8"
+                    : "text-slate hover:text-charcoal hover:bg-cream-dark/60"
+                }`}
+              >
+                Super Admin
+              </Link>
+            )}
+
             {/* Auth button */}
             {!loading && (
               <>
@@ -243,6 +257,21 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Super admin — platform backend, only for staff accounts */}
+            {isSuperAdmin && (
+              <Link
+                href="/superadmin"
+                onClick={() => setMenuOpen(false)}
+                className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/superadmin")
+                    ? "text-terracotta bg-terracotta/8"
+                    : "text-slate hover:text-charcoal hover:bg-cream-dark/60"
+                }`}
+              >
+                Super Admin
+              </Link>
+            )}
 
             {/* Mobile auth */}
             {!loading && (

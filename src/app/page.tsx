@@ -14,15 +14,17 @@ import { useAuth } from "@/context/AuthContext";
 import LandingPage from "@/components/LandingPage";
 
 export default function HomePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isSuperAdmin } = useAuth();
   const { household, loading: householdLoading } = useHousehold();
   const router = useRouter();
 
   useEffect(() => {
     if (!authLoading && !householdLoading && user && !household) {
-      router.push("/setup");
+      // Platform super admins have no cookbook of their own — send them to the
+      // backend instead of the "create a cookbook" onboarding.
+      router.push(isSuperAdmin ? "/superadmin" : "/setup");
     }
-  }, [authLoading, householdLoading, user, household, router]);
+  }, [authLoading, householdLoading, user, household, isSuperAdmin, router]);
 
   if (authLoading || householdLoading) {
     return (
