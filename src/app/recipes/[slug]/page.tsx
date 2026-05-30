@@ -26,7 +26,7 @@ export default function RecipePage() {
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [linkedTips, setLinkedTips] = useState<KitchenTip[]>([]);
   const { user } = useAuth();
-  const { householdId } = useHousehold();
+  const { householdId, loading: householdLoading } = useHousehold();
   const searchParams = useSearchParams();
 
   const savedParam = searchParams.get("saved");
@@ -38,8 +38,12 @@ export default function RecipePage() {
     }
   }, [savedParam]);
 
+  // Wait for the household to resolve before fetching, so we scope to it and
+  // never treat a not-yet-loaded household as "recipe not found".
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || householdLoading) return;
+    setLoading(true);
+    setNotFound(false);
 
     getRecipeBySlug(slug, householdId)
       .then((r) => {
@@ -56,7 +60,7 @@ export default function RecipePage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [slug, householdId]);
+  }, [slug, householdId, householdLoading]);
 
   useEffect(() => {
     if (recipe) {

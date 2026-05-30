@@ -108,11 +108,12 @@ function RecipesContent() {
     return acc;
   }, {});
 
-  // Fetch on mount and when category changes
+  // Fetch on mount, when category changes, and once the household resolves
+  // (householdId starts null, so the first fetch returns nothing without this).
   useEffect(() => {
     fetchRecipes(searchQuery, activeCategory);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory]);
+  }, [activeCategory, householdId]);
 
   // Debounced search: 300ms delay
   useEffect(() => {
