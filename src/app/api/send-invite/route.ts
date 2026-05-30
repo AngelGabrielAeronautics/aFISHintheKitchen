@@ -4,8 +4,10 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL ?? "invites@afishinthekitchen.com";
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL ?? "noreply@afishinthekitchen.com";
 const FROM_NAME = "A Fish in the Kitchen";
+// noreply sends, but replies should reach a real inbox.
+const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL ?? "admin@afishinthekitchen.com";
 
 function escapeHtml(s: string): string {
   return s
@@ -136,6 +138,7 @@ export async function POST(req: NextRequest) {
     await sgMail.send({
       to: email,
       from: { email: FROM_EMAIL, name: FROM_NAME },
+      replyTo: { email: REPLY_TO_EMAIL, name: FROM_NAME },
       subject,
       html,
       text,
