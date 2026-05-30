@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -13,7 +13,7 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type AuthMode = "signin" | "signup" | "reset";
 
@@ -73,14 +73,23 @@ function joinErrorMessage(error?: string): string | null {
   }
 }
 
-export default function AuthPage() {
+function AuthPageContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("signin");
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+
+  // Invite context from the email link (email/name/book). Email present means
+  // this is an invited signup — greet them, prefill, and lock the email.
+  const invitedEmail = searchParams.get("email")?.trim().toLowerCase() ?? "";
+  const invitedName = searchParams.get("name")?.trim() ?? "";
+  const invitedBook = searchParams.get("book")?.trim() ?? "";
+  const isInvite = !!invitedEmail;
+
+  const [mode, setMode] = useState<AuthMode>(isInvite ? "signup" : "signin");
+  const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(invitedName);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -95,12 +104,13 @@ export default function AuthPage() {
     setMode(newMode);
     setError("");
     setSuccessMessage("");
-    if (newMode !== "reset") {
+    // Keep the invited email locked across modes; otherwise clear on switch.
+    if (newMode !== "reset" && !isInvite) {
       setEmail("");
     }
     setPassword("");
     setConfirmPassword("");
-    setDisplayName("");
+    if (!isInvite) setDisplayName("");
   }
 
   async function handleSignIn(e: React.FormEvent) {
@@ -245,9 +255,21 @@ export default function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream px-4 py-12">
       <div className="w-full max-w-md">
-        <h1 className="mb-8 text-center font-serif text-3xl font-bold text-charcoal">
-          Welcome to A Fish in the Kitchen
+        <h1 className="mb-2 text-center font-serif text-3xl font-bold text-charcoal">
+          {isInvite
+            ? `Welcome${invitedName ? `, ${invitedName}` : ""}!`
+            : "Welcome to A Fish in the Kitchen"}
         </h1>
+        {isInvite && (
+          <p className="mb-8 text-center font-sans text-sm text-slate">
+            You&rsquo;ve been invited to join{" "}
+            <span className="font-medium text-charcoal">
+              {invitedBook || "a family cookbook"}
+            </span>
+            . Set a password to get started.
+          </p>
+        )}
+        {!isInvite && <div className="mb-8" />}
 
         <div className="rounded-2xl bg-white p-8 shadow-lg">
           {/* Social sign-in */}
@@ -326,8 +348,8 @@ export default function AuthPage() {
             </h2>
           )}
 
-          {/* Sign-up note */}
-          {mode === "signup" && (
+          {/* Sign-up note — self-serve only; invited users get the header note. */}
+          {mode === "signup" && !isInvite && (
             <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
               Create an account to start your own cookbook with a free trial. Invited by family? Sign up with the email they invited and you&rsquo;ll join their cookbook automatically.
             </div>
@@ -364,7 +386,8 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className={inputClasses}
+                  readOnly={isInvite}
+                  className={`${inputClasses}${isInvite ? " bg-cream-dark/20 text-slate cursor-not-allowed" : ""}`}
                 />
               </div>
 
@@ -438,8 +461,14 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className={inputClasses}
+                  readOnly={isInvite}
+                  className={`${inputClasses}${isInvite ? " bg-cream-dark/20 text-slate cursor-not-allowed" : ""}`}
                 />
+                {isInvite && (
+                  <p className="mt-1 font-sans text-xs text-slate/70">
+                    This is the email your invitation was sent to.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -558,5 +587,13 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthPageContent />
+    </Suspense>
   );
 }

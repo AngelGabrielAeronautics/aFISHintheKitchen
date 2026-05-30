@@ -70,7 +70,12 @@ export async function POST(req: NextRequest) {
     const safeName = escapeHtml(name);
     const safeInviter = escapeHtml(inviterName);
     const safeHousehold = householdName ? escapeHtml(householdName) : null;
-    const safeUrl = encodeURI(signupUrl);
+    // Carry the invitee's details so /auth can greet them, prefill + lock the
+    // email, and just ask for a password. Auth/join still verify server-side.
+    const safeUrl =
+      `${signupUrl}?email=${encodeURIComponent(email)}` +
+      `&name=${encodeURIComponent(name)}` +
+      (householdName ? `&book=${encodeURIComponent(householdName)}` : "");
 
     const intro = safeHousehold
       ? `<strong>${safeInviter}</strong> has invited you to join <strong>${safeHousehold}</strong> on A Fish in the Kitchen — a private family cookbook for sharing recipes, meal plans, and kitchen tips.`
@@ -130,7 +135,7 @@ export async function POST(req: NextRequest) {
       "",
       story.replace(/[’]/g, "'"),
       "",
-      `Accept your invitation: ${signupUrl}`,
+      `Accept your invitation: ${safeUrl}`,
       "",
       "— A Fish in the Kitchen",
     ].join("\n");
