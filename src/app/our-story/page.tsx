@@ -52,10 +52,7 @@ export default function OurStoryPage() {
 
         {/* Dedication — book-style, sits up front like the front of the Kookbook. */}
         <Reveal delay={0.2} className="mx-auto mt-14 max-w-md px-4 text-center">
-          <p className="font-sans text-[11px] uppercase tracking-[0.25em] text-slate/50">
-            Dedicated to
-          </p>
-          <p className="mt-3 font-serif text-xl italic text-charcoal sm:text-2xl">
+          <p className="font-serif text-xl italic text-charcoal sm:text-2xl">
             Poppie &mdash; the cook of our family.
           </p>
         </Reveal>

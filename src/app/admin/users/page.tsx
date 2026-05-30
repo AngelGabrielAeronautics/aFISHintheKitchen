@@ -153,8 +153,10 @@ export default function AdminUsersPage() {
       setInviteName("");
       setInviteEmail("");
       await fetchData();
-    } catch {
-      setError("Failed to add invitation. Please try again.");
+    } catch (err) {
+      console.error("add invitation failed:", err);
+      const message = err instanceof Error ? err.message : "Please try again.";
+      setError(`Failed to add invitation: ${message}`);
     } finally {
       setSubmitting(false);
     }
