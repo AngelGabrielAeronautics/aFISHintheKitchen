@@ -51,7 +51,7 @@ export default function TipsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([getAllTips(householdId ?? undefined), getAllRecipes(householdId ?? undefined)])
+    Promise.all([getAllTips(householdId), getAllRecipes(householdId)])
       .then(([t, r]) => { setTips(t); setAllRecipes(r); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -463,7 +463,7 @@ export default function TipsPage() {
               onClick={() => {
                 setError(false);
                 setLoading(true);
-                getAllTips(householdId ?? undefined)
+                getAllTips(householdId)
                   .then(setTips)
                   .catch(() => setError(true))
                   .finally(() => setLoading(false));

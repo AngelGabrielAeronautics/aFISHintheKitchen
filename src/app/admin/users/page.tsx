@@ -53,7 +53,7 @@ export default function AdminUsersPage() {
   const fetchData = useCallback(async () => {
     try {
       const [usersData, adminsData] = await Promise.all([
-        getInvitedUsers(householdId ?? undefined),
+        getInvitedUsers(householdId),
         getAdminEmails(),
       ]);
       setUsers(usersData);

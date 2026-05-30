@@ -24,7 +24,7 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     async function load() {
-      const [cols, recs] = await Promise.all([getAllCollections(householdId ?? undefined), getAllRecipes(householdId ?? undefined)]);
+      const [cols, recs] = await Promise.all([getAllCollections(householdId), getAllRecipes(householdId)]);
       setCollections(cols);
       setRecipes(recs);
       setLoading(false);

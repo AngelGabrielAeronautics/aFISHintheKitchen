@@ -41,7 +41,7 @@ export default function RecipePage() {
   useEffect(() => {
     if (!slug) return;
 
-    getRecipeBySlug(slug, householdId ?? undefined)
+    getRecipeBySlug(slug, householdId)
       .then((r) => {
         if (r) {
           setRecipe(r);

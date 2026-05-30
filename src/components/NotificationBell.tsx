@@ -21,10 +21,10 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!uid) return;
-    getNotifications(householdId ?? undefined, 20).then(setNotifications).catch(() => {});
+    getNotifications(householdId, 20).then(setNotifications).catch(() => {});
     // Poll every 60s for new notifications
     const interval = setInterval(() => {
-      getNotifications(householdId ?? undefined, 20).then(setNotifications).catch(() => {});
+      getNotifications(householdId, 20).then(setNotifications).catch(() => {});
     }, 60_000);
     return () => clearInterval(interval);
   }, [uid, householdId]);

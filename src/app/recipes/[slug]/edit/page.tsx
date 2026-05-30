@@ -111,7 +111,7 @@ export default function EditRecipePage() {
     async function fetchRecipe() {
       setLoadingRecipe(true);
       try {
-        const fetched = await getRecipeBySlug(slug, householdId ?? undefined);
+        const fetched = await getRecipeBySlug(slug, householdId);
         if (!fetched) {
           setNotFound(true);
           return;

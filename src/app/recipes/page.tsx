@@ -76,14 +76,14 @@ function RecipesContent() {
         let results: Recipe[];
 
         if (search.trim() && category !== "all") {
-          results = await searchRecipes(search, householdId ?? undefined);
+          results = await searchRecipes(search, householdId);
           results = results.filter((r) => r.category === category);
         } else if (search.trim()) {
-          results = await searchRecipes(search, householdId ?? undefined);
+          results = await searchRecipes(search, householdId);
         } else if (category !== "all") {
-          results = await getRecipesByCategory(category, householdId ?? undefined);
+          results = await getRecipesByCategory(category, householdId);
         } else {
-          results = await getAllRecipes(householdId ?? undefined);
+          results = await getAllRecipes(householdId);
         }
 
         setRecipes(results);
@@ -100,7 +100,7 @@ function RecipesContent() {
 
   // Fetch all recipes once for category counts and contributor list
   useEffect(() => {
-    getAllRecipes(householdId ?? undefined).then(setAllRecipes).catch(() => {});
+    getAllRecipes(householdId).then(setAllRecipes).catch(() => {});
   }, [householdId]);
 
   const categoryCounts = allRecipes.reduce<Record<string, number>>((acc, r) => {

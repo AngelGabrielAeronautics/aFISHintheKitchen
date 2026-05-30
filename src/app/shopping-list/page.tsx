@@ -55,7 +55,7 @@ function ShoppingListContent() {
 
   useEffect(() => {
     if (!user) return;
-    getAllRecipes(householdId ?? undefined)
+    getAllRecipes(householdId)
       .then((all) => {
         setRecipes(all);
       })

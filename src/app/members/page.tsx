@@ -50,7 +50,7 @@ export default function MembersPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getAllMembers(householdId ?? undefined)
+    getAllMembers(householdId)
       .then(setMembers)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -115,7 +115,7 @@ export default function MembersPage() {
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-20 text-center">
             <p className="font-sans text-sm text-slate">Something went wrong loading family members.</p>
-            <button type="button" onClick={() => { setError(false); setLoading(true); getAllMembers(householdId ?? undefined).then(setMembers).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
+            <button type="button" onClick={() => { setError(false); setLoading(true); getAllMembers(householdId).then(setMembers).catch(() => setError(true)).finally(() => setLoading(false)); }} className="font-sans text-sm font-medium text-terracotta hover:text-terracotta-dark transition-colors cursor-pointer">Try again</button>
           </div>
         ) : members.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">

@@ -323,7 +323,7 @@ export default function MealPlannerPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    getAllRecipes(householdId ?? undefined).then((r) => {
+    getAllRecipes(householdId).then((r) => {
       if (!cancelled) {
         setRecipes(r);
         setLoadingRecipes(false);

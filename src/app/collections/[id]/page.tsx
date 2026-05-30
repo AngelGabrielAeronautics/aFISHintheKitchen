@@ -59,8 +59,8 @@ export default function CollectionDetailPage() {
   useEffect(() => {
     async function load() {
       const [cols, recs] = await Promise.all([
-        getAllCollections(householdId ?? undefined),
-        getAllRecipes(householdId ?? undefined),
+        getAllCollections(householdId),
+        getAllRecipes(householdId),
       ]);
       const found = cols.find((c) => c.id === collectionId);
       if (!found) {
