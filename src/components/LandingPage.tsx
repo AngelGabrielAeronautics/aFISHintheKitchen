@@ -19,7 +19,7 @@ const HOW_IT_WORKS = [
   {
     step: "3",
     title: "Cook together",
-    description: "Add recipes, plan meals, assign dishes for gatherings, and cook hands-free with step-by-step mode.",
+    description: "Add recipes, plan meals, assign dishes for gatherings, and follow along in step-by-step cooking mode.",
   },
 ];
 
@@ -55,6 +55,10 @@ const FAQS = [
     a: "Up to 5 family members or friends, free for them. They can add recipes, plan meals, and cook right alongside you.",
   },
   {
+    q: "What if my family is bigger than 5?",
+    a: "Your plan covers you plus 5 members. If you need more, you can add extra seats for a small additional monthly fee.",
+  },
+  {
     q: "Do my family members pay?",
     a: "No. Only you, the cookbook owner, subscribe. Everyone you invite uses the app for free.",
   },
@@ -64,7 +68,7 @@ const FAQS = [
   },
   {
     q: "What happens after the free trial?",
-    a: "Your plan starts automatically at the end of the 14-day trial. Cancel before it ends if it's not for you.",
+    a: "The 14-day trial is completely free — we won't charge you during it, and we'll email you a reminder before it ends. When it ends, your trial rolls into a paid subscription automatically, so your cookbook keeps working without a break. Not for you? Cancel any time before the trial ends and you won't be charged a cent.",
   },
   {
     q: "Can I join more than one cookbook?",
@@ -441,10 +445,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <h2 className="text-center font-serif text-3xl font-bold text-charcoal sm:text-4xl">
-              Everything your family kitchen needs
+              More than a recipe book
             </h2>
             <p className="mt-4 text-center font-sans text-sm text-slate max-w-2xl mx-auto">
-              More than just a recipe book. Plan, shop, cook, and share — together.
+              Plan, shop, cook, and share your family&rsquo;s food — together.
             </p>
           </Reveal>
           <div className="mt-14 grid grid-cols-1 items-start gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -525,7 +529,7 @@ export default function LandingPage() {
               One simple plan
             </h2>
             <p className="mt-4 text-center font-sans text-sm text-slate max-w-2xl mx-auto">
-              Start with a 14-day free trial. One subscription covers your whole family.
+              Start with a 14-day free trial. One subscription covers you plus up to 5 family members.
             </p>
             <div className="mt-8 flex items-center justify-center">
               <div className="inline-flex rounded-full bg-cream-dark/30 p-1">
@@ -646,7 +650,7 @@ export default function LandingPage() {
             The flavours and smells of your childhood stay with you for life. This is a small way back to the table: keep your family&rsquo;s recipes alive, cook them together &mdash; even from far apart &mdash; and gather around them again.
           </p>
           <p className="mt-6 font-sans text-sm italic text-slate">
-            Six years ago I moved 8,000 km from my parents. My daughter asked her grandfather to write his recipes down for her &mdash; and that became this app.
+            A few years ago I moved away from my parents. My daughter asked her grandfather to write his recipes down for her &mdash; and that became this app.
           </p>
           <Link
             href="/our-story"
@@ -661,10 +665,10 @@ export default function LandingPage() {
       <section className="py-16 sm:py-24">
         <Reveal className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="font-serif text-3xl font-bold text-charcoal sm:text-4xl">
-            Start your family cookbook today
+            Bring your family together today
           </h2>
           <p className="mt-4 font-sans text-sm text-slate">
-            Start with a 14-day free trial. Cancel anytime. Invite your whole family.
+            Start with a 14-day free trial. Cancel anytime. Invite family members.
           </p>
           <Link
             href="/auth"

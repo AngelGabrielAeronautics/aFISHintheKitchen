@@ -2,21 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
 
-// PLACEHOLDER photo slot — visually intentional so the page reads as "design
-// in progress" rather than "broken images." Swap each one for an <Image /> as
-// real photos land in public/.
-function PhotoSlot({ caption, aspect = "aspect-[4/3]" }: { caption: string; aspect?: string }) {
-  return (
-    <div
-      className={`${aspect} flex items-center justify-center rounded-2xl border-2 border-dashed border-cream-dark/70 bg-cream/40 px-4 text-center`}
-    >
-      <span className="font-sans text-xs uppercase tracking-[0.15em] text-slate/50">
-        Photo · {caption}
-      </span>
-    </div>
-  );
-}
-
 export const metadata = {
   title: "Our Story · A Fish in the Kitchen",
   description: "How a paperback called the Kookbook — written by a grandfather, asked for by a granddaughter — became this app.",
@@ -85,13 +70,9 @@ export default function OurStoryPage() {
                 I grew up watching my father &mdash; Poppie &mdash; cook for our family. He&rsquo;s the one who taught me. I cook his recipes for my own kids now, and they&rsquo;ve started cooking them too: the same flavours, the same way, the same things he was making when I was their age.
               </p>
               <p>
-                Six years ago I moved to Jersey. My parents stayed in South Africa. The thing I didn&rsquo;t realise I&rsquo;d lose was just sitting around the table eating Poppie&rsquo;s food. My daughter Bella missed it too. She asked her grandfather to write his recipes down for her &mdash; and he did. A paperback he made himself, called the <em>Kookbook</em>. That&rsquo;s where this app started.
+                A few years ago we immigrated, and my parents stayed behind. The thing I didn&rsquo;t realise I&rsquo;d miss so badly was just sitting around the table eating Poppie&rsquo;s food. My eldest daughter missed this too, prompting her to ask her grandfather to write his recipes down &mdash; and so he did. A paperback he made himself, called the <em>Kookbook</em>. That&rsquo;s where this app started.
               </p>
             </div>
-          </Reveal>
-
-          <Reveal delay={0.1} className="mt-10">
-            <PhotoSlot caption="Poppie cooking, or the family at the table" />
           </Reveal>
         </div>
       </section>
@@ -100,7 +81,7 @@ export default function OurStoryPage() {
       <section className="bg-warm-white py-16 sm:py-20">
         <Reveal className="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <p className="font-serif text-2xl italic leading-snug text-charcoal sm:text-3xl">
-            Sometimes on special days we cook the same meal, eight thousand kilometres apart, and eat together over a video call. The flavours are exactly the same.
+            Sometimes on special occasions we cook the same meal, thousands of kilometres apart, and eat together over a video call. The flavours and smells perfectly aligned.
           </p>
         </Reveal>
       </section>
@@ -117,7 +98,7 @@ export default function OurStoryPage() {
                 Cooking and sharing food with the people you love is one of the most fundamentally human things we do. Long before kitchens, tribes gathered around a fire to cook, eat, and tell stories. It&rsquo;s how families bond and how the day winds down &mdash; it&rsquo;s wired into us.
               </p>
               <p>
-                And it runs deeper than habit. The smell of something your mum or your gran used to make can take you straight back to being a child. Those flavours live in your body; comfort food comforts because of the people and the memories baked into it.
+                And it runs deeper than habit. The smell of something your mom or gran used to make can take you straight back to being a child. Those flavours and smells live deep in our psyche; comfort food comforts because of the people and the memories baked into it.
               </p>
               <p>
                 Modern life &mdash; most of all the phones at the table &mdash; is quietly eroding that. We sit together but look elsewhere. We eat without really eating together, and a little of what makes us human slips away with it.
@@ -140,28 +121,6 @@ export default function OurStoryPage() {
             &mdash; Poppie
           </p>
         </Reveal>
-      </section>
-
-      {/* Three-generation strip */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <Reveal>
-            <h2 className="text-center font-serif text-2xl font-bold text-charcoal sm:text-3xl">
-              Three generations, one kitchen
-            </h2>
-          </Reveal>
-          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Reveal>
-              <PhotoSlot caption="Poppie at the stove" aspect="aspect-[3/4]" />
-            </Reveal>
-            <Reveal delay={0.1}>
-              <PhotoSlot caption="Bella & Poppie" aspect="aspect-[3/4]" />
-            </Reveal>
-            <Reveal delay={0.2}>
-              <PhotoSlot caption="The kids cooking today" aspect="aspect-[3/4]" />
-            </Reveal>
-          </div>
-        </div>
       </section>
 
       {/* Soft CTA */}
