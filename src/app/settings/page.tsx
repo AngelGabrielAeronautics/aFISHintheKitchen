@@ -70,7 +70,7 @@ export default function SettingsPage() {
         name: name.trim(),
         customisation: {
           brandName: name.trim(),
-          tagline: tagline.trim() || "Family Recipes Worth Catching",
+          tagline: tagline.trim() || "The food your family is built on",
         },
       });
       setSaved(true);

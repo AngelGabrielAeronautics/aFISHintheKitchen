@@ -74,6 +74,10 @@ export async function POST(req: NextRequest) {
       ? `<strong>${safeInviter}</strong> has invited you to join <strong>${safeHousehold}</strong> on A Fish in the Kitchen — a private family cookbook for sharing recipes, meal plans, and kitchen tips.`
       : `<strong>${safeInviter}</strong> has invited you to join A Fish in the Kitchen — a private family cookbook for sharing recipes, meal plans, and kitchen tips.`;
 
+    // One quiet line of the ethos (see project_brand_story) — this email is the
+    // moment a family member is pulled in, so it carries the legacy thesis.
+    const story = "It’s where our family’s recipes live now — so the ones worth keeping get passed down, not lost.";
+
     const html = `<!DOCTYPE html>
 <html>
   <body style="margin:0;padding:0;background:#faf6f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2d2a26;">
@@ -87,8 +91,13 @@ export async function POST(req: NextRequest) {
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 40px;font-size:16px;line-height:1.6;color:#4a4540;">
+              <td style="padding:16px 40px 4px 40px;font-size:16px;line-height:1.6;color:#4a4540;">
                 ${intro}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:4px 40px 16px 40px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;line-height:1.6;color:#6b6660;">
+                ${story}
               </td>
             </tr>
             <tr>
@@ -103,7 +112,7 @@ export async function POST(req: NextRequest) {
               </td>
             </tr>
           </table>
-          <p style="margin:24px 0 0 0;font-size:12px;color:#a8a39d;">A Fish in the Kitchen — family recipes worth catching</p>
+          <p style="margin:24px 0 0 0;font-size:12px;color:#a8a39d;">A Fish in the Kitchen — the food your family is built on</p>
         </td>
       </tr>
     </table>
@@ -116,6 +125,8 @@ export async function POST(req: NextRequest) {
       householdName
         ? `${inviterName} has invited you to join ${householdName} on A Fish in the Kitchen — a private family cookbook for sharing recipes, meal plans, and kitchen tips.`
         : `${inviterName} has invited you to join A Fish in the Kitchen — a private family cookbook for sharing recipes, meal plans, and kitchen tips.`,
+      "",
+      story.replace(/[’]/g, "'"),
       "",
       `Accept your invitation: ${signupUrl}`,
       "",

@@ -23,10 +23,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-slate italic">
-              A Coppard & Fish Family Collection
-            </p>
-            <p className="text-xs text-slate/60 italic">
-              Built on Poppie&rsquo;s Kookbook.
+              Dedicated to my father who shaped the flavours of my family for generations
             </p>
           </div>
 
@@ -74,7 +71,7 @@ export default function Footer() {
         {/* Bottom row */}
         <div className="mt-8 pt-6 border-t border-gold-light/40 text-center">
           <p className="text-xs text-slate">
-            &copy; {year} A Fish in the Kitchen. Made with love and a pinch of salt.
+            &copy; {year} A Fish in the Kitchen. Made for your family with love and a pinch of salt.
           </p>
         </div>
       </div>

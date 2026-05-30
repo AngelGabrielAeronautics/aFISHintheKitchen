@@ -40,7 +40,7 @@ export default function MigratePage() {
         memberIds: [user!.uid],
         customisation: {
           brandName: "A Fish in the Kitchen",
-          tagline: "Family Recipes Worth Catching",
+          tagline: "The food your family is built on",
         },
         plan: "premium" as const,
         accessState: "active" as const,

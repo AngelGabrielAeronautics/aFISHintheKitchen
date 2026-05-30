@@ -68,7 +68,7 @@ export default function SetupPage() {
         ownerName: user.displayName || user.email || "Owner",
         customisation: {
           brandName: name.trim(),
-          tagline: tagline.trim() || "Family Recipes Worth Catching",
+          tagline: tagline.trim() || "The food your family is built on",
         },
       });
 

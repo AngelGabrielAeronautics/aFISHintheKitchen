@@ -155,7 +155,8 @@ export default function OurStoryPage() {
             Start your family&rsquo;s cookbook
           </h2>
           <p className="mt-4 font-sans text-sm text-slate">
-            Whatever your Kookbook turns out to be, this is the place to keep it.
+            Recipes outlast the people who made them &mdash; but only if someone
+            writes them down. This is where you do that.
           </p>
           <Link
             href="/auth"

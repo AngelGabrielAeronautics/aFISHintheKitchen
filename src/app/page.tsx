@@ -167,7 +167,7 @@ function HomeContent() {
           />
 
           <p className="mt-4 font-serif text-xl italic text-gold-light md:text-2xl">
-            Family Recipes Worth Catching
+            The food your family is built on
           </p>
 
           <p className="mt-6 max-w-xl font-sans text-base leading-relaxed text-cream md:text-lg">

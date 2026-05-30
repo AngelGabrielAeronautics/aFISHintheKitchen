@@ -77,7 +77,7 @@ export default function Header() {
                 A Fish in the Kitchen
               </span>
               <span className="hidden sm:block font-sans text-xs text-slate italic leading-tight">
-                Family Recipes Worth Catching
+                The food your family is built on
               </span>
             </div>
           </Link>

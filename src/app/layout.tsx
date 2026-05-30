@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "A Fish in the Kitchen — Family Recipes Worth Catching",
+    default: "A Fish in the Kitchen — The food your family is built on",
     template: "%s | A Fish in the Kitchen",
   },
   description:

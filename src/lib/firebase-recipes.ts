@@ -537,7 +537,7 @@ export async function createHousehold(data: {
     memberIds: [data.ownerId],
     customisation: {
       brandName: data.customisation?.brandName ?? data.name,
-      tagline: data.customisation?.tagline ?? "Family Recipes Worth Catching",
+      tagline: data.customisation?.tagline ?? "The food your family is built on",
       ...(data.customisation?.primaryColor ? { primaryColor: data.customisation.primaryColor } : {}),
       ...(data.customisation?.logoUrl ? { logoUrl: data.customisation.logoUrl } : {}),
     },

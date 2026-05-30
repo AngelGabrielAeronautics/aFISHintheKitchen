@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   getAllRecipes,
@@ -606,19 +607,40 @@ function RecipesContent() {
                     <path d="m21 21-5.197-5.197M15.803 15.803A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                   </svg>
                 </div>
-                <h3 className="font-serif text-xl font-semibold text-charcoal">
-                  No recipes found
-                </h3>
-                <p className="max-w-sm font-sans text-sm text-slate">
-                  We couldn&apos;t find any recipes matching your search. Try
-                  different keywords or clear your filters.
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  className="mt-2 rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark cursor-pointer"
-                >
-                  Clear all filters
-                </button>
+                {allRecipes.length === 0 ? (
+                  <>
+                    <h3 className="font-serif text-xl font-semibold text-charcoal">
+                      Your cookbook is empty &mdash; for now
+                    </h3>
+                    <p className="max-w-sm font-sans text-sm text-slate">
+                      Every family has that one dish everyone asks for. Start
+                      there. Add it once and it&apos;s saved for good &mdash;
+                      ready to cook, share, and pass down.
+                    </p>
+                    <Link
+                      href="/submit"
+                      className="mt-2 rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark cursor-pointer"
+                    >
+                      Add your first recipe
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-serif text-xl font-semibold text-charcoal">
+                      No recipes found
+                    </h3>
+                    <p className="max-w-sm font-sans text-sm text-slate">
+                      We couldn&apos;t find any recipes matching your search. Try
+                      different keywords or clear your filters.
+                    </p>
+                    <button
+                      onClick={clearAllFilters}
+                      className="mt-2 rounded-full bg-terracotta px-6 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark cursor-pointer"
+                    >
+                      Clear all filters
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </>
