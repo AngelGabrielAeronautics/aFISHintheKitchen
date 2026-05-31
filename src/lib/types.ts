@@ -324,6 +324,9 @@ export interface Household {
   stateChangedAt?: string;
   deleteAfter?: string; // set when suspended; hard-deleted ~1 year later
   createdAt: string;
+  // Set when an owner asks for more than the base 5 seats. Captures demand until
+  // the paid extra-seats add-on (billing milestone) ships.
+  seatUpgradeRequestedAt?: string;
   recipeOfWeek?: {
     weekId: string;
     recipeId: string;

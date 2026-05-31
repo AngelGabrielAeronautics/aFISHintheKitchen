@@ -10,6 +10,7 @@ import {
   getAdminEmails,
   countHouseholdSeats,
   getSubscription,
+  updateHousehold,
   type InvitedUser,
 } from "@/lib/firebase-recipes";
 import { useHousehold } from "@/context/HouseholdContext";
@@ -40,6 +41,11 @@ export default function AdminUsersPage() {
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Seat usage + the "more seats" interest prompt (no purchase until billing).
+  const [seats, setSeats] = useState<{ used: number; limit: number } | null>(null);
+  const [upgradeRequested, setUpgradeRequested] = useState(false);
+  const [requestingUpgrade, setRequestingUpgrade] = useState(false);
+
   // Invite form state
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -52,18 +58,22 @@ export default function AdminUsersPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [usersData, adminsData] = await Promise.all([
+      const [usersData, adminsData, used, sub] = await Promise.all([
         getInvitedUsers(householdId),
         getAdminEmails(),
+        householdId ? countHouseholdSeats(householdId) : Promise.resolve(0),
+        user ? getSubscription(user.uid) : Promise.resolve(null),
       ]);
       setUsers(usersData);
       setAdminEmails(adminsData);
+      setSeats({ used, limit: MAX_SEATS + (sub?.extraSeats ?? 0) });
+      setUpgradeRequested(Boolean(household?.seatUpgradeRequestedAt));
     } catch {
       setError("Failed to load data.");
     } finally {
       setLoadingData(false);
     }
-  }, [householdId]);
+  }, [householdId, user, household?.seatUpgradeRequestedAt]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -121,9 +131,9 @@ export default function AdminUsersPage() {
         ]);
         const limit = MAX_SEATS + (sub?.extraSeats ?? 0);
         if (used >= limit) {
-          // TODO(billing): offer an "add extra seats" upgrade once that add-on exists.
+          setSeats({ used, limit });
           setError(
-            `You've used all ${limit} member seats. Remove a member (or a pending invite) to free one up.`
+            `You've used all ${limit} member seats. Remove a member (or a pending invite) to free one up — or use the "Notify me" prompt above to register for more seats.`
           );
           setSubmitting(false);
           return;
@@ -188,6 +198,23 @@ export default function AdminUsersPage() {
     }
   }
 
+  // Records interest in more-than-5 seats. No charge yet — the paid add-on lands
+  // with billing; for now this just captures demand on the household doc.
+  async function handleNotifyMe() {
+    if (!householdId) return;
+    setRequestingUpgrade(true);
+    try {
+      await updateHousehold(householdId, {
+        seatUpgradeRequestedAt: new Date().toISOString(),
+      });
+      setUpgradeRequested(true);
+    } catch {
+      setError("Couldn't record your request. Please try again.");
+    } finally {
+      setRequestingUpgrade(false);
+    }
+  }
+
   if (loading || (!user && !loading)) {
     return null;
   }
@@ -216,6 +243,35 @@ export default function AdminUsersPage() {
         <h1 className="mb-8 font-serif text-3xl font-bold text-charcoal">
           Manage Users
         </h1>
+
+        {/* Upgrade nudge — shown when every seat is used. No purchase yet; this
+            captures interest until the paid extra-seats add-on ships. */}
+        {seats && seats.used >= seats.limit && (
+          <div className="mb-8 rounded-2xl border border-terracotta-light/40 bg-terracotta-light/10 p-6 shadow-sm">
+            <h2 className="font-serif text-xl font-semibold text-charcoal">
+              Need room for more?
+            </h2>
+            <p className="mt-2 font-sans text-sm text-slate">
+              You&rsquo;ve used all {seats.limit} member seats. Bigger plans with
+              more seats are coming soon. Want us to let you know when you can add
+              them?
+            </p>
+            {upgradeRequested ? (
+              <p className="mt-4 font-sans text-sm font-medium text-sage-dark">
+                Thanks &mdash; we&rsquo;ve noted your interest and will be in touch.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNotifyMe}
+                disabled={requestingUpgrade}
+                className="mt-4 rounded-lg bg-terracotta px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark disabled:opacity-60 cursor-pointer"
+              >
+                {requestingUpgrade ? "Saving…" : "Notify me"}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Invite Form */}
         <div className="mb-8 rounded-2xl bg-white p-6 shadow-lg">
