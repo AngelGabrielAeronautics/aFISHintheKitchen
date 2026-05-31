@@ -69,8 +69,16 @@ export default function Footer() {
         </div>
 
         {/* Bottom row */}
-        <div className="mt-8 pt-6 border-t border-gold-light/40 text-center">
-          <p className="text-xs text-slate">
+        <div className="mt-8 pt-6 border-t border-gold-light/40 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-5">
+            <Link href="/privacy" className="text-xs text-slate hover:text-terracotta transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="text-xs text-slate hover:text-terracotta transition-colors">
+              Terms of Service
+            </Link>
+          </div>
+          <p className="text-xs text-slate text-center">
             &copy; {year} A Fish in the Kitchen. Made for your family with love and a pinch of salt.
           </p>
         </div>
