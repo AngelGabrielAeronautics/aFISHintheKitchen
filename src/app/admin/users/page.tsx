@@ -93,6 +93,22 @@ export default function AdminUsersPage() {
       return;
     }
 
+    // Don't let an existing email be re-invited (which would clobber their
+    // record back to "pending" and waste a seat / send a duplicate email).
+    if (user?.email && trimmedEmail === user.email.toLowerCase()) {
+      setError("You're the cookbook owner — no need to invite yourself.");
+      return;
+    }
+    const existing = users.find((u) => u.email.toLowerCase() === trimmedEmail);
+    if (existing) {
+      setError(
+        existing.status === "registered"
+          ? `${trimmedEmail} is already a member of your cookbook.`
+          : `${trimmedEmail} already has a pending invitation.`
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
