@@ -301,8 +301,10 @@ function AuthPageContent() {
         {!isInvite && <div className="mb-8" />}
 
         <div className="rounded-2xl bg-white p-8 shadow-lg">
-          {/* Social sign-in */}
-          {mode !== "reset" && (
+          {/* Social sign-in — hidden for invites: a Google/Apple account could be
+              a different email than the one invited, sending them to the wrong
+              (or a brand-new) cookbook. Invited users use the locked email only. */}
+          {mode !== "reset" && !isInvite && (
             <div className="mb-6 space-y-3">
               <button
                 type="button"
@@ -342,8 +344,9 @@ function AuthPageContent() {
             </div>
           )}
 
-          {/* Tabs — hidden during password reset */}
-          {mode !== "reset" && (
+          {/* Tabs — hidden during password reset and for invites (invited users
+              get a single-purpose "accept your invitation" form). */}
+          {mode !== "reset" && !isInvite && (
             <div className="mb-6 flex border-b border-gold-light">
               <button
                 type="button"
@@ -381,6 +384,26 @@ function AuthPageContent() {
           {mode === "signup" && !isInvite && (
             <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
               Create an account to start your own cookbook with a free trial. Invited by family? Sign up with the email they invited and you&rsquo;ll join their cookbook automatically.
+            </div>
+          )}
+
+          {/* Invite instructions — one clear step. */}
+          {isInvite && mode === "signup" && (
+            <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
+              <p>
+                Almost there &mdash; just <strong>choose a password</strong> below to
+                accept. Your email is already set; nothing else is needed.
+              </p>
+              <p className="mt-2 text-xs text-slate">
+                If the email below isn&rsquo;t yours, ask whoever invited you to
+                re-send the invitation to the right address.
+              </p>
+            </div>
+          )}
+          {isInvite && mode === "signin" && (
+            <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
+              You already have an account &mdash; enter your password to join{" "}
+              <span className="font-medium">{invitedBook || "the cookbook"}</span>.
             </div>
           )}
 
@@ -541,7 +564,13 @@ function AuthPageContent() {
                 disabled={submitting}
                 className="w-full rounded-lg bg-terracotta px-4 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark focus:outline-none focus:ring-2 focus:ring-terracotta/50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submitting ? "Creating account..." : "Create Account"}
+                {submitting
+                  ? isInvite
+                    ? "Accepting…"
+                    : "Creating account..."
+                  : isInvite
+                    ? "Accept Invitation"
+                    : "Create Account"}
               </button>
             </form>
           )}
