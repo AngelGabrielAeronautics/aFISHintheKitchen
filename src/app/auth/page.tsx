@@ -120,14 +120,16 @@ function AuthPageContent() {
 
     try {
       await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
-      // If they arrived via an invite link, join them to that book (no-op if
-      // there's no invite, or if they're already a member).
-      const join = await joinHouseholdFromInvite();
-      const joinMsg = joinErrorMessage(join.error);
-      if (!join.ok && joinMsg) {
-        setError(joinMsg);
-        setSubmitting(false);
-        return;
+      // Only attempt the invite join when they actually arrived via an invite
+      // link — otherwise /api/join 403s (no_invite) on every normal sign-in.
+      if (isInvite) {
+        const join = await joinHouseholdFromInvite();
+        const joinMsg = joinErrorMessage(join.error);
+        if (!join.ok && joinMsg) {
+          setError(joinMsg);
+          setSubmitting(false);
+          return;
+        }
       }
       router.push("/");
     } catch (err: unknown) {
@@ -167,22 +169,25 @@ function AuthPageContent() {
         displayName: displayName.trim(),
       });
 
-      const join = await joinHouseholdFromInvite();
-      const joinMsg = joinErrorMessage(join.error);
-      if (!join.ok && joinMsg) {
-        setError(joinMsg);
-        setSubmitting(false);
-        return;
-      }
-
-      if (join.ok) {
-        // Invited member — /api/join already marked them verified (the invite
-        // email proved they own the address). Refresh the session so the
-        // verify-email gate doesn't show, then go straight in.
-        await credential.user.reload();
-        await credential.user.getIdToken(true);
-        window.location.href = "/";
-        return;
+      // Only run the invite join when they came via an invite link; otherwise
+      // /api/join 403s (no_invite) for every self-serve signup.
+      if (isInvite) {
+        const join = await joinHouseholdFromInvite();
+        const joinMsg = joinErrorMessage(join.error);
+        if (!join.ok && joinMsg) {
+          setError(joinMsg);
+          setSubmitting(false);
+          return;
+        }
+        if (join.ok) {
+          // Invited member — /api/join already marked them verified (the invite
+          // email proved they own the address). Refresh the session so the
+          // verify-email gate doesn't show, then go straight in.
+          await credential.user.reload();
+          await credential.user.getIdToken(true);
+          window.location.href = "/";
+          return;
+        }
       }
 
       // Self-serve signup (no invite) — they must verify their email.
@@ -230,13 +235,8 @@ function AuthPageContent() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(getFirebaseAuth(), provider);
-      const join = await joinHouseholdFromInvite();
-      const joinMsg = joinErrorMessage(join.error);
-      if (!join.ok && joinMsg) {
-        setError(joinMsg);
-        setSubmitting(false);
-        return;
-      }
+      // Social sign-in is self-serve only (hidden for invites), so there's no
+      // invite to join here.
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
@@ -256,13 +256,8 @@ function AuthPageContent() {
       provider.addScope("email");
       provider.addScope("name");
       await signInWithPopup(getFirebaseAuth(), provider);
-      const join = await joinHouseholdFromInvite();
-      const joinMsg = joinErrorMessage(join.error);
-      if (!join.ok && joinMsg) {
-        setError(joinMsg);
-        setSubmitting(false);
-        return;
-      }
+      // Social sign-in is self-serve only (hidden for invites), so there's no
+      // invite to join here.
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
