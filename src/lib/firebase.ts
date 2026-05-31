@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, type Firestore } from "firebase/firestore";
 import { getAuth, type Auth } from "firebase/auth";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
@@ -21,7 +21,17 @@ let _auth: Auth;
 let _storage: FirebaseStorage;
 
 export function getDb(): Firestore {
-  if (!_db) _db = getFirestore(getApp());
+  if (_db) return _db;
+  const app = getApp();
+  try {
+    // Auto-detect when the WebChannel/QUIC stream is unreliable (VPNs, proxies,
+    // flaky networks) and fall back to HTTP long-polling. Avoids the noisy
+    // "WebChannelConnection RPC 'Listen' stream transport errored" + QUIC errors.
+    _db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch {
+    // Already initialized (HMR / double import) — reuse the existing instance.
+    _db = getFirestore(app);
+  }
   return _db;
 }
 
