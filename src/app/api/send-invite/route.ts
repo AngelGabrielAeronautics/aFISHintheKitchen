@@ -11,6 +11,9 @@ const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL ?? "admin@afishinthek
 // Absolute, always-reachable brand asset for the email header (email clients
 // can't load localhost / relative paths).
 const LOGO_URL = "https://www.afishinthekitchen.com/logo.png";
+// Email-safe stand-in for the app's heading font (Francois One — a bold,
+// condensed sans). Email clients can't load web fonts, so fall back gracefully.
+const HEADING_FONT = "'Arial Narrow', Arial, Helvetica, sans-serif";
 
 // App palette (globals.css) for an on-brand email. Note "terracotta" is green.
 const COLOR = {
@@ -112,12 +115,12 @@ export async function POST(req: NextRequest) {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${COLOR.white};border-radius:16px;box-shadow:0 2px 14px rgba(26,26,26,0.08);overflow:hidden;">
             <tr>
               <td align="center" style="padding:36px 40px 0 40px;">
-                <img src="${LOGO_URL}" alt="A Fish in the Kitchen" width="60" height="60" style="display:block;border-radius:50%;border:0;outline:none;text-decoration:none;" />
+                <img src="${LOGO_URL}" alt="A Fish in the Kitchen" width="120" height="120" style="display:block;border-radius:50%;border:0;outline:none;text-decoration:none;" />
               </td>
             </tr>
             <tr>
               <td style="padding:24px 40px 0 40px;">
-                <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;color:${COLOR.charcoal};">Hi ${safeName},</h1>
+                <h1 style="margin:0;font-family:${HEADING_FONT};font-weight:700;font-size:30px;line-height:1.2;color:${COLOR.charcoal};">Hi ${safeName},</h1>
               </td>
             </tr>
             <tr>
@@ -126,7 +129,7 @@ export async function POST(req: NextRequest) {
               </td>
             </tr>
             <tr>
-              <td style="padding:4px 40px 18px 40px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;line-height:1.6;color:${COLOR.sage};">
+              <td style="padding:4px 40px 18px 40px;font-style:italic;font-size:16px;line-height:1.6;color:${COLOR.sage};">
                 ${story}
               </td>
             </tr>
@@ -149,7 +152,7 @@ export async function POST(req: NextRequest) {
               </td>
             </tr>
           </table>
-          <p style="margin:24px 0 0 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:13px;color:${COLOR.muted};">A Fish in the Kitchen &mdash; the food your family is built on</p>
+          <p style="margin:24px 0 0 0;font-style:italic;font-size:13px;color:${COLOR.muted};">A Fish in the Kitchen &mdash; the food your family is built on</p>
         </td>
       </tr>
     </table>
