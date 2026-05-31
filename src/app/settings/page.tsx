@@ -48,8 +48,10 @@ export default function SettingsPage() {
     if (!authLoading && !householdLoading) {
       if (!user) router.push("/auth");
       else if (!household) router.push("/setup");
+      // Cookbook settings are owner-only; send members to their account page.
+      else if (membership && membership.role !== "owner") router.push("/account");
     }
-  }, [authLoading, householdLoading, user, household, router]);
+  }, [authLoading, householdLoading, user, household, membership, router]);
 
   if (authLoading || householdLoading) {
     return (
@@ -60,6 +62,8 @@ export default function SettingsPage() {
   }
 
   if (!user || !household || !householdId) return null;
+  // Members get redirected (effect above); render nothing meanwhile.
+  if (!isOwner) return null;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
