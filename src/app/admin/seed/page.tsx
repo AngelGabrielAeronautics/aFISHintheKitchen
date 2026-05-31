@@ -110,7 +110,7 @@ export default function SeedPage() {
 
           {/* Error */}
           {error && (
-            <div className="mb-6 rounded-lg border border-terracotta-light/30 bg-terracotta-light/10 px-4 py-3 font-sans text-sm text-terracotta-dark">
+            <div className="mb-6 rounded-lg border border-amber-400 bg-amber-50 px-4 py-3 font-sans text-sm text-amber-900">
               {error}
             </div>
           )}

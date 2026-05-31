@@ -568,7 +568,7 @@ function StatusBanner({ status }: { status: { type: "error" | "success"; message
 
   if (status.type === "error") {
     return (
-      <div className="mb-4 rounded-lg border border-terracotta-light/30 bg-terracotta-light/10 px-4 py-3 font-sans text-sm text-terracotta-dark">
+      <div className="mb-4 rounded-lg border border-amber-400 bg-amber-50 px-4 py-3 font-sans text-sm text-amber-900">
         {status.message}
       </div>
     );
