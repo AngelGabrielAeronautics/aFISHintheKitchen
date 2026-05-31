@@ -15,7 +15,10 @@
   --color-gold: #8B7B4A;
   --color-gold-light: #C4B88A;
   --color-navy: #1A2E1A;
-  --font-serif: "Francois One", sans-serif;
+  /* Francois One is a bold condensed sans display font. When it can't load,
+     fall back to a condensed bold sans (Arial Narrow) rather than a generic
+     sans, so headings keep their shape. */
+  --font-serif: "Francois One", "Arial Narrow", Arial, Helvetica, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
