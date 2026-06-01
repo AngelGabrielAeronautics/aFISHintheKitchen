@@ -182,6 +182,11 @@ export async function POST(req: NextRequest) {
       subject,
       html,
       text,
+      // Transactional: an invite the recipient asked for. Bypass SendGrid's
+      // unsubscribe/global-unsubscribe lists so it can't be silently dropped if
+      // the address ever landed on one (this is a shared SendGrid account).
+      // Still honours bounces/blocks/spam reports.
+      mailSettings: { bypassUnsubscribeManagement: { enable: true } },
     });
 
     return NextResponse.json({ ok: true });
