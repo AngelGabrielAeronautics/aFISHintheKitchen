@@ -433,6 +433,32 @@ export default function SubmitRecipePage() {
     );
   }
 
+  // --- Email not verified: can browse, but not add content yet ---
+  if (!user.emailVerified) {
+    return (
+      <main className="min-h-screen bg-cream py-8 sm:py-16 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
+            <h2 className="font-serif text-2xl text-charcoal mb-2">
+              Verify your email first
+            </h2>
+            <p className="text-slate mb-6">
+              Confirm your email address and you can start adding recipes. We sent a
+              verification link to <strong className="text-charcoal">{user.email}</strong> &mdash;
+              click it, then come back. (Look for the reminder at the top of the page to resend it.)
+            </p>
+            <Link
+              href="/recipes"
+              className="inline-block w-full bg-terracotta text-white font-medium py-3 rounded-lg hover:bg-terracotta-dark transition-colors text-center"
+            >
+              Browse recipes meanwhile
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   // --- Success state ---
   if (submitted) {
     return (

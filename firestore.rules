@@ -27,6 +27,12 @@ service cloud.firestore {
       return request.auth.token.email.lower();
     }
 
+    // True for verified email/password users and all Google/Apple sign-ins.
+    // Unverified self-serve users can read/set up but not write content/invite.
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isSuperAdmin() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/config/superAdmins)
@@ -56,9 +62,10 @@ service cloud.firestore {
     function canRead(hid) {
       return isSuperAdmin() || (isMember(hid) && stateOf(hid) != "suspended");
     }
-    // Members may write only while the household is fully active (not read-only / suspended).
+    // Members may write only while the household is fully active (not read-only /
+    // suspended) AND their email is verified.
     function canWrite(hid) {
-      return isSuperAdmin() || (isMember(hid) && stateOf(hid) == "active");
+      return isSuperAdmin() || (isMember(hid) && stateOf(hid) == "active" && isEmailVerified());
     }
 
     // ── Households ──
@@ -150,7 +157,7 @@ service cloud.firestore {
             || isSuperAdmin()
             || (resource != null && isOwner(resource.data.householdId)));
       allow create: if isSuperAdmin()
-        || (isSignedIn() && isOwner(request.resource.data.householdId));
+        || (isOwner(request.resource.data.householdId) && isEmailVerified());
       // The invitee may mark themselves registered; owner/super admin may manage.
       allow update: if isSuperAdmin()
         || isOwner(resource.data.householdId)

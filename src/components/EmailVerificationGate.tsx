@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { sendEmailVerification, signOut } from "firebase/auth";
+import { sendEmailVerification } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 
-// Blocks the app until the email is verified. Only bites email/password users —
-// Google/Apple sign-ins arrive with emailVerified already true.
+// Non-blocking reminder for unverified email/password users. They can browse
+// and set up, but writing content / inviting is blocked (Firestore rules +
+// per-surface prompts) until verified. Google/Apple sign-ins arrive verified.
 export default function EmailVerificationGate() {
   const { user, loading } = useAuth();
   const [sent, setSent] = useState(false);
@@ -37,40 +38,32 @@ export default function EmailVerificationGate() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/70 p-4 backdrop-blur-sm">
-      <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
-        <h2 className="mb-2 font-serif text-2xl text-charcoal">Verify your email</h2>
-        <p className="mb-6 font-sans text-sm text-slate">
-          We sent a verification link to <strong>{user.email}</strong>. Click it, then refresh this
-          page.
-          {sent && (
-            <span className="mt-2 block text-terracotta-dark">Verification email resent.</span>
+    <div className="w-full bg-gold-light/90 px-4 py-2.5 text-center font-sans text-sm text-charcoal">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        <span>
+          {sent ? (
+            <>Verification email re-sent to <strong>{user.email}</strong>. Click the link, then refresh.</>
+          ) : (
+            <>Verify your email to add recipes and invite family. We sent a link to <strong>{user.email}</strong>.</>
           )}
-        </p>
-        <div className="flex flex-col gap-2">
+        </span>
+        <span className="flex items-center gap-3">
           <button
             type="button"
             onClick={refresh}
-            className="rounded-lg bg-terracotta px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+            className="font-semibold text-terracotta-dark underline underline-offset-2 hover:text-terracotta cursor-pointer"
           >
-            I&rsquo;ve verified — refresh
+            I&rsquo;ve verified
           </button>
           <button
             type="button"
             onClick={resend}
             disabled={sending}
-            className="rounded-lg px-5 py-2.5 font-sans text-sm font-medium text-terracotta transition-colors hover:bg-cream-dark/20 disabled:opacity-50"
+            className="font-medium text-charcoal/70 underline underline-offset-2 hover:text-charcoal disabled:opacity-50 cursor-pointer"
           >
-            {sending ? "Sending…" : "Resend email"}
+            {sending ? "Sending…" : "Resend"}
           </button>
-          <button
-            type="button"
-            onClick={() => signOut(getFirebaseAuth())}
-            className="mt-1 font-sans text-xs text-slate/60 underline"
-          >
-            Use a different account
-          </button>
-        </div>
+        </span>
       </div>
     </div>
   );

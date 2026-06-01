@@ -103,6 +103,11 @@ export default function AdminUsersPage() {
       return;
     }
 
+    if (user && !user.emailVerified) {
+      setError("Please verify your email before inviting family members — use the reminder at the top of the page.");
+      return;
+    }
+
     // Don't let an existing email be re-invited (which would clobber their
     // record back to "pending" and waste a seat / send a duplicate email).
     if (user?.email && trimmedEmail === user.email.toLowerCase()) {
