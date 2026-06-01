@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import sgMail from "@sendgrid/mail";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { sendTransactionalEmail, FROM_NAME } from "@/lib/email";
 
 export const runtime = "nodejs";
 
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL ?? "noreply@afishinthekitchen.com";
-const FROM_NAME = "A Fish in the Kitchen";
-// noreply sends, but replies should reach a real inbox.
-const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL ?? "admin@afishinthekitchen.com";
 // Absolute, always-reachable brand asset for the email header (email clients
 // can't load localhost / relative paths).
 const LOGO_URL = "https://www.afishinthekitchen.com/logo.png";
@@ -46,11 +42,9 @@ interface InviteBody {
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (!apiKey) {
+    if (!process.env.SENDGRID_API_KEY) {
       return NextResponse.json({ error: "Email service not configured" }, { status: 500 });
     }
-    sgMail.setApiKey(apiKey);
 
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
@@ -175,19 +169,10 @@ export async function POST(req: NextRequest) {
       "— A Fish in the Kitchen",
     ].join("\n");
 
-    await sgMail.send({
-      to: email,
-      from: { email: FROM_EMAIL, name: FROM_NAME },
-      replyTo: { email: REPLY_TO_EMAIL, name: FROM_NAME },
-      subject,
-      html,
-      text,
-      // Transactional: an invite the recipient asked for. Bypass SendGrid's
-      // unsubscribe/global-unsubscribe lists so it can't be silently dropped if
-      // the address ever landed on one (this is a shared SendGrid account).
-      // Still honours bounces/blocks/spam reports.
-      mailSettings: { bypassUnsubscribeManagement: { enable: true } },
-    });
+    // Transactional invite — sent via the shared helper, which strips the
+    // unsubscribe link and bypasses unsubscribe suppression so it can't be
+    // silently dropped (bounces/blocks/spam still honoured).
+    await sendTransactionalEmail({ to: email, subject, html, text });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
