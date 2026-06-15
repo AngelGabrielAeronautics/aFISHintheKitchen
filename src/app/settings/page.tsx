@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { updateHousehold, getHouseholdMembers, removeHouseholdMember } from "@/lib/firebase-recipes";
 import type { HouseholdMember } from "@/lib/types";
 import Avatar from "@/components/Avatar";
+import BillingSection from "@/components/BillingSection";
 
 const inputClasses =
   "w-full rounded-lg border border-gold-light bg-warm-white px-4 py-3 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20";
@@ -154,6 +155,9 @@ export default function SettingsPage() {
             )}
           </form>
         </section>
+
+        {/* Subscription / billing (owner-only) */}
+        <BillingSection userId={user.uid} householdId={householdId} />
 
         {/* Members */}
         <section className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg">
