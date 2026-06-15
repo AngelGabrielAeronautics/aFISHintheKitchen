@@ -350,20 +350,10 @@ export async function getInvitedUsers(householdId: string | null): Promise<Invit
   return snapshot.docs.map((d) => ({ ...d.data(), email: d.id } as InvitedUser));
 }
 
-export async function addInvitedUser(
-  data: Omit<InvitedUser, "status" | "createdAt">
-): Promise<void> {
-  const email = data.email.toLowerCase().trim();
-  const docRef = doc(getDb(), "invitedUsers", email);
-  await setDoc(docRef, {
-    name: data.name,
-    invitedBy: data.invitedBy,
-    ...(data.householdId ? { householdId: data.householdId } : {}),
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  });
-}
-
+// NOTE: Invites are CREATED server-side via /api/invite (Admin SDK) — the
+// Firestore rules forbid clients from writing invitedUsers directly, so there
+// is intentionally no client-side addInvitedUser. Removal stays client-side
+// (the rules still allow an owner to delete their own invites).
 export async function removeInvitedUser(email: string): Promise<void> {
   const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
   await deleteDoc(docRef);
@@ -373,14 +363,6 @@ export async function isEmailAllowed(email: string): Promise<boolean> {
   const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
   const snapshot = await getDoc(docRef);
   return snapshot.exists();
-}
-
-export async function markUserRegistered(email: string): Promise<void> {
-  const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
-  await updateDoc(docRef, {
-    status: "registered",
-    registeredAt: new Date().toISOString(),
-  });
 }
 
 export async function isAdmin(email: string): Promise<boolean> {

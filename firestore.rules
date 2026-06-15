@@ -156,12 +156,12 @@ service cloud.firestore {
         && (inviteEmail == email()
             || isSuperAdmin()
             || (resource != null && isOwner(resource.data.householdId)));
-      allow create: if isSuperAdmin()
-        || (isOwner(request.resource.data.householdId) && isEmailVerified());
-      // The invitee may mark themselves registered; owner/super admin may manage.
-      allow update: if isSuperAdmin()
-        || isOwner(resource.data.householdId)
-        || (isSignedIn() && inviteEmail == email());
+      // Creating/updating invites is SERVER-SIDE ONLY (Admin SDK via /api/invite,
+      // which bypasses these rules). That route is the authoritative enforcement
+      // point for owner-auth, the duplicate guard, and the seat cap — clients
+      // must not write invites directly. /api/join marks invites registered.
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
       allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
     }
 

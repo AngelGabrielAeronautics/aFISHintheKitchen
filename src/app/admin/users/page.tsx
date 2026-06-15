@@ -5,7 +5,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   getInvitedUsers,
-  addInvitedUser,
   removeInvitedUser,
   getAdminEmails,
   countHouseholdSeats,
@@ -15,6 +14,34 @@ import {
 } from "@/lib/firebase-recipes";
 import { useHousehold } from "@/context/HouseholdContext";
 import { MAX_SEATS } from "@/lib/access";
+
+// Maps the server's /api/invite error codes to owner-facing messages.
+function inviteErrorMessage(code: string | undefined, email: string, limit?: number): string {
+  switch (code) {
+    case "already_member":
+      return `${email} is already a member of your cookbook.`;
+    case "already_invited":
+      return `${email} already has a pending invitation.`;
+    case "invited_elsewhere":
+      return `${email} has already been invited to another cookbook and can't be added here.`;
+    case "self_invite":
+      return "You're the cookbook owner — no need to invite yourself.";
+    case "seat_limit":
+      return `You've used all ${limit ?? MAX_SEATS} member seats. Remove a member (or a pending invite) to free one up — or use the "Notify me" prompt above to register for more seats.`;
+    case "email_unverified":
+      return "Please verify your email before inviting family members — use the reminder at the top of the page.";
+    case "household_inactive":
+      return "Your cookbook is read-only right now, so invites are paused. Check your subscription on the settings page.";
+    case "not_owner":
+      return "Only the cookbook owner can invite members.";
+    case "invalid_email":
+      return "That doesn't look like a valid email address.";
+    case "email_not_configured":
+      return "The email service isn't configured. Please try again later.";
+    default:
+      return "Failed to add invitation. Please try again.";
+  }
+}
 
 /*
   Firestore rules needed (deploy manually):
@@ -127,57 +154,54 @@ export default function AdminUsersPage() {
     setSubmitting(true);
 
     try {
-      // Seat soft-block (UX). The hard cap is enforced server-side at join, but
-      // catch it here so owners aren't surprised after an invitee tries to accept.
-      if (householdId) {
-        const [used, sub] = await Promise.all([
-          countHouseholdSeats(householdId),
-          user ? getSubscription(user.uid) : Promise.resolve(null),
-        ]);
-        const limit = MAX_SEATS + (sub?.extraSeats ?? 0);
-        if (used >= limit) {
-          setSeats({ used, limit });
-          setError(
-            `You've used all ${limit} member seats. Remove a member (or a pending invite) to free one up — or use the "Notify me" prompt above to register for more seats.`
-          );
-          setSubmitting(false);
-          return;
-        }
+      // Soft seat-block (UX only). The authoritative cap — along with owner-auth
+      // and the duplicate guard — is enforced server-side in /api/invite; this
+      // just gives a faster, friendlier message before the round-trip.
+      if (householdId && seats && seats.used >= seats.limit) {
+        setError(
+          `You've used all ${seats.limit} member seats. Remove a member (or a pending invite) to free one up — or use the "Notify me" prompt above to register for more seats.`
+        );
+        setSubmitting(false);
+        return;
       }
 
-      await addInvitedUser({
-        email: trimmedEmail,
-        name: trimmedName,
-        invitedBy: user?.displayName ?? "Unknown",
-        ...(householdId ? { householdId } : {}),
+      const token = await user?.getIdToken();
+      if (!token || !householdId) {
+        setError("Your session expired. Please refresh and try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          householdId,
+          email: trimmedEmail,
+          name: trimmedName,
+          inviterName: user?.displayName || user?.email || "A family member",
+          signupUrl: `${window.location.origin}/auth`,
+        }),
       });
 
-      let emailSent = false;
-      try {
-        const token = await user?.getIdToken();
-        if (token) {
-          const res = await fetch("/api/send-invite", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              email: trimmedEmail,
-              name: trimmedName,
-              inviterName: user?.displayName || user?.email || "A family member",
-              householdName: household?.customisation?.brandName,
-              signupUrl: `${window.location.origin}/auth`,
-            }),
-          });
-          emailSent = res.ok;
-        }
-      } catch {
-        // Fall through — allow-list entry still succeeded
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        emailSent?: boolean;
+        error?: string;
+        limit?: number;
+      };
+
+      if (!res.ok || !data.ok) {
+        setError(inviteErrorMessage(data.error, trimmedEmail, data.limit));
+        setSubmitting(false);
+        return;
       }
 
       setSuccessMessage(
-        emailSent
+        data.emailSent
           ? `Invitation sent to ${trimmedName} (${trimmedEmail})`
           : `${trimmedName} (${trimmedEmail}) is allow-listed, but the email failed to send. Share the signup link with them directly.`
       );
@@ -186,8 +210,7 @@ export default function AdminUsersPage() {
       await fetchData();
     } catch (err) {
       console.error("add invitation failed:", err);
-      const message = err instanceof Error ? err.message : "Please try again.";
-      setError(`Failed to add invitation: ${message}`);
+      setError("Failed to add invitation. Please try again.");
     } finally {
       setSubmitting(false);
     }
