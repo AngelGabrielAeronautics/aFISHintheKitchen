@@ -4,14 +4,13 @@ import { useState, useEffect, Suspense } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  sendEmailVerification,
   updateProfile,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { sendVerificationEmail, sendResetEmail } from "@/lib/auth-email-client";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -190,8 +189,14 @@ function AuthPageContent() {
         }
       }
 
-      // Self-serve signup (no invite) — they must verify their email.
-      await sendEmailVerification(credential.user);
+      // Self-serve signup (no invite) — they must verify their email. Sent via
+      // our SendGrid sender for deliverability; failure is non-fatal (they can
+      // resend from the in-app banner).
+      try {
+        await sendVerificationEmail(credential.user);
+      } catch {
+        /* non-fatal — resend available from the EmailVerificationGate banner */
+      }
       setSuccessMessage(
         `We've sent a verification email to ${email}. Please check your inbox.`
       );
@@ -219,11 +224,11 @@ function AuthPageContent() {
     setSubmitting(true);
 
     try {
-      await sendPasswordResetEmail(getFirebaseAuth(), email);
-      setSuccessMessage("Check your email for a password reset link.");
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? "";
-      setError(getErrorMessage(code));
+      await sendResetEmail(email);
+      // Enumeration-safe: the same message whether or not an account exists.
+      setSuccessMessage("If that email has an account, we've sent a password reset link.");
+    } catch {
+      setError("Couldn't send the reset email. Please try again.");
     } finally {
       setSubmitting(false);
     }

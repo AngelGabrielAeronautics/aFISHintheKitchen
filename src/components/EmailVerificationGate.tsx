@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { sendEmailVerification } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { sendVerificationEmail } from "@/lib/auth-email-client";
 import { useAuth } from "@/context/AuthContext";
 
 // Non-blocking reminder for unverified email/password users. They can browse
@@ -20,7 +20,7 @@ export default function EmailVerificationGate() {
     if (!current) return;
     setSending(true);
     try {
-      await sendEmailVerification(current);
+      await sendVerificationEmail(current);
       setSent(true);
     } catch {
       /* ignore — likely rate-limited */

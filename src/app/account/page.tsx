@@ -9,10 +9,10 @@ import {
   deleteUser,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  sendEmailVerification,
   verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { sendVerificationEmail } from "@/lib/auth-email-client";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
 import { useRouter } from "next/navigation";
@@ -149,7 +149,7 @@ export default function AccountPage() {
     setVerificationStatus(null);
     setSendingVerification(true);
     try {
-      await sendEmailVerification(currentUser);
+      await sendVerificationEmail(currentUser);
       setVerificationStatus({ type: "success", message: "Verification email sent. Check your inbox." });
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
