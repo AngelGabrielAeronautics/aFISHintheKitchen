@@ -41,12 +41,16 @@ export async function GET(req: NextRequest) {
       trialEndsAt: sub?.trialEndsAt ?? null,
       lapsedAt: sub?.lapsedAt ?? null,
       createdAt: h.createdAt ?? null,
+      // Owner clicked "Notify me" at the seat cap — captured demand for the
+      // paid extra-seats add-on (lands with billing). null once handled.
+      seatUpgradeRequestedAt: h.seatUpgradeRequestedAt ?? null,
     };
   });
 
   const metrics = {
     households: households.length,
     members: membersSnap.size,
+    seatRequests: households.filter((h) => h.seatUpgradeRequestedAt).length,
     byAccessState: countBy(households, (h) => h.accessState),
     bySubscription: countBy(households, (h) => h.subscriptionStatus),
   };

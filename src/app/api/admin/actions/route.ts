@@ -63,6 +63,10 @@ export async function POST(req: NextRequest) {
       await subRef.set({ status: "canceled", householdId, lapsedAt: now, updatedAt: now }, { merge: true });
       break;
 
+    case "clear_seat_request": // dismiss a handled "more seats" request
+      await hhRef.set({ seatUpgradeRequestedAt: FieldValue.delete() }, { merge: true });
+      break;
+
     default:
       return NextResponse.json({ error: "unknown_action" }, { status: 400 });
   }

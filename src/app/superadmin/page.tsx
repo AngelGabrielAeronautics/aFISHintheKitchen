@@ -16,12 +16,14 @@ interface HouseholdRow {
   trialEndsAt: string | null;
   lapsedAt: string | null;
   createdAt: string | null;
+  seatUpgradeRequestedAt: string | null;
 }
 
 interface Overview {
   metrics: {
     households: number;
     members: number;
+    seatRequests: number;
     byAccessState: Record<string, number>;
     bySubscription: Record<string, number>;
   };
@@ -95,12 +97,48 @@ export default function SuperAdminPage() {
 
       {data && (
         <>
-          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Metric label="Cookbooks" value={data.metrics.households} />
             <Metric label="Members" value={data.metrics.members} />
             <Metric label="Active" value={data.metrics.byAccessState.active ?? 0} />
             <Metric label="Suspended" value={data.metrics.byAccessState.suspended ?? 0} />
+            <Metric label="Seat requests" value={data.metrics.seatRequests ?? 0} />
           </div>
+
+          {data.households.some((h) => h.seatUpgradeRequestedAt) && (
+            <div className="mb-8 rounded-xl border border-terracotta-light/40 bg-terracotta-light/10 p-5">
+              <h2 className="mb-1 font-serif text-lg font-semibold text-charcoal">
+                More-seats requests
+              </h2>
+              <p className="mb-4 font-sans text-xs text-slate">
+                Owners who hit the seat cap and asked to be notified. Captured demand for the paid
+                extra-seats add-on — reach out, then mark handled.
+              </p>
+              <ul className="divide-y divide-gold-light/50">
+                {data.households
+                  .filter((h) => h.seatUpgradeRequestedAt)
+                  .sort((a, b) => (a.seatUpgradeRequestedAt! < b.seatUpgradeRequestedAt! ? 1 : -1))
+                  .map((h) => (
+                    <li key={h.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <div className="truncate font-sans text-sm font-medium text-charcoal">
+                          {h.name || h.id}
+                        </div>
+                        <div className="font-sans text-xs text-slate/70">
+                          {h.memberCount} members · requested {formatDate(h.seatUpgradeRequestedAt)}
+                        </div>
+                      </div>
+                      <ActionBtn
+                        onClick={() => act(h.id, "clear_seat_request")}
+                        busy={busy === `${h.id}:clear_seat_request`}
+                      >
+                        Mark handled
+                      </ActionBtn>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
 
           <div className="overflow-x-auto rounded-xl border border-gold-light bg-white">
             <table className="w-full text-left font-sans text-sm">
@@ -156,6 +194,14 @@ export default function SuperAdminPage() {
       )}
     </main>
   );
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
