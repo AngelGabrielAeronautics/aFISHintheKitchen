@@ -2,6 +2,7 @@ import {
   SignedDataVerifier,
   Environment,
   type JWSTransactionDecodedPayload,
+  type ResponseBodyV2DecodedPayload,
 } from "@apple/app-store-server-library";
 
 // Apple Root CA - G3 (DER), embedded as base64 so it ships in the serverless
@@ -18,10 +19,13 @@ function appleRootCAs(): Buffer[] {
 }
 
 // Read the (unverified) environment so we can build the matching verifier.
+// Transactions carry `environment` at the top level; notifications carry it at
+// `data.environment`.
 function peekEnvironment(jws: string): Environment {
   try {
     const payload = JSON.parse(Buffer.from(jws.split(".")[1] ?? "", "base64").toString("utf-8"));
-    return payload.environment === "Production" ? Environment.PRODUCTION : Environment.SANDBOX;
+    const env = payload.environment ?? payload.data?.environment;
+    return env === "Production" ? Environment.PRODUCTION : Environment.SANDBOX;
   } catch {
     return Environment.SANDBOX;
   }
@@ -36,4 +40,12 @@ export async function verifyAppStoreTransaction(jws: string): Promise<JWSTransac
   const env = peekEnvironment(jws);
   const verifier = new SignedDataVerifier(appleRootCAs(), false, env, BUNDLE_ID, APP_APPLE_ID);
   return verifier.verifyAndDecodeTransaction(jws);
+}
+
+// Verify + decode an App Store Server Notification V2 (signedPayload). Throws if
+// the signature/chain don't verify — so only genuine Apple notifications pass.
+export async function verifyAppStoreNotification(signedPayload: string): Promise<ResponseBodyV2DecodedPayload> {
+  const env = peekEnvironment(signedPayload);
+  const verifier = new SignedDataVerifier(appleRootCAs(), false, env, BUNDLE_ID, APP_APPLE_ID);
+  return verifier.verifyAndDecodeNotification(signedPayload);
 }
