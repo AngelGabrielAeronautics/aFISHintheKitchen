@@ -2,21 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
+import { verifyAppStoreTransaction } from "@/lib/appstore-verify";
 
 export const runtime = "nodejs";
 
-// Syncs an Apple App Store subscription (StoreKit 2) into Firestore so the
-// household's accessState reflects it. The iOS app reports a verified purchase
-// here; we run the same provider-agnostic state machine the Stripe webhook used.
-// Apple is the merchant of record (this is what unblocks billing for the Jersey
-// entity).
-//
-// ⚠️ PRODUCTION HARDENING REQUIRED: this currently trusts the authenticated
-// owner's reported purchase. Before charging real money, verify the signed
-// transaction with Apple's App Store Server API (originalTransactionId → Apple),
-// and/or move the source of truth to App Store Server Notifications V2. The
-// Firebase ID token + owner check limit writes to one's own household, but a
-// determined owner could still fake entitlement until this is added.
+// Syncs an Apple App Store subscription (StoreKit 2) into Firestore. The iOS app
+// sends the SIGNED transaction (JWS); we cryptographically verify it against
+// Apple's certificate chain (so a forged/tampered purchase can't pass), then run
+// the provider-agnostic state machine. Apple = merchant of record (this is what
+// unblocked billing for the Jersey entity).
+const MONTHLY_PRODUCT = "angelgabriel.afishinthekitchen.monthly";
+const ANNUAL_PRODUCT = "angelgabriel.afishinthekitchen.annual";
+
 export async function POST(req: NextRequest) {
   try {
     const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
@@ -29,17 +26,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_token" }, { status: 401 });
     }
 
-    const body = (await req.json()) as {
-      householdId?: string;
-      productId?: string;
-      plan?: "monthly" | "annual";
-      isTrial?: boolean;
-      expiresMillis?: number;
-      originalTransactionId?: string;
-    };
+    const body = (await req.json()) as { householdId?: string; jws?: string };
     const householdId = body.householdId?.trim();
-    if (!householdId || !body.originalTransactionId) {
+    const jws = body.jws?.trim();
+    if (!householdId || !jws) {
       return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+    }
+
+    // Cryptographically verify the StoreKit transaction with Apple's chain.
+    let transaction;
+    try {
+      transaction = await verifyAppStoreTransaction(jws);
+    } catch (err) {
+      console.error("appstore: transaction verification failed:", err);
+      return NextResponse.json({ error: "invalid_transaction" }, { status: 400 });
+    }
+
+    const productId = transaction.productId;
+    if (productId !== MONTHLY_PRODUCT && productId !== ANNUAL_PRODUCT) {
+      return NextResponse.json({ error: "unknown_product" }, { status: 400 });
     }
 
     const db = getAdminDb();
@@ -52,20 +57,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "not_owner" }, { status: 403 });
     }
 
-    // Expired → treat as canceled so the lapse ladder takes over.
-    const now = Date.now();
-    const expired = typeof body.expiresMillis === "number" && body.expiresMillis < now;
-    const status = expired ? "canceled" : body.isTrial ? "trialing" : "active";
-    const periodEnd = body.expiresMillis ? new Date(body.expiresMillis).toISOString() : undefined;
+    // Build the event from VERIFIED fields (not client-claimed).
+    const plan: "monthly" | "annual" = productId === ANNUAL_PRODUCT ? "annual" : "monthly";
+    const isTrial = transaction.offerType === 1; // 1 = introductory (free trial)
+    const expiresMs = transaction.expiresDate;
+    const expired = typeof expiresMs === "number" && expiresMs < Date.now();
+    const status = expired ? "canceled" : isTrial ? "trialing" : "active";
+    const periodEnd = typeof expiresMs === "number" ? new Date(expiresMs).toISOString() : undefined;
 
     const event: BillingEvent = {
       userId: uid,
       householdId,
       provider: "appstore",
-      providerSubscriptionId: body.originalTransactionId,
+      providerSubscriptionId: transaction.originalTransactionId,
       status,
-      plan: body.plan ?? "monthly",
-      trialEndsAt: body.isTrial ? periodEnd : undefined,
+      plan,
+      trialEndsAt: isTrial ? periodEnd : undefined,
       currentPeriodEnd: periodEnd,
     };
 
