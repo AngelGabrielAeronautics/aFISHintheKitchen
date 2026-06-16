@@ -355,7 +355,7 @@ export type SubscriptionStatus =
 export interface Subscription {
   userId: string; // doc id
   householdId: string; // the one book this subscription pays for
-  provider: "stripe" | "paddle" | null; // chosen at the billing milestone
+  provider: "stripe" | "paddle" | "appstore" | null; // chosen at the billing milestone
   providerCustomerId?: string;
   providerSubscriptionId?: string;
   status: SubscriptionStatus;
