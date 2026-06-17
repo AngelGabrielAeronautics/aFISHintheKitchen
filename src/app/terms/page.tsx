@@ -62,10 +62,17 @@ export default function TermsPage() {
 
           <Section title="Subscriptions and trials">
             <p>
-              Owning a cookbook may require a subscription, which can start with a free trial. When
-              paid plans are available, the owner pays and invited members remain free, and a trial
-              may convert to a paid subscription unless cancelled beforehand. Specific prices and
-              terms will be shown at the point of sign-up.
+              Owning a cookbook requires a subscription, which can start with a free trial. The owner
+              pays and invited members remain free. Specific prices are shown at the point of sign-up.
+            </p>
+            <p>
+              On our iOS app, subscriptions are auto-renewable and are sold through Apple. Payment is
+              charged to your Apple ID account at confirmation of purchase. The subscription
+              automatically renews for the same period unless it is cancelled at least 24 hours
+              before the end of the current period, and your account is charged for renewal within 24
+              hours before the end of the period. You can manage or cancel your subscription, and turn
+              off auto-renewal, in your App Store account settings after purchase. If a free trial is
+              offered, any unused portion of the trial is forfeited when you purchase a subscription.
             </p>
           </Section>
 
