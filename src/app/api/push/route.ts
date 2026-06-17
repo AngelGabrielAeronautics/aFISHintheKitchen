@@ -28,11 +28,17 @@ export async function POST(req: NextRequest) {
       link?: string;
       assignedMember?: string;
     };
-    const { type, householdId, message } = body;
+    const { type, householdId } = body;
     const link = body.link ?? "/";
-    if (!type || !householdId || !message) {
+    if (!type || !householdId || !body.message) {
       return NextResponse.json({ error: "missing_fields" }, { status: 400 });
     }
+    // Only our two known notification types may push, and the body is bounded so
+    // a member can't blast arbitrary long content to the household.
+    if (type !== "new-recipe" && type !== "event-assignment") {
+      return NextResponse.json({ error: "invalid_type" }, { status: 400 });
+    }
+    const message = String(body.message).slice(0, 240);
 
     const db = getAdminDb();
 
@@ -52,7 +58,16 @@ export async function POST(req: NextRequest) {
     let targets = snap.docs.map((d) => d.data() as { token: string; uid: string; displayName: string });
 
     if (type === "event-assignment" && body.assignedMember) {
-      targets = targets.filter((t) => t.displayName === body.assignedMember);
+      // Resolve the assignee to their account uid(s) via authoritative membership
+      // (display names aren't unique and the request value is client-supplied), then
+      // target that user's devices. A profile-only member with no account → no push.
+      const memberSnap = await db
+        .collection("householdMembers")
+        .where("householdId", "==", householdId)
+        .where("displayName", "==", body.assignedMember)
+        .get();
+      const assigneeUids = new Set(memberSnap.docs.map((d) => d.data().userId as string));
+      targets = targets.filter((t) => assigneeUids.has(t.uid));
     } else {
       // new-recipe (and any broadcast): everyone but the author.
       targets = targets.filter((t) => t.uid !== authorUid);

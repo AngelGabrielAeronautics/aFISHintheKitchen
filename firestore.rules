@@ -145,7 +145,10 @@ service cloud.firestore {
     match /notifications/{id} {
       allow read: if canRead(resource.data.householdId);
       allow create: if canWrite(request.resource.data.householdId);
-      allow update: if canRead(resource.data.householdId); // mark-as-read
+      // Mark-as-read only: a reader may append themselves to readBy, but may not
+      // rewrite the notification's content (message/link/author/etc.).
+      allow update: if canRead(resource.data.householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
       allow delete: if canWrite(resource.data.householdId);
     }
 
