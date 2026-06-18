@@ -22,6 +22,21 @@ function throttleKey(email: string): string {
   return encodeURIComponent(email);
 }
 
+// Repoint a Firebase-generated action link at our branded /auth/action handler.
+// The oobCode is project-scoped, so applyActionCode works no matter which host
+// serves the page — we keep the query (mode, oobCode, apiKey, continueUrl, lang)
+// and just swap the host. Lets us brand the verify/reset pages without relying
+// on the Firebase Console's (flaky) custom action URL setting.
+function brandActionLink(link: string): string {
+  try {
+    const out = new URL("https://www.afishinthekitchen.com/auth/action");
+    out.search = new URL(link).search;
+    return out.toString();
+  } catch {
+    return link; // fall back to the Firebase default if parsing ever fails
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.SENDGRID_API_KEY) {
@@ -59,7 +74,7 @@ export async function POST(req: NextRequest) {
       // Nothing to do — avoids a pointless email if their token is just stale.
       if (alreadyVerified) return NextResponse.json({ ok: true, alreadyVerified: true });
 
-      const link = await adminAuth.generateEmailVerificationLink(email, actionCodeSettings);
+      const link = brandActionLink(await adminAuth.generateEmailVerificationLink(email, actionCodeSettings));
       const { subject, html, text } = buildVerifyEmail(link);
       await sendTransactionalEmail({ to: email, subject, html, text });
       return NextResponse.json({ ok: true });
@@ -88,7 +103,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const link = await adminAuth.generatePasswordResetLink(email, actionCodeSettings);
+      const link = brandActionLink(await adminAuth.generatePasswordResetLink(email, actionCodeSettings));
       const { subject, html, text } = buildResetEmail(link);
       await sendTransactionalEmail({ to: email, subject, html, text });
     } catch (err) {
