@@ -120,7 +120,12 @@ service cloud.firestore {
 
     // ── Meal plans (per user, within a household) ──
     match /mealPlans/{id} {
-      allow read: if canRead(resource.data.householdId);
+      // A meal-plan doc is created lazily on first save, so a fresh week has no
+      // doc yet. Firestore sets `resource` to null for a non-existent doc, which
+      // makes a bare canRead() deny the read — surfacing as a spurious "couldn't
+      // load" error. Allow any signed-in user to read a missing doc (reveals
+      // nothing); gate existing docs on household membership as before.
+      allow read: if isSignedIn() && (resource == null || canRead(resource.data.householdId));
       allow create: if canWrite(request.resource.data.householdId)
         && request.resource.data.userId == request.auth.uid;
       allow update, delete: if canWrite(resource.data.householdId)
