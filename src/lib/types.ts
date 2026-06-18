@@ -76,6 +76,7 @@ export interface Recipe {
   category: Category;
   image: string;
   images?: string[];
+  thumbUrl?: string;   // small cover thumbnail for cards/lists
   prepTime: number;
   cookTime: number;
   servings: number;
