@@ -86,16 +86,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "seat_limit", limit: MAX_SEATS + extraSeats }, { status: 409 });
     }
 
-    // 6. Join: write membership + memberIds + mark invite registered, atomically.
+    // 6. Join: write membership + memberIds + mark invite registered, and create
+    //    a family-member profile so they appear on the Family tab — atomically.
     const now = new Date().toISOString();
+    const displayName = tokenName || invite.name || emailLower;
+    // Order the new profile after existing ones.
+    const profileCount = (
+      await db.collection("members").where("householdId", "==", householdId).count().get()
+    ).data().count;
     const memberRef = db.collection("householdMembers").doc();
+    const profileRef = db.collection("members").doc();
     const batch = db.batch();
     batch.set(memberRef, {
       userId: uid,
       householdId,
-      displayName: tokenName || invite.name || emailLower,
+      displayName,
       role: "member",
       joinedAt: now,
+    });
+    batch.set(profileRef, {
+      householdId,
+      userId: uid,                 // link profile → user (forward-compat; type ignores it)
+      order: profileCount,
+      name: displayName,
+      title: "",
+      bio: "",
+      goodAt: [],
+      loves: [],
+      hates: [],
+      favouriteFromBook: "",
+      favouriteNotInBook: "",
     });
     batch.update(hhRef, { memberIds: FieldValue.arrayUnion(uid) });
     batch.update(inviteRef, { status: "registered", registeredAt: now });
