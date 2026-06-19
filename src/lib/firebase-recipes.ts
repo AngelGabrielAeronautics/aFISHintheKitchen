@@ -175,7 +175,11 @@ export async function toggleDisliked(recipeId: string, name: string, add: boolea
 export async function toggleMustTry(recipeId: string, name: string, add: boolean): Promise<void> {
   const docRef = doc(getDb(), "recipes", recipeId);
   if (add) {
-    await updateDoc(docRef, { mustTry: arrayUnion(name) });
+    // Must-try and tried are an exclusive pair: clear "tried" when marking must-try.
+    await updateDoc(docRef, {
+      mustTry: arrayUnion(name),
+      triedBy: arrayRemove(name),
+    });
   } else {
     await updateDoc(docRef, { mustTry: arrayRemove(name) });
   }
