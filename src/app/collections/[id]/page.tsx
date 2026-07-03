@@ -14,7 +14,7 @@ import {
   updateAssignmentStatus,
 } from "@/lib/firebase-recipes";
 import type { RecipeCollection, Recipe, EventMenuComment, EditLogEntry } from "@/lib/types";
-import { FAMILY_MEMBERS } from "@/lib/types";
+import { useFamilyNames } from "@/hooks/useFamilyNames";
 import RecipeCard from "@/components/RecipeCard";
 import Avatar from "@/components/Avatar";
 import EditHistory from "@/components/EditHistory";
@@ -23,7 +23,9 @@ export default function CollectionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
-  const { householdId } = useHousehold();
+  const { householdId, loading: householdLoading } = useHousehold();
+  // This household's family profiles for the assignment dropdowns.
+  const familyNames = useFamilyNames();
 
   const [collection, setCollection] = useState<RecipeCollection | null>(null);
   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
@@ -57,6 +59,10 @@ export default function CollectionDetailPage() {
   const collectionId = params.id as string;
 
   useEffect(() => {
+    // Wait for the household to resolve — running with a null householdId
+    // returned [] and latched notFound, so direct links/refreshes always
+    // showed "Event menu not found" (the flag was never reset).
+    if (householdLoading || !householdId) return;
     async function load() {
       const [cols, recs] = await Promise.all([
         getAllCollections(householdId),
@@ -66,6 +72,7 @@ export default function CollectionDetailPage() {
       if (!found) {
         setNotFound(true);
       } else {
+        setNotFound(false);
         setCollection(found);
         // Migrate old string assignments to string[] format
         const raw = found.assignments ?? {};
@@ -82,7 +89,7 @@ export default function CollectionDetailPage() {
       setLoading(false);
     }
     load();
-  }, [collectionId, householdId]);
+  }, [collectionId, householdId, householdLoading]);
 
   const recipeMap = useMemo(() => {
     const map = new Map<string, Recipe>();
@@ -213,6 +220,9 @@ export default function CollectionDetailPage() {
             collectionId: collection.id,
             recipeId,
             assignedMember: member,
+            // Reads are household-filtered — without this the notification is
+            // never delivered to anyone.
+            ...(householdId ? { householdId } : {}),
           }).catch(() => {});
         }
         logEdit(`Assigned ${member} to ${recipe?.title ?? "a recipe"}`);
@@ -530,9 +540,11 @@ export default function CollectionDetailPage() {
                             className="flex-1 bg-transparent font-sans text-xs text-charcoal outline-none cursor-pointer"
                           >
                             <option value="">Assign to...</option>
-                            {FAMILY_MEMBERS.filter((name) => name === value || !otherSlots.includes(name)).map((name) => (
-                              <option key={name} value={name}>{name}</option>
-                            ))}
+                            {(value && !familyNames.includes(value) ? [...familyNames, value] : familyNames)
+                              .filter((name) => name === value || !otherSlots.includes(name))
+                              .map((name) => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
                           </select>
                           {/* Status badge */}
                           {status && (

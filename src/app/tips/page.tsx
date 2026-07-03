@@ -104,6 +104,10 @@ export default function TipsPage() {
       setFormError("Please fill in all fields.");
       return;
     }
+    if (!householdId) {
+      setFormError("Your cookbook is still loading — try again in a moment.");
+      return;
+    }
     setSubmitting(true);
     setFormError("");
     try {
@@ -128,7 +132,7 @@ export default function TipsPage() {
         ...(imageUrls.length > 0 ? { images: imageUrls } : {}),
         ...(videoUrl ? { video: videoUrl } : {}),
         ...(linkedRecipes.length > 0 ? { linkedRecipes } : {}),
-      });
+      }, householdId);
       setTips((prev) => [newTip, ...prev]);
       setTitle("");
       setContent("");

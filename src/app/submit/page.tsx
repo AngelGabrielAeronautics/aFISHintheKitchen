@@ -3,7 +3,8 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, FAMILY_MEMBERS, SEASONS, type Season } from "@/lib/types";
+import { CATEGORIES, SEASONS, type Season } from "@/lib/types";
+import { useFamilyNames } from "@/hooks/useFamilyNames";
 import type { Category, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
@@ -95,6 +96,13 @@ export default function SubmitRecipePage() {
       setContributedBy(user.displayName);
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // This household's family profiles; keep the auto-filled name selectable even
+  // when it doesn't (yet) match a profile.
+  const familyNames = useFamilyNames();
+  const memberOptions = !contributedBy || familyNames.includes(contributedBy)
+    ? familyNames
+    : [...familyNames, contributedBy];
 
   // --- Ingredient helpers ---
   function updateIngredient(index: number, value: string) {
@@ -258,6 +266,12 @@ export default function SubmitRecipePage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+    // A recipe written without its tenant id is invisible to every
+    // household-scoped read — orphaned the moment it's saved.
+    if (!householdId) {
+      setErrors((prev) => ({ ...prev, submit: "Your cookbook is still loading — try again in a moment." }));
+      return;
+    }
 
     setSubmitting(true);
     setErrors((prev) => {
@@ -322,7 +336,7 @@ export default function SubmitRecipePage() {
           .map((t) => t.trim())
           .filter(Boolean),
         featured: false,
-        ...(householdId ? { householdId } : {}),
+        householdId,
       };
 
       const savedRecipe = await addRecipe(recipeData);
@@ -333,7 +347,7 @@ export default function SubmitRecipePage() {
         message: `${contributedBy} added a new recipe: ${title}`,
         link: `/recipes/${savedRecipe.slug}`,
         authorName: contributedBy,
-        ...(householdId ? { householdId } : {}),
+        householdId,
       }).catch(() => {}); // fire and forget
 
       router.push(`/recipes/${savedRecipe.slug}?saved=1`);
@@ -796,7 +810,7 @@ export default function SubmitRecipePage() {
                 className={`${inputClasses} appearance-none`}
               >
                 <option value="">Select family member</option>
-                {FAMILY_MEMBERS.map((name) => (
+                {memberOptions.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>

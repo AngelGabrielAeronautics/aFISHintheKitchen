@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useHousehold } from "@/context/HouseholdContext";
+
+// Bundled family photos belong to the flagship household ONLY — in any other
+// tenant a member named e.g. "Sam" must get initials, not a stranger's photo.
+const FLAGSHIP_HOUSEHOLD_ID = "IJOnirYRuMqn7O0p1Rzh";
 
 const AVATAR_COLORS = [
   { bg: "bg-terracotta", text: "text-white" },
@@ -68,7 +73,8 @@ const imageSizes = {
 
 export default function Avatar({ name, size = "sm", ring = false }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
-  const avatarFile = getAvatarImage(name);
+  const { householdId } = useHousehold();
+  const avatarFile = householdId === FLAGSHIP_HOUSEHOLD_ID ? getAvatarImage(name) : null;
   const color = AVATAR_COLORS[hashName(name) % AVATAR_COLORS.length];
   const initials = getInitials(name);
   const px = imageSizes[size];

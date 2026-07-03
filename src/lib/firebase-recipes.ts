@@ -122,24 +122,6 @@ export async function uploadRecipeImage(
   return getDownloadURL(storageRef);
 }
 
-export async function seedRecipes(recipes: Recipe[]): Promise<void> {
-  const db = getDb();
-  // Delete all existing recipes first
-  const existing = await getDocs(recipesCollection());
-  if (!existing.empty) {
-    const deleteBatch = writeBatch(db);
-    existing.docs.forEach((d) => deleteBatch.delete(d.ref));
-    await deleteBatch.commit();
-  }
-  // Write new recipes
-  const batch = writeBatch(db);
-  for (const recipe of recipes) {
-    const docRef = doc(db, "recipes", recipe.id);
-    batch.set(docRef, recipe);
-  }
-  await batch.commit();
-}
-
 export async function updateRecipe(
   recipeId: string,
   data: Partial<Omit<Recipe, "id" | "slug" | "createdAt">>
@@ -245,24 +227,6 @@ export async function getAllMembers(householdId: string | null): Promise<Member[
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Member));
 }
 
-export async function seedMembers(members: Member[]): Promise<void> {
-  const db = getDb();
-  // Delete all existing members first
-  const existing = await getDocs(membersCollection());
-  if (!existing.empty) {
-    const deleteBatch = writeBatch(db);
-    existing.docs.forEach((d) => deleteBatch.delete(d.ref));
-    await deleteBatch.commit();
-  }
-  // Write new members
-  const batch = writeBatch(db);
-  for (const member of members) {
-    const docRef = doc(db, "members", member.id);
-    batch.set(docRef, member);
-  }
-  await batch.commit();
-}
-
 export async function updateMember(
   memberId: string,
   data: Partial<Omit<Member, "id">>
@@ -294,10 +258,14 @@ export async function getAllCollections(householdId: string | null): Promise<Rec
 }
 
 export async function addCollection(
-  data: Omit<RecipeCollection, "id" | "createdAt">
+  data: Omit<RecipeCollection, "id" | "createdAt" | "householdId">,
+  householdId: string
 ): Promise<RecipeCollection> {
+  // householdId is a required arg: every read is household-filtered, so a
+  // menu written without it is invisible on the next load (orphaned forever).
+  if (!householdId) throw new Error("addCollection: householdId is required");
   const createdAt = new Date().toISOString();
-  const payload = { ...data, createdAt };
+  const payload = { ...data, householdId, createdAt };
   const docRef = await addDoc(collectionsCollection(), payload);
   return { ...payload, id: docRef.id } as RecipeCollection;
 }
@@ -403,15 +371,26 @@ export async function getAllTips(householdId: string | null): Promise<KitchenTip
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
 }
 
-export async function getTipsForRecipe(recipeId: string): Promise<KitchenTip[]> {
-  const q = query(tipsCollection(), where("linkedRecipeIds", "array-contains", recipeId));
+export async function getTipsForRecipe(recipeId: string, householdId: string | null): Promise<KitchenTip[]> {
+  if (!householdId) return [];
+  // The householdId clause is required by the security rules — without it the
+  // whole query is rejected (rules are not filters) and linked tips never show.
+  const q = query(
+    tipsCollection(),
+    where("householdId", "==", householdId),
+    where("linkedRecipeIds", "array-contains", recipeId)
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as KitchenTip));
 }
 
-export async function addTip(data: { title: string; content: string; category: TipCategory; author: string; images?: string[]; video?: string; linkedRecipes?: { id: string; title: string; slug: string }[] }): Promise<KitchenTip> {
+export async function addTip(data: { title: string; content: string; category: TipCategory; author: string; images?: string[]; video?: string; linkedRecipes?: { id: string; title: string; slug: string }[] }, householdId: string): Promise<KitchenTip> {
+  // householdId is required: reads are household-filtered, so a tip written
+  // without it vanishes on the next load.
+  if (!householdId) throw new Error("addTip: householdId is required");
   const createdAt = new Date().toISOString();
   const payload: Record<string, unknown> = {
+    householdId,
     title: data.title,
     content: data.content,
     category: data.category,
@@ -425,7 +404,7 @@ export async function addTip(data: { title: string; content: string; category: T
     payload.linkedRecipeIds = data.linkedRecipes.map((r) => r.id);
   }
   const docRef = await addDoc(tipsCollection(), payload);
-  return { ...data, createdAt, id: docRef.id };
+  return { ...data, householdId, createdAt, id: docRef.id };
 }
 
 export async function uploadTipFile(file: File, tipId: string): Promise<string> {
@@ -508,54 +487,13 @@ function householdMembersCollection() {
   return collection(getDb(), "householdMembers");
 }
 
-export async function createHousehold(data: {
-  name: string;
-  slug: string;
-  ownerId: string;
-  ownerName: string;
-  customisation?: Partial<HouseholdCustomisation>;
-}): Promise<Household> {
-  const createdAt = new Date().toISOString();
-  const household: Omit<Household, "id"> = {
-    name: data.name,
-    slug: data.slug,
-    ownerId: data.ownerId,
-    memberIds: [data.ownerId],
-    customisation: {
-      brandName: data.customisation?.brandName ?? data.name,
-      tagline: data.customisation?.tagline ?? "The food your family is built on",
-      ...(data.customisation?.primaryColor ? { primaryColor: data.customisation.primaryColor } : {}),
-      ...(data.customisation?.logoUrl ? { logoUrl: data.customisation.logoUrl } : {}),
-    },
-    plan: "free",
-    accessState: "active",
-    createdAt,
-  };
-  const docRef = await addDoc(householdsCollection(), household);
-
-  // Add owner as first member
-  await addDoc(householdMembersCollection(), {
-    userId: data.ownerId,
-    householdId: docRef.id,
-    displayName: data.ownerName,
-    role: "owner",
-    joinedAt: createdAt,
-  });
-
-  return { ...household, id: docRef.id };
-}
+// Household creation is server-side only: /api/create-household (Admin SDK).
+// It enforces one-owned-book-per-user + slug uniqueness and writes the owner
+// membership, which the Firestore rules forbid clients from doing.
 
 export async function getHousehold(id: string): Promise<Household | null> {
   const snap = await getDoc(doc(getDb(), "households", id));
   return snap.exists() ? { ...snap.data(), id: snap.id } as Household : null;
-}
-
-export async function getHouseholdBySlug(slug: string): Promise<Household | null> {
-  const q = query(householdsCollection(), where("slug", "==", slug));
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { ...d.data(), id: d.id } as Household;
 }
 
 export async function updateHousehold(id: string, data: Partial<Omit<Household, "id" | "createdAt">>): Promise<void> {
@@ -575,32 +513,21 @@ export async function getHouseholdMembers(householdId: string): Promise<Househol
   return snap.docs.map((d) => ({ ...d.data(), id: d.id } as HouseholdMember));
 }
 
-export async function addHouseholdMember(data: { userId: string; householdId: string; displayName: string; role: "member" }): Promise<HouseholdMember> {
-  const joinedAt = new Date().toISOString();
-  const payload = { ...data, joinedAt };
-  const docRef = await addDoc(householdMembersCollection(), payload);
-  // Keep the denormalised memberIds in sync for security-rule lookups.
-  await updateDoc(doc(getDb(), "households", data.householdId), {
-    memberIds: arrayUnion(data.userId),
-  });
-  return { ...payload, id: docRef.id };
-}
+// Adding members is server-side only (/api/join) — that route enforces the
+// seat cap; the rules forbid clients from growing memberIds.
 
 export async function removeHouseholdMember(memberId: string): Promise<void> {
   const ref = doc(getDb(), "householdMembers", memberId);
   const snap = await getDoc(ref);
-  if (snap.exists()) {
-    const m = snap.data() as HouseholdMember;
-    await updateDoc(doc(getDb(), "households", m.householdId), {
-      memberIds: arrayRemove(m.userId),
-    });
-  }
-  await deleteDoc(ref);
-}
-
-export async function isSlugAvailable(slug: string): Promise<boolean> {
-  const existing = await getHouseholdBySlug(slug);
-  return !existing;
+  if (!snap.exists()) return;
+  const m = snap.data() as HouseholdMember;
+  // Atomic: membership doc + denormalised memberIds must never diverge.
+  const batch = writeBatch(getDb());
+  batch.update(doc(getDb(), "households", m.householdId), {
+    memberIds: arrayRemove(m.userId),
+  });
+  batch.delete(ref);
+  await batch.commit();
 }
 
 // ── Subscriptions (one per paying user, keyed by userId) ──

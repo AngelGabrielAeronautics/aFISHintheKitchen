@@ -57,7 +57,7 @@ export default function CollectionsPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!user || !name.trim()) return;
+    if (!user || !name.trim() || !householdId) return;
     setSubmitting(true);
     try {
       const newCol = await addCollection({
@@ -65,7 +65,7 @@ export default function CollectionsPage() {
         description: description.trim(),
         createdBy: user.displayName || user.email || "Unknown",
         recipeIds: selectedRecipeIds,
-      });
+      }, householdId);
       setCollections((prev) => [newCol, ...prev]);
       setName("");
       setDescription("");

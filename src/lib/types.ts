@@ -129,16 +129,6 @@ export const SEASONS: { value: Season; label: string }[] = [
   { value: "all-year", label: "All Year" },
 ];
 
-export const FAMILY_MEMBERS = [
-  "Bella",
-  "Charlie",
-  "Dylan",
-  "Granny Gill",
-  "Poppie",
-  "Quaid",
-  "Sam",
-] as const;
-
 export const CATEGORIES: CategoryInfo[] = [
   {
     slug: "baking-breads",
@@ -356,7 +346,9 @@ export type SubscriptionStatus =
 export interface Subscription {
   userId: string; // doc id
   householdId: string; // the one book this subscription pays for
-  provider: "stripe" | "paddle" | "appstore" | null; // chosen at the billing milestone
+  // "none" = the signup trial before any store purchase exists; a real
+  // provider replaces it when the first verified purchase syncs.
+  provider: "stripe" | "paddle" | "appstore" | "none" | null;
   providerCustomerId?: string;
   providerSubscriptionId?: string;
   status: SubscriptionStatus;

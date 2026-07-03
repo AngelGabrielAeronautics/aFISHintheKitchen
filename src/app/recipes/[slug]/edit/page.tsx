@@ -3,7 +3,8 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CATEGORIES, FAMILY_MEMBERS, SEASONS, type Season } from "@/lib/types";
+import { CATEGORIES, SEASONS, type Season } from "@/lib/types";
+import { useFamilyNames } from "@/hooks/useFamilyNames";
 import type { Category, Recipe, Protein, HeatLevel } from "@/lib/types";
 import { HEAT_LABELS } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
@@ -52,6 +53,9 @@ export default function EditRecipePage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loadingRecipe, setLoadingRecipe] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  // This household's family profiles for the "Contributed by" dropdown.
+  const familyNames = useFamilyNames();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -350,17 +354,27 @@ export default function EditRecipePage() {
       recipeData.video = finalVideoUrl || "";
 
       const editor = user?.displayName || user?.email || "Unknown";
-      const isOriginalAuthor = editor === recipe.contributedBy;
+      // Loose same-person check: the auth displayName ("Dylan Coppard") must
+      // match the Contributed-by dropdown value ("Dylan") — exact equality
+      // forked on nearly every self-edit and orphaned the user's work.
+      const norm = (s: string) => s.toLowerCase().trim();
+      const firstName = (s: string) => norm(s).split(/\s+/)[0] ?? "";
+      const isOriginalAuthor =
+        norm(editor) === norm(recipe.contributedBy) ||
+        (firstName(editor) !== "" && firstName(editor) === firstName(recipe.contributedBy));
 
       // Check if core recipe content changed
       const ingredientsChanged = ingredients.filter(i => i.trim()).join() !== recipe.ingredients.join();
       const instructionsChanged = instructions.filter(i => i.trim()).join() !== recipe.instructions.join();
       const coreChanged = ingredientsChanged || instructionsChanged;
 
-      if (!isOriginalAuthor && coreChanged) {
+      if (!isOriginalAuthor && coreChanged && householdId) {
         // Fork: create a new version of the recipe
         const versionTitle = `${recipe.title} — ${editor}'s Version`;
         const forkedData: Record<string, unknown> = {
+          // Without the tenant id the fork is invisible to every
+          // household-scoped query — an orphan the user can never find.
+          householdId,
           title: versionTitle,
           description,
           category,
@@ -789,7 +803,10 @@ export default function EditRecipePage() {
                 className={`${inputClasses} appearance-none`}
               >
                 <option value="">Select family member</option>
-                {FAMILY_MEMBERS.map((name) => (
+                {(!contributedBy || familyNames.includes(contributedBy)
+                  ? familyNames
+                  : [...familyNames, contributedBy]
+                ).map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>

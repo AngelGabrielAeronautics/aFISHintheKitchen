@@ -49,7 +49,7 @@ export default function RecipePage() {
       .then((r) => {
         if (r) {
           setRecipe(r);
-          getTipsForRecipe(r.id).then(setLinkedTips).catch(() => {});
+          getTipsForRecipe(r.id, householdId).then(setLinkedTips).catch(() => {});
         } else {
           setNotFound(true);
         }

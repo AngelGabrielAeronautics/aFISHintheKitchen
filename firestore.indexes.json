@@ -58,6 +58,14 @@
       ]
     },
     {
+      "collectionGroup": "tips",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "linkedRecipeIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "householdId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
