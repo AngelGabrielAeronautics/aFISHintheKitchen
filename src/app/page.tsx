@@ -45,25 +45,19 @@ export default function HomePage() {
   return <HomeContent />;
 }
 
-// ISO 8601 week id, aligned to Monday (e.g. "2026-W16")
-function getIsoWeekId(date: Date): string {
+// Monday-aligned absolute week number, counting from a fixed reference Monday
+// (2024-01-01). Increments by exactly 1 every week, so it can index a rotation.
+function getWeekNumber(date: Date): number {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  const weekNum =
-    1 +
-    Math.round(
-      ((d.getTime() - week1.getTime()) / 86400000 -
-        3 +
-        ((week1.getDay() + 6) % 7)) /
-        7
-    );
-  return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+  // Step back to the Monday of this week.
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const ref = new Date(2024, 0, 1); // a Monday
+  return Math.round((d.getTime() - ref.getTime()) / (7 * 86400000));
 }
 
-// Deterministic FNV-1a string hash, used to pick a recipe of the week without
-// any stored state — the same week always maps to the same recipe.
+// Deterministic FNV-1a string hash. Used only to give the recipe pool a stable
+// pseudo-random order so the weekly rotation isn't alphabetical/chronological.
 function hashString(str: string): number {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -102,22 +96,20 @@ function HomeContent() {
     return sorted.slice(0, 6);
   }, [allRecipes]);
 
-  // Recipe of the week: chosen deterministically from this household's recipes
-  // for the current ISO week. No stored state, so it's identical for every
-  // family member and only changes when the week rolls over.
+  // Recipe of the week: rotates deterministically through the household's
+  // recipes, one per week. No stored state, so it's identical for every family
+  // member. Because it indexes an ordered pool by the absolute week number, it
+  // advances every week and won't repeat until every recipe has had a turn.
   const recipeOfTheWeek = useMemo<Recipe | null>(() => {
     if (allRecipes.length === 0) return null;
-    const weekId = getIsoWeekId(new Date());
     const withImages = allRecipes.filter(
       (r) => (r.images && r.images.length > 0) || r.image
     );
     const pool = withImages.length > 0 ? withImages : allRecipes;
-    // Pick the recipe whose hash for this week is highest. Stable as recipes are
-    // added — a new recipe only changes the pick if it happens to out-hash the
-    // current winner.
-    return pool.reduce((best, r) =>
-      hashString(weekId + r.id) > hashString(weekId + best.id) ? r : best
-    );
+    // Stable pseudo-random order so the rotation isn't alphabetical/chronological.
+    const ordered = [...pool].sort((a, b) => hashString(a.id) - hashString(b.id));
+    const week = getWeekNumber(new Date());
+    return ordered[((week % ordered.length) + ordered.length) % ordered.length];
   }, [allRecipes]);
 
   function handleSearch(e?: React.FormEvent) {
