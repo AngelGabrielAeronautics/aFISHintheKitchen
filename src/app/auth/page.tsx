@@ -383,7 +383,7 @@ function AuthPageContent() {
           {/* Sign-up note — self-serve only; invited users get the header note. */}
           {mode === "signup" && !isInvite && (
             <div className="mb-4 rounded-lg border border-gold-light bg-gold-light/10 px-4 py-3 font-sans text-sm text-charcoal">
-              Create an account to start your own cookbook with a free trial. Invited by family? Sign up with the email they invited and you&rsquo;ll join their cookbook automatically.
+              New cookbooks are created in the iPhone app, where your 14-day free trial starts. Invited by family? Sign up with the email they invited and you&rsquo;ll join their cookbook automatically — free, no subscription needed.
             </div>
           )}
 

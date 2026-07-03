@@ -48,6 +48,25 @@ export async function GET(req: NextRequest) {
   const db = getAdminDb();
   const now = new Date();
 
+  // Expire signup trials that never converted. Only provider "none" (the
+  // placeholder written by create-household): store-backed trials are advanced
+  // by their own verified events, never by the clock here. Expiry marks the
+  // sub canceled with lapsedAt = trialEndsAt, and the unpaid loop below walks
+  // the household down the same ladder as any other lapse.
+  let trialsExpired = 0;
+  const trialing = await db.collection("subscriptions").where("status", "==", "trialing").get();
+  for (const subSnap of trialing.docs) {
+    const sub = subSnap.data();
+    if (sub.provider !== "none") continue;
+    if (!sub.trialEndsAt || new Date(sub.trialEndsAt) > now) continue;
+    await subSnap.ref.update({
+      status: "canceled",
+      lapsedAt: sub.trialEndsAt,
+      updatedAt: now.toISOString(),
+    });
+    trialsExpired++;
+  }
+
   // Only unpaid subscriptions drive the ladder; recovered ones are reset to
   // active by the webhook and have no lapsedAt.
   const unpaid = await db
@@ -95,6 +114,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     scanned: unpaid.size,
+    trialsExpired,
     transitioned,
     flaggedForDelete,
     deleted,

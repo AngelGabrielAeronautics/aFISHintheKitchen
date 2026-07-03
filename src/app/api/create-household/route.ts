@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { TRIAL_DAYS } from "@/lib/access";
 
 export const runtime = "nodejs";
 
@@ -65,7 +66,24 @@ export async function POST(req: NextRequest) {
       joinedAt: createdAt,
     });
 
-    return NextResponse.json({ ok: true, householdId: hhRef.id });
+    // Every new owner starts the 14-day trial clock. Without this doc the
+    // lapse sweep never looks at the household and access is free forever.
+    // A real StoreKit purchase later overwrites provider/status via
+    // /api/billing/appstore (merge:true on the same doc).
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString();
+    await db.collection("subscriptions").doc(uid).set({
+      userId: uid,
+      householdId: hhRef.id,
+      provider: "none",
+      status: "trialing",
+      plan: null,
+      trialEndsAt,
+      hasUsedTrial: true,
+      extraSeats: 0,
+      updatedAt: createdAt,
+    });
+
+    return NextResponse.json({ ok: true, householdId: hhRef.id, trialEndsAt });
   } catch (err) {
     console.error("create-household error:", err);
     return NextResponse.json({ error: "create_failed" }, { status: 500 });

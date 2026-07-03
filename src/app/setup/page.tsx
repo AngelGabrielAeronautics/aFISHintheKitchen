@@ -1,34 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
-import { createHousehold, isSlugAvailable } from "@/lib/firebase-recipes";
 
-const inputClasses =
-  "w-full rounded-lg border border-gold-light bg-warm-white px-4 py-3 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20";
-
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
+// New cookbooks are created in the iOS app (decided 2026-07-03): StoreKit owns
+// the 14-day trial + billing, so web self-serve creation is closed. Invited
+// members never land here — they join via their invite link. Set the App Store
+// URL at launch; until then the page shows "coming soon".
+const APP_STORE_URL: string | null = null;
 
 export default function SetupPage() {
   const { user, loading: authLoading } = useAuth();
   const { household, loading: householdLoading } = useHousehold();
   const router = useRouter();
-
-  const [name, setName] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-
-  const slug = nameToSlug(name);
 
   useEffect(() => {
     if (!authLoading && !householdLoading) {
@@ -45,41 +31,6 @@ export default function SetupPage() {
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !user) return;
-
-    setSubmitting(true);
-    setError("");
-
-    try {
-      const finalSlug = nameToSlug(name);
-      const available = await isSlugAvailable(finalSlug);
-      if (!available) {
-        setError("This name is already taken. Try a different one.");
-        setSubmitting(false);
-        return;
-      }
-
-      await createHousehold({
-        name: name.trim(),
-        slug: finalSlug,
-        ownerId: user.uid,
-        ownerName: user.displayName || user.email || "Owner",
-        customisation: {
-          brandName: name.trim(),
-          tagline: tagline.trim() || "The food your family is built on",
-        },
-      });
-
-      // Force reload to pick up the new household in context
-      window.location.href = "/";
-    } catch {
-      setError("Something went wrong. Please try again.");
-      setSubmitting(false);
-    }
-  }
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-cream px-4">
       <div className="w-full max-w-md">
@@ -90,60 +41,33 @@ export default function SetupPage() {
             </svg>
           </div>
           <h1 className="mt-4 font-serif text-2xl font-bold text-charcoal">
-            Create your family cookbook
+            Start your cookbook in the app
           </h1>
           <p className="mt-2 font-sans text-sm text-slate">
-            Give your cookbook a name and start adding recipes.
+            Family cookbooks are created in A Fish in the Kitchen for iPhone —
+            with a free 14-day trial, recipe photo scanning, and cook mode at
+            the stove.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg ring-1 ring-charcoal/5 space-y-5">
-          <div>
-            <label htmlFor="name" className="block font-sans text-sm font-medium text-charcoal mb-1.5">
-              Cookbook Name <span className="text-terracotta">*</span>
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. The Smith Family Kitchen"
-              className={inputClasses}
-              required
-            />
-            {slug && (
-              <p className="mt-1.5 font-sans text-[11px] text-slate/60">
-                Your URL: cookapp.com/<span className="font-medium text-charcoal">{slug}</span>
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="tagline" className="block font-sans text-sm font-medium text-charcoal mb-1.5">
-              Tagline <span className="text-slate/50 font-normal">(optional)</span>
-            </label>
-            <input
-              id="tagline"
-              type="text"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              placeholder="e.g. Recipes worth sharing"
-              className={inputClasses}
-            />
-          </div>
-
-          {error && (
-            <p className="font-sans text-sm text-red-500">{error}</p>
+        <div className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg ring-1 ring-charcoal/5 space-y-4 text-center">
+          {APP_STORE_URL ? (
+            <a
+              href={APP_STORE_URL}
+              className="block w-full rounded-lg bg-terracotta py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+            >
+              Download on the App Store
+            </a>
+          ) : (
+            <p className="font-sans text-sm font-medium text-charcoal">
+              Coming to the App Store very soon.
+            </p>
           )}
-
-          <button
-            type="submit"
-            disabled={submitting || !name.trim()}
-            className="w-full rounded-lg bg-terracotta py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {submitting ? "Creating..." : "Create Cookbook"}
-          </button>
-        </form>
+          <p className="font-sans text-xs text-slate/70">
+            Been invited to a family cookbook? Open the link in your invite
+            email — joining is free and doesn&apos;t need a subscription.
+          </p>
+        </div>
       </div>
     </main>
   );
