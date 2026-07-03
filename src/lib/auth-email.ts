@@ -94,6 +94,22 @@ export function buildVerifyEmail(actionUrl: string): BuiltEmail {
   return { subject: `Confirm your email for ${FROM_NAME}`, html, text };
 }
 
+// Sent once by the lapse sweep a few days before a signup trial expires —
+// without it the first sign of an ended trial is a read-only cookbook.
+export function buildTrialEndingEmail(daysLeft: number): BuiltEmail {
+  const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
+  const { html, text } = shell({
+    heading: "Your free trial is ending soon",
+    bodyLines: [
+      `Your ${FROM_NAME} free trial ends ${when}. Subscribe in the app to keep adding recipes, planning meals, and cooking together — your family's recipes are safe either way.`,
+      "If you don't subscribe, your cookbook becomes read-only for a while before pausing. Nothing is deleted.",
+    ],
+    ctaLabel: "Keep your cookbook going",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Your ${FROM_NAME} trial ends ${when}`, html, text };
+}
+
 export function buildResetEmail(actionUrl: string): BuiltEmail {
   const { html, text } = shell({
     heading: "Reset your password",

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase-admin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
+import { sendTransactionalEmail } from "@/lib/email";
+import { buildTrialEndingEmail } from "@/lib/auth-email";
 import type { Firestore } from "firebase-admin/firestore";
+
+const TRIAL_WARNING_DAYS = 3; // email the owner this many days before trial end
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,11 +58,35 @@ export async function GET(req: NextRequest) {
   // sub canceled with lapsedAt = trialEndsAt, and the unpaid loop below walks
   // the household down the same ladder as any other lapse.
   let trialsExpired = 0;
+  let trialWarningsSent = 0;
   const trialing = await db.collection("subscriptions").where("status", "==", "trialing").get();
   for (const subSnap of trialing.docs) {
     const sub = subSnap.data();
     if (sub.provider !== "none") continue;
-    if (!sub.trialEndsAt || new Date(sub.trialEndsAt) > now) continue;
+    if (!sub.trialEndsAt) continue;
+    const endsAt = new Date(sub.trialEndsAt);
+
+    if (endsAt > now) {
+      // Still trialing — send the one-time "ending soon" warning inside the
+      // final window, so expiry never arrives unannounced.
+      const daysLeft = Math.ceil((endsAt.getTime() - now.getTime()) / 86_400_000);
+      if (daysLeft <= TRIAL_WARNING_DAYS && !sub.trialWarningSentAt) {
+        try {
+          const email = (await getAdminAuth().getUser(subSnap.id)).email;
+          if (email) {
+            const { subject, html, text } = buildTrialEndingEmail(daysLeft);
+            await sendTransactionalEmail({ to: email, subject, html, text });
+            await subSnap.ref.update({ trialWarningSentAt: now.toISOString() });
+            trialWarningsSent++;
+          }
+        } catch (err) {
+          // Best-effort: a failed email must not block the sweep; retried tomorrow.
+          console.error(`lapse-sweep: trial warning failed for ${subSnap.id}:`, err);
+        }
+      }
+      continue;
+    }
+
     await subSnap.ref.update({
       status: "canceled",
       lapsedAt: sub.trialEndsAt,
@@ -115,6 +143,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     scanned: unpaid.size,
     trialsExpired,
+    trialWarningsSent,
     transitioned,
     flaggedForDelete,
     deleted,
