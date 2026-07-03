@@ -1,12 +1,40 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+
+// Abuse guards for the metered Anthropic call: any Firebase account could
+// otherwise run up the API bill with unlimited oversized requests.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // matches what phone photos need
+const RATE_LIMIT = 20;                     // imports per user per window
+const RATE_WINDOW_MS = 60 * 60 * 1000;     // 1 hour
+
+/// Fixed-window per-uid counter in Firestore (serverless has no memory; this
+/// mirrors the authEmailThrottle pattern). Fail-open on Firestore errors —
+/// availability of the feature beats a perfect limiter here.
+async function checkRateLimit(uid: string): Promise<boolean> {
+  try {
+    const ref = getAdminDb().collection("importThrottle").doc(uid);
+    const now = Date.now();
+    const snap = await ref.get();
+    const data = snap.data() as { windowStart?: number; count?: number } | undefined;
+    if (!data || now - (data.windowStart ?? 0) > RATE_WINDOW_MS) {
+      await ref.set({ windowStart: now, count: 1 });
+      return true;
+    }
+    if ((data.count ?? 0) >= RATE_LIMIT) return false;
+    await ref.set({ windowStart: data.windowStart, count: (data.count ?? 0) + 1 });
+    return true;
+  } catch (err) {
+    console.error("import-recipe throttle check failed (continuing):", err);
+    return true;
+  }
+}
 
 const SYSTEM_PROMPT = `You are a recipe extraction assistant. Given an image of a recipe (from a cookbook, magazine, handwritten card, or screenshot), extract the recipe data into structured JSON.
 
@@ -47,10 +75,29 @@ export async function POST(request: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    let uid: string;
     try {
-      await getAdminAuth().verifyIdToken(token);
+      uid = (await getAdminAuth().verifyIdToken(token)).uid;
     } catch {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Must belong to a household — blocks drive-by accounts created solely to
+    // burn the Anthropic key.
+    const membership = await getAdminDb()
+      .collection("householdMembers")
+      .where("userId", "==", uid)
+      .limit(1)
+      .get();
+    if (membership.empty) {
+      return NextResponse.json({ error: "Join or create a cookbook first." }, { status: 403 });
+    }
+
+    if (!(await checkRateLimit(uid))) {
+      return NextResponse.json(
+        { error: "You've imported a lot of recipes in the last hour — please try again later." },
+        { status: 429 }
+      );
     }
 
     const formData = await request.formData();
@@ -58,6 +105,12 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      return NextResponse.json(
+        { error: "That photo is too large. Please use an image under 10 MB." },
+        { status: 413 }
+      );
     }
 
     const bytes = await file.arrayBuffer();

@@ -74,6 +74,20 @@ export async function POST(req: NextRequest) {
       // Nothing to do — avoids a pointless email if their token is just stale.
       if (alreadyVerified) return NextResponse.json({ ok: true, alreadyVerified: true });
 
+      // Same per-address throttle as reset — a signed-in user hammering
+      // "Resend" shouldn't burn SendGrid quota or mail-bomb themselves.
+      const verifyThrottleRef = getAdminDb().collection("authEmailThrottle").doc(throttleKey(`verify:${email}`));
+      try {
+        const snap = await verifyThrottleRef.get();
+        const lastSent = snap.exists ? (snap.data()?.lastSentAt as number | undefined) : undefined;
+        if (lastSent && Date.now() - lastSent < RESET_THROTTLE_MS) {
+          return NextResponse.json({ ok: true });
+        }
+        await verifyThrottleRef.set({ lastSentAt: Date.now() });
+      } catch (err) {
+        console.error("auth-email verify throttle check failed (continuing):", err);
+      }
+
       const link = brandActionLink(await adminAuth.generateEmailVerificationLink(email, actionCodeSettings));
       const { subject, html, text } = buildVerifyEmail(link);
       await sendTransactionalEmail({ to: email, subject, html, text });

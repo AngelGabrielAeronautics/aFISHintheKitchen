@@ -69,8 +69,15 @@ export async function POST(req: NextRequest) {
       const assigneeUids = new Set(memberSnap.docs.map((d) => d.data().userId as string));
       targets = targets.filter((t) => assigneeUids.has(t.uid));
     } else {
-      // new-recipe (and any broadcast): everyone but the author.
+      // new-recipe (and any broadcast): everyone but the author — minus anyone
+      // who turned new-recipe alerts off (userPreferences.notifyNewRecipes).
       targets = targets.filter((t) => t.uid !== authorUid);
+      const uids = [...new Set(targets.map((t) => t.uid))];
+      const prefSnaps = await Promise.all(uids.map((uid) => db.collection("userPreferences").doc(uid).get()));
+      const optedOut = new Set(
+        prefSnaps.filter((s) => s.exists && s.data()?.notifyNewRecipes === false).map((s) => s.id)
+      );
+      targets = targets.filter((t) => !optedOut.has(t.uid));
     }
 
     const tokens = [...new Set(targets.map((t) => t.token))].filter(Boolean);

@@ -51,3 +51,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }
+
+// De-register on sign-out: without this a signed-out (or handed-over) device
+// keeps receiving the household's push content.
+export async function DELETE(req: NextRequest) {
+  try {
+    const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    if (!token) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+    let uid: string;
+    try {
+      uid = (await getAdminAuth().verifyIdToken(token)).uid;
+    } catch {
+      return NextResponse.json({ error: "invalid_token" }, { status: 401 });
+    }
+
+    const body = (await req.json()) as { token?: string };
+    const fcmToken = body.token?.trim();
+    if (!fcmToken) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+
+    const db = getAdminDb();
+    const ref = db.collection("deviceTokens").doc(fcmToken);
+    const snap = await ref.get();
+    // Only the device's own registration can be removed.
+    if (snap.exists && snap.data()?.uid === uid) await ref.delete();
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("register-device delete error", err);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
+}
