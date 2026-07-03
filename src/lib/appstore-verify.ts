@@ -1,9 +1,23 @@
+import { createHash } from "crypto";
 import {
   SignedDataVerifier,
   Environment,
   type JWSTransactionDecodedPayload,
   type ResponseBodyV2DecodedPayload,
 } from "@apple/app-store-server-library";
+
+// The appAccountToken a genuine purchase from this Firebase user carries.
+// Deterministic UUID derived from the uid (first 16 bytes of SHA-256, with
+// RFC-4122 version/variant bits) — the iOS app computes the identical value
+// (StoreKitManager.appAccountToken(for:)) and attaches it at purchase time, so
+// a JWS can be tied to the account that bought it without a lookup table.
+export function appAccountTokenForUid(uid: string): string {
+  const b = createHash("sha256").update(uid).digest().subarray(0, 16);
+  b[6] = (b[6] & 0x0f) | 0x50;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const hex = b.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 // Apple Root CA - G3 (DER), embedded as base64 so it ships in the serverless
 // bundle without a runtime file read. Source:

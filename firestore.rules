@@ -70,16 +70,37 @@ service cloud.firestore {
 
     // ── Households ──
     match /households/{hid} {
+      // uids this update would add to / remove from memberIds.
+      function addedMemberIds() {
+        return request.resource.data.memberIds.toSet().difference(resource.data.memberIds.toSet());
+      }
+      function removedMemberIds() {
+        return resource.data.memberIds.toSet().difference(request.resource.data.memberIds.toSet());
+      }
+
       allow read: if isSuperAdmin()
         || (isSignedIn() && request.auth.uid in resource.data.memberIds
             && resource.data.accessState != "suspended");
-      // A user may create only their own household, with themselves as sole member/owner.
-      allow create: if isSignedIn()
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.memberIds == [request.auth.uid];
-      // Only the owner edits settings/billing fields; members never write the household doc.
-      // (Adding/removing members is done server-side via the Admin SDK.)
-      allow update: if isSuperAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+      // Creation is server-side only (/api/create-household via Admin SDK): it is
+      // the enforcement point for one-owned-book-per-user and slug uniqueness,
+      // and it writes the owner's householdMembers doc, which clients can't.
+      allow create: if isSuperAdmin();
+      // The owner may edit branding/settings fields ONLY. accessState, plan,
+      // ownerId, deleteAfter etc. are server-owned — an unrestricted owner
+      // update would let a lapsed owner re-activate themselves.
+      // memberIds may SHRINK client-side (owner removes a member; a member
+      // removes exactly themselves to leave) but never grow: additions happen
+      // in /api/join, which is where the seat cap is enforced.
+      allow update: if isSuperAdmin()
+        || (isSignedIn() && request.auth.uid == resource.data.ownerId
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['name', 'customisation', 'seatUpgradeRequestedAt']))
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+            && addedMemberIds().size() == 0
+            && resource.data.ownerId in request.resource.data.memberIds
+            && (request.auth.uid == resource.data.ownerId
+                || removedMemberIds().hasOnly([request.auth.uid])));
       allow delete: if isSuperAdmin();
     }
 
@@ -132,6 +153,18 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
+    // ── Shopping lists (private to the user, synced across their devices) ──
+    // Doc id = {uid}_{householdId}. Created lazily on first save, so allow signed-in
+    // reads of a missing doc (reveals nothing); gate existing docs on ownership.
+    match /shoppingLists/{id} {
+      allow read: if isSignedIn()
+        && (resource == null || (resource.data.userId == request.auth.uid && canRead(resource.data.householdId)));
+      allow create: if request.resource.data.userId == request.auth.uid
+        && canWrite(request.resource.data.householdId);
+      allow update, delete: if resource.data.userId == request.auth.uid
+        && canWrite(resource.data.householdId);
+    }
+
     // ── Event menus / collections ──
     match /collections/{id} {
       allow read: if canRead(resource.data.householdId);
@@ -180,8 +213,10 @@ service cloud.firestore {
 
     // ── Global config ──
     match /config/{docId} {
-      // Clients read superAdmins/settings to gate UI; writes are server/super-admin only.
-      allow read: if isSignedIn();
+      // superAdmins holds platform-staff emails — only superadmins may read it
+      // (both clients treat a denied read as "not a superadmin"). Other config
+      // docs stay readable to signed-in users for UI gating.
+      allow read: if docId == "superAdmins" ? isSuperAdmin() : isSignedIn();
       allow write: if isSuperAdmin();
     }
   }

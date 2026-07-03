@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
-import { verifyAppStoreTransaction } from "@/lib/appstore-verify";
+import { verifyAppStoreTransaction, appAccountTokenForUid } from "@/lib/appstore-verify";
 
 export const runtime = "nodejs";
 
@@ -48,6 +48,33 @@ export async function POST(req: NextRequest) {
     }
 
     const db = getAdminDb();
+
+    // Bind the transaction to the buyer. Purchases made by this build attach an
+    // appAccountToken derived from the Firebase uid — if the token is present it
+    // must match the caller, so a shared/replayed JWS can't activate someone
+    // else's account. (Older transactions carry no token; the claim check below
+    // still covers them.)
+    const appAccountToken = (transaction.appAccountToken ?? "").toLowerCase();
+    if (appAccountToken && appAccountToken !== appAccountTokenForUid(uid)) {
+      console.warn(`appstore: appAccountToken mismatch for uid ${uid}`);
+      return NextResponse.json({ error: "wrong_account" }, { status: 403 });
+    }
+
+    // One Apple subscription activates ONE account: reject a JWS whose
+    // originalTransactionId is already recorded on a different user's
+    // subscription doc.
+    const originalTransactionId = transaction.originalTransactionId;
+    if (originalTransactionId) {
+      const claimed = await db
+        .collection("subscriptions")
+        .where("providerSubscriptionId", "==", originalTransactionId)
+        .limit(1)
+        .get();
+      if (!claimed.empty && claimed.docs[0].id !== uid) {
+        console.warn(`appstore: tx ${originalTransactionId} already claimed by another account`);
+        return NextResponse.json({ error: "transaction_already_claimed" }, { status: 409 });
+      }
+    }
 
     // Caller must own the household this subscription pays for.
     const hhRef = db.collection("households").doc(householdId);
