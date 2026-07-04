@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { TRIAL_DAYS } from "@/lib/access";
+import { STARTER_RECIPES, SAMPLE_MEMBERS } from "@/lib/starter-content";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_token" }, { status: 401 });
     }
 
-    const body = (await req.json()) as { name?: string; tagline?: string };
+    const body = (await req.json()) as {
+      name?: string;
+      tagline?: string;
+      starterRecipes?: boolean;
+      sampleMembers?: boolean;
+    };
     const name = body.name?.trim();
     if (!name) return NextResponse.json({ error: "missing_name" }, { status: 400 });
 
@@ -65,6 +71,35 @@ export async function POST(req: NextRequest) {
       role: "owner",
       joinedAt: createdAt,
     });
+
+    // Opt-in starter content, so the new book is never an empty screen: a few
+    // recipes from the founder family's Kookbook (deletable, flagged
+    // starter:true) and example member profiles that show how profiles work.
+    if (body.starterRecipes || body.sampleMembers) {
+      const batch = db.batch();
+      if (body.starterRecipes) {
+        STARTER_RECIPES.forEach((recipe, i) => {
+          batch.set(db.collection("recipes").doc(), {
+            ...recipe,
+            householdId: hhRef.id,
+            starter: true,
+            featured: false,
+            // Staggered so "newest first" keeps the curated order.
+            createdAt: new Date(Date.now() - i * 1000).toISOString(),
+          });
+        });
+      }
+      if (body.sampleMembers) {
+        for (const member of SAMPLE_MEMBERS) {
+          batch.set(db.collection("members").doc(), {
+            ...member,
+            householdId: hhRef.id,
+            sample: true,
+          });
+        }
+      }
+      await batch.commit();
+    }
 
     // Every new owner starts the 14-day trial clock. Without this doc the
     // lapse sweep never looks at the household and access is free forever.
