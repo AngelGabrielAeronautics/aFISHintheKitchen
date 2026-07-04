@@ -668,7 +668,7 @@ export default function LandingPage() {
             Bring your family together today
           </h2>
           <p className="mt-4 font-sans text-sm text-slate">
-            Start with a 14-day free trial. Cancel anytime. Invite family members.
+            Start with a 14-day free trial. Cancel anytime. Invite family members and friends.
           </p>
           <Link
             href="/auth"
