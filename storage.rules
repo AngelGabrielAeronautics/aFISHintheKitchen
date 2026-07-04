@@ -32,6 +32,12 @@ service firebase.storage {
                        || request.resource.contentType.matches('video/.*'));
     }
 
+    // Shared hero-image presets (app content, uploaded by us — read-only).
+    match /hero-presets/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Household logos
     match /{householdId}/branding/{allPaths=**} {
       allow read: if true;

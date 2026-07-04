@@ -294,6 +294,7 @@ export interface HouseholdCustomisation {
   tagline: string;
   primaryColor?: string;
   logoUrl?: string;
+  heroUrl?: string; // custom home hero image (preset or owner upload)
 }
 
 // Mirrored access state, advanced by the lapse-ladder scheduled job so rules and
