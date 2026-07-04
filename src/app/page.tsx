@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, DIFFICULTY_ICONS, type Recipe, formatTime, getCategoryBySlug } from "@/lib/types";
-import { getAllRecipes } from "@/lib/firebase-recipes";
+import { getAllRecipes, updateHousehold } from "@/lib/firebase-recipes";
 import RecipeCard from "@/components/RecipeCard";
 import CategoryIcon from "@/components/CategoryIcon";
 import Avatar from "@/components/Avatar";
@@ -82,7 +82,7 @@ function HomeContent() {
   const [filterSort, setFilterSort] = useState("newest");
   const [rotwIconError, setRotwIconError] = useState(false);
   const router = useRouter();
-  const { householdId } = useHousehold();
+  const { householdId, household } = useHousehold();
 
   const contributors = [...new Set(allRecipes.map(r => r.contributedBy))].sort();
 
@@ -96,12 +96,22 @@ function HomeContent() {
     return sorted.slice(0, 6);
   }, [allRecipes]);
 
-  // Recipe of the week: rotates deterministically through the household's
-  // recipes, one per week. No stored state, so it's identical for every family
-  // member. Because it indexes an ordered pool by the absolute week number, it
-  // advances every week and won't repeat until every recipe has had a turn.
+  // Recipe of the week: PINNED on the household doc for the whole week. The
+  // first client to notice a new week computes it (deterministic rotation)
+  // and persists {weekId, recipeId}; everyone else just reads it. This is
+  // what stops the pick moving mid-week when the pool changes (a new recipe
+  // or photo used to shift the modulo) or when clients disagree.
   const recipeOfTheWeek = useMemo<Recipe | null>(() => {
     if (allRecipes.length === 0) return null;
+    const weekId = String(getWeekNumber(new Date()));
+
+    // Stored pick wins while it's this week's and the recipe still exists.
+    const stored = household?.recipeOfWeek;
+    if (stored?.weekId === weekId) {
+      const pinned = allRecipes.find((r) => r.id === stored.recipeId);
+      if (pinned) return pinned;
+    }
+
     const withImages = allRecipes.filter(
       (r) => (r.images && r.images.length > 0) || r.image
     );
@@ -109,8 +119,14 @@ function HomeContent() {
     // Stable pseudo-random order so the rotation isn't alphabetical/chronological.
     const ordered = [...pool].sort((a, b) => hashString(a.id) - hashString(b.id));
     const week = getWeekNumber(new Date());
-    return ordered[((week % ordered.length) + ordered.length) % ordered.length];
-  }, [allRecipes]);
+    const pick = ordered[((week % ordered.length) + ordered.length) % ordered.length];
+    // Pin it for the rest of the family (rules allow members to write only
+    // this field). Best-effort: a failed write just means we compute again.
+    if (householdId && pick.id) {
+      updateHousehold(householdId, { recipeOfWeek: { weekId, recipeId: pick.id } }).catch(() => {});
+    }
+    return pick;
+  }, [allRecipes, household?.recipeOfWeek, householdId]);
 
   function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();

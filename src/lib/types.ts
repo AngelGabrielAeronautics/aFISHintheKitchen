@@ -311,6 +311,9 @@ export interface Household {
   // (rules can't run queries). Maintained alongside the householdMembers docs.
   memberIds: string[];
   customisation: HouseholdCustomisation;
+  // The pinned Recipe of the Week: computed once per week by the first client
+  // to notice a new week, then read by everyone — pool edits can't move it.
+  recipeOfWeek?: { weekId: string; recipeId: string };
   /** @deprecated superseded by the owner's Subscription + accessState */
   plan?: "free" | "premium";
   accessState?: HouseholdAccessState; // undefined treated as "active" (legacy docs)
@@ -320,10 +323,6 @@ export interface Household {
   // Set when an owner asks for more than the base 5 seats. Captures demand until
   // the paid extra-seats add-on (billing milestone) ships.
   seatUpgradeRequestedAt?: string;
-  recipeOfWeek?: {
-    weekId: string;
-    recipeId: string;
-  };
 }
 
 export type HouseholdRole = "owner" | "member";
