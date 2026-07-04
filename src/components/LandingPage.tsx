@@ -56,7 +56,7 @@ const FAQS = [
   },
   {
     q: "What if my family is bigger than 5?",
-    a: "Your plan covers you plus 5 members. If you need more, you can add extra seats for a small additional monthly fee.",
+    a: "Your plan covers you plus 5 members. Need more? Tap “Notify me” in the app and we'll let you know as soon as extra seats are available.",
   },
   {
     q: "Do my family members pay?",
