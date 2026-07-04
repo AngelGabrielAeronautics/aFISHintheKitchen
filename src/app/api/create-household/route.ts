@@ -30,11 +30,21 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as {
       name?: string;
       tagline?: string;
+      groupType?: string;
       starterRecipes?: boolean;
       sampleMembers?: boolean;
     };
     const name = body.name?.trim();
     if (!name) return NextResponse.json({ error: "missing_name" }, { status: 400 });
+
+    // Who the cookbook is for — drives the default tagline and in-app wording.
+    const groupType = (["family", "friends", "mixed", "solo"] as const).find((t) => t === body.groupType) ?? "family";
+    const defaultTagline = {
+      family: "The food your family is built on",
+      friends: "The food your friendship is built on",
+      mixed: "The food that brings us all together",
+      solo: "The food that defines you",
+    }[groupType];
 
     const db = getAdminDb();
 
@@ -59,7 +69,7 @@ export async function POST(req: NextRequest) {
       slug,
       ownerId: uid,
       memberIds: [uid],
-      customisation: { brandName: name, tagline: body.tagline?.trim() || "The food your family is built on" },
+      customisation: { brandName: name, tagline: body.tagline?.trim() || defaultTagline, groupType },
       plan: "free",
       accessState: "active",
       createdAt,

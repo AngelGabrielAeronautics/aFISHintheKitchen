@@ -295,6 +295,7 @@ export interface HouseholdCustomisation {
   primaryColor?: string;
   logoUrl?: string;
   heroUrl?: string; // custom home hero image (preset or owner upload)
+  groupType?: "family" | "friends" | "mixed" | "solo"; // nil = family
 }
 
 // Mirrored access state, advanced by the lapse-ladder scheduled job so rules and
