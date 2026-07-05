@@ -305,7 +305,12 @@ export default function CollectionsPage() {
                   )}
                   <div className="mt-3 flex items-center gap-3 font-sans text-xs text-slate border-t border-cream-dark/40 pt-3">
                     <span>
-                      {col.recipeIds.length}{" "}
+{col.eventDate && (
+                      <span className="font-medium text-terracotta">
+                        {new Date(col.eventDate + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
+                    {col.recipeIds.length}{" "}
                       {col.recipeIds.length === 1 ? "recipe" : "recipes"}
                     </span>
                     <span className="text-cream-dark">|</span>

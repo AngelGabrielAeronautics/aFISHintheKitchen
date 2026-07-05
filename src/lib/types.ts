@@ -214,6 +214,7 @@ export interface EventMenuComment {
 
 export interface RecipeCollection {
   id: string;
+  eventDate?: string; // "yyyy-MM-dd" — set from iOS; display-only on web
   householdId?: string;
   name: string;
   description: string;

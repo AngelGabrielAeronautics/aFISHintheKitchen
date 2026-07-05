@@ -453,6 +453,11 @@ export default function CollectionDetailPage() {
               </span>
               <span className="text-cream-dark">|</span>
               <span>by {collection.createdBy}</span>
+              {collection.eventDate && (
+                      <span className="font-medium text-terracotta">
+                        {new Date(collection.eventDate + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
             </div>
 
             {user && (
