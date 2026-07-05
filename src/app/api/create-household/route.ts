@@ -81,6 +81,20 @@ export async function POST(req: NextRequest) {
       role: "owner",
       joinedAt: createdAt,
     });
+    // The owner is a member of their own cookbook — give them a profile card
+    // (invited joiners get theirs from /api/join; owners were ghosts before).
+    await db.collection("members").add({
+      householdId: hhRef.id,
+      order: 0,
+      name: tokenName || email || "Owner",
+      title: "",
+      bio: "",
+      goodAt: [],
+      loves: [],
+      hates: [],
+      favouriteFromBook: "",
+      favouriteNotInBook: "",
+    });
 
     // Opt-in starter content, so the new book is never an empty screen: a few
     // recipes from the founder family's Kookbook (deletable, flagged

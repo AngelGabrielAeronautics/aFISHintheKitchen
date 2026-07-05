@@ -107,6 +107,7 @@ export interface Recipe {
 }
 
 export interface Member {
+  photoUrl?: string; // profile photo (uploaded from iOS)
   id: string;
   householdId?: string;
   order: number;
