@@ -35,7 +35,11 @@ export async function getAllRecipes(householdId: string | null): Promise<Recipe[
     orderBy("createdAt", "desc")
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id } as Recipe));
+  // Drafts are an iOS-side feature: unpublished recipes visible only to their
+  // author in the app. The web never shows them.
+  return snapshot.docs
+    .map((d) => ({ ...d.data(), id: d.id } as Recipe))
+    .filter((r) => !r.draft);
 }
 
 export async function getRecipeBySlug(

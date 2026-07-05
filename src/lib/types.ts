@@ -102,6 +102,7 @@ export interface Recipe {
   versionOf?: string;
   versionAuthor?: string;
   featured?: boolean;
+  draft?: boolean; // unpublished (iOS drafts) — hidden from all web surfaces
   createdAt: string;
 }
 
