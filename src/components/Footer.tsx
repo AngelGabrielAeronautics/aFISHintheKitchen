@@ -81,18 +81,23 @@ export default function Footer() {
           <p className="text-xs text-slate text-center">
             &copy; {year} A Fish in the Kitchen. Made for your family with love and a pinch of salt.
           </p>
-          <p className="text-xs text-slate/80 text-center">
-            Designed &amp; built by{" "}
-            <a
-              href="https://www.pinkieandthebrain.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-terracotta hover:text-terracotta-dark transition-colors"
-            >
-              Pinkie &amp; the Brain
-            </a>
-            {" "}— bespoke web &amp; mobile apps
-          </p>
+          <a
+            href="https://www.pinkieandthebrain.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Designed & built by Pinkie & the Brain"
+            className="group relative z-0 inline-flex items-center gap-2.5 text-xs text-slate/80 transition-colors hover:z-50 hover:text-charcoal"
+          >
+            <span>Designed &amp; built by</span>
+            {/* Small badge that enlarges on hover so the sign is legible. */}
+            <Image
+              src="/pinkie-logo-red.jpg"
+              alt="Pinkie & the Brain"
+              width={200}
+              height={200}
+              className="h-10 w-10 origin-bottom rounded-md ring-1 ring-charcoal/10 transition-all duration-300 ease-out group-hover:scale-[4] group-hover:rounded-lg group-hover:shadow-2xl group-hover:ring-charcoal/20"
+            />
+          </a>
         </div>
       </div>
     </footer>
