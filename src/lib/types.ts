@@ -79,6 +79,7 @@ export interface Recipe {
   thumbUrl?: string;   // small cover thumbnail for cards/lists
   prepTime: number;
   cookTime: number;
+  noCook?: boolean; // raw dishes — cookTime 0 is intentional (iOS-set)
   servings: number;
   difficulty: "Easy" | "Medium" | "Hard";
   protein?: Protein;
