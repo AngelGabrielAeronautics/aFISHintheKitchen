@@ -11,28 +11,38 @@ const client = new Anthropic({
 // Abuse guards for the metered Anthropic call: any Firebase account could
 // otherwise run up the API bill with unlimited oversized requests.
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // matches what phone photos need
-const RATE_LIMIT = 20;                     // imports per user per window
+const RATE_LIMIT = 20;                     // imports per user per hour (burst guard)
 const RATE_WINDOW_MS = 60 * 60 * 1000;     // 1 hour
+const MONTHLY_LIMIT = 50;                  // imports per user per 30 days (cost cap ≈ $1/user worst case)
+const MONTH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 /// Fixed-window per-uid counter in Firestore (serverless has no memory; this
 /// mirrors the authEmailThrottle pattern). Fail-open on Firestore errors —
 /// availability of the feature beats a perfect limiter here.
-async function checkRateLimit(uid: string): Promise<boolean> {
+async function checkRateLimit(uid: string): Promise<"ok" | "hour" | "month"> {
   try {
     const ref = getAdminDb().collection("importThrottle").doc(uid);
     const now = Date.now();
     const snap = await ref.get();
-    const data = snap.data() as { windowStart?: number; count?: number } | undefined;
-    if (!data || now - (data.windowStart ?? 0) > RATE_WINDOW_MS) {
-      await ref.set({ windowStart: now, count: 1 });
-      return true;
-    }
-    if ((data.count ?? 0) >= RATE_LIMIT) return false;
-    await ref.set({ windowStart: data.windowStart, count: (data.count ?? 0) + 1 });
-    return true;
+    const data = snap.data() as
+      | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
+      | undefined;
+
+    const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_WINDOW_MS;
+    const monthStart = monthFresh ? now : data!.monthStart!;
+    const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
+    if (monthCount >= MONTHLY_LIMIT) return "month";
+
+    const hourFresh = !data?.windowStart || now - data.windowStart > RATE_WINDOW_MS;
+    const windowStart = hourFresh ? now : data!.windowStart!;
+    const count = hourFresh ? 0 : data?.count ?? 0;
+    if (count >= RATE_LIMIT) return "hour";
+
+    await ref.set({ windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
+    return "ok";
   } catch (err) {
     console.error("import-recipe throttle check failed (continuing):", err);
-    return true;
+    return "ok";
   }
 }
 
@@ -95,9 +105,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Join or create a cookbook first." }, { status: 403 });
     }
 
-    if (!(await checkRateLimit(uid))) {
+    const rate = await checkRateLimit(uid);
+    if (rate === "hour") {
       return NextResponse.json(
         { error: "You've imported a lot of recipes in the last hour — please try again later." },
+        { status: 429 }
+      );
+    }
+    if (rate === "month") {
+      return NextResponse.json(
+        { error: "You've reached this month's limit of 50 photo imports. It resets in a few weeks — recipes can still be added by hand anytime." },
         { status: 429 }
       );
     }
