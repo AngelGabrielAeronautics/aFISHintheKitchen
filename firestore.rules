@@ -143,6 +143,11 @@ service cloud.firestore {
       allow update, delete: if canWrite(resource.data.householdId);
     }
 
+    // ── Shared-recipe snapshots (server-only; read via API/SSR) ──
+    match /sharedRecipes/{token} {
+      allow read, write: if false;
+    }
+
     // ── Meal plans (per user, within a household) ──
     match /mealPlans/{id} {
       // A meal-plan doc is created lazily on first save, so a fresh week has no

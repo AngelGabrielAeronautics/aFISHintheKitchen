@@ -16,6 +16,10 @@ const AASA = {
             "?": { email: "?*" },
             comment: "Invite links (carry ?email=) open the app; plain /auth stays on web.",
           },
+          {
+            "/": "/r/*",
+            comment: "Shared-recipe links open in the app when installed; web page otherwise.",
+          },
         ],
       },
     ],
