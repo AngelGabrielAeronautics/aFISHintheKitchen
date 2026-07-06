@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     // (invited joiners get theirs from /api/join; owners were ghosts before).
     await db.collection("members").add({
       householdId: hhRef.id,
+      userId: uid,                 // immutable link profile → account
       order: 0,
       name: tokenName || email || "Owner",
       title: "",
