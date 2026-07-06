@@ -50,12 +50,14 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
   "category": "mains",
   "protein": "poultry",
   "difficulty": "Medium",
+  "noCook": false,
   "tags": ["tag1", "tag2"],
   "seasons": []
 }
 
 Rules:
 - prepTime and cookTime are in minutes (integers). Estimate if not stated.
+- If the dish requires NO cooking or heat at all (salads, no-bake desserts, dips), set cookTime to 0 and noCook to true. Otherwise noCook is false.
 - servings is an integer. Default to 4 if not stated.
 - category must be one of: starters-snacks, soups, stews, mains, seafood, sides-salads, baking-breads, desserts, sauces-condiments, drinks, braai, holiday-specials
 - protein must be one of: beef, poultry, lamb, pork, seafood, vegetarian, vegan, eggs, mixed (or empty string if unclear)
@@ -123,8 +125,9 @@ export async function POST(request: NextRequest) {
     else if (file.type === "image/webp") mediaType = "image/webp";
 
     const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-5",
       max_tokens: 4096,
+      temperature: 0,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -174,7 +177,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(recipe);
+    // Sanitise: the client decodes strictly-typed fields, so coerce/clamp here
+    // rather than let one malformed value sink the whole import.
+    const r = (recipe ?? {}) as Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+    const strArr = (v: unknown) =>
+      Array.isArray(v) ? v.filter((x) => typeof x === "string").map((x) => String(x).slice(0, 500)) : undefined;
+    const int = (v: unknown) => {
+      const n = typeof v === "number" ? v : typeof v === "string" ? parseInt(v, 10) : NaN;
+      return Number.isFinite(n) ? Math.max(0, Math.min(6000, Math.round(n))) : undefined;
+    };
+    const oneOf = (v: unknown, allowed: string[]) =>
+      typeof v === "string" && allowed.includes(v) ? v : undefined;
+    const clean = {
+      title: str(r.title)?.slice(0, 200),
+      description: str(r.description)?.slice(0, 1000),
+      ingredients: strArr(r.ingredients)?.slice(0, 100),
+      instructions: strArr(r.instructions)?.slice(0, 100),
+      prepTime: int(r.prepTime),
+      cookTime: int(r.cookTime),
+      servings: int(r.servings),
+      category: oneOf(r.category, ["starters-snacks","soups","stews","mains","seafood","sides-salads","baking-breads","desserts","sauces-condiments","drinks","braai","holiday-specials"]),
+      protein: oneOf(r.protein, ["beef","poultry","lamb","pork","seafood","vegetarian","vegan","eggs","mixed"]),
+      difficulty: oneOf(r.difficulty, ["Easy","Medium","Hard"]),
+      noCook: r.noCook === true ? true : undefined,
+      tags: strArr(r.tags)?.slice(0, 15),
+      seasons: strArr(r.seasons)?.filter((x) => ["summer","autumn","winter","spring","all-year"].includes(x)),
+    };
+    return NextResponse.json(clean);
   } catch (err) {
     console.error("Recipe import error:", err);
     return NextResponse.json(
