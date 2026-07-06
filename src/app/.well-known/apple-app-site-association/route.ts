@@ -20,6 +20,10 @@ const AASA = {
             "/": "/r/*",
             comment: "Shared-recipe links open in the app when installed; web page otherwise.",
           },
+          {
+            "/": "/m/*",
+            comment: "Shared event-menu links open in the app when installed; web page otherwise.",
+          },
         ],
       },
     ],

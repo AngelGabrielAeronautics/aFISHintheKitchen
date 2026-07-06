@@ -143,8 +143,11 @@ service cloud.firestore {
       allow update, delete: if canWrite(resource.data.householdId);
     }
 
-    // ── Shared-recipe snapshots (server-only; read via API/SSR) ──
+    // ── Shared-recipe snapshots + shared-menu tokens (server-only; via API/SSR) ──
     match /sharedRecipes/{token} {
+      allow read, write: if false;
+    }
+    match /sharedMenus/{token} {
       allow read, write: if false;
     }
 
