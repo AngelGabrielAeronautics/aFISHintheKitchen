@@ -85,10 +85,10 @@ export default function Footer() {
             href="https://www.pinkieandthebrain.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Designed & built by Pinkie & the Brain"
+            aria-label="Crafted by Pinkie & the Brain"
             className="group relative z-0 inline-flex items-center gap-2.5 text-xs text-slate/80 transition-colors hover:z-50 hover:text-charcoal"
           >
-            <span>Designed &amp; built by</span>
+            <span>Crafted by</span>
             {/* Small badge that enlarges on hover so the sign is legible. */}
             <Image
               src="/pinkie-logo-red.jpg"
