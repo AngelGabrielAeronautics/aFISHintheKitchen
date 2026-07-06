@@ -81,6 +81,18 @@ export default function Footer() {
           <p className="text-xs text-slate text-center">
             &copy; {year} A Fish in the Kitchen. Made for your family with love and a pinch of salt.
           </p>
+          <p className="text-xs text-slate/80 text-center">
+            Designed &amp; built by{" "}
+            <a
+              href="https://www.pinkieandthebrain.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-terracotta hover:text-terracotta-dark transition-colors"
+            >
+              Pinkie &amp; the Brain
+            </a>
+            {" "}— bespoke web &amp; mobile apps
+          </p>
         </div>
       </div>
     </footer>
