@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
       description: `A recipe from ${share.bookName}, shared with you on A Fish in the Kitchen.`,
       images: share.snapshot.image ? [share.snapshot.image] : [],
     },
+    twitter: { card: "summary_large_image" },
   };
 }
 

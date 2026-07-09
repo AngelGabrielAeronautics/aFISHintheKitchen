@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Francois_One, Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -81,6 +82,7 @@ export default function RootLayout({
           <Footer />
           <ContinueCooking />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );

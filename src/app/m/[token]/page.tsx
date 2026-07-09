@@ -41,9 +41,20 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   const { token } = await params;
   const data = await loadMenu(token);
   if (!data) return { title: "Menu not found", robots: { index: false } };
+  const cover = data.recipes.find((r) => r.image)?.image;
+  const description =
+    (data.menu.description as string) ||
+    "An event menu on A Fish in the Kitchen — see who's bringing what.";
   return {
     title: `${data.menu.name} — help plan it on A Fish in the Kitchen`,
+    description,
     robots: { index: false, follow: false },
+    openGraph: {
+      title: data.menu.name as string,
+      description,
+      images: cover ? [cover] : [],
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

@@ -18,7 +18,7 @@ const ALLOWED_EXACT = new Set(["/", "/our-story", "/terms", "/privacy"]);
 // the auth-email action handler, invite deep-link file, and staff tools.
 const ALLOWED_PREFIXES = ["/r/", "/m/", "/auth/action", "/.well-known/", "/admin", "/superadmin"];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   if (!BLOCK_WEB_APP) return NextResponse.next();
 
   const { pathname } = req.nextUrl;
