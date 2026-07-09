@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 //
 // Flip this to `true` on launch day (and swap the landing's "Sign Up" buttons
 // for the App Store badge). Off for now so nothing changes while we build/test.
-const BLOCK_WEB_APP = false;
+const BLOCK_WEB_APP = true;
 
 // Reachable even when the app is blocked (exact matches).
 const ALLOWED_EXACT = new Set(["/", "/our-story", "/terms", "/privacy"]);

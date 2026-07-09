@@ -93,10 +93,10 @@ export default function Header() {
                   Our Story
                 </Link>
                 <Link
-                  href="/auth"
+                  href="/"
                   className="ml-2 px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors"
                 >
-                  Sign In
+                  Get the app
                 </Link>
               </>
             ) : <>
@@ -201,8 +201,8 @@ export default function Header() {
 
           {/* Mobile menu button */}
           {!loading && !user ? (
-            <Link href="/auth" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
-              Sign In
+            <Link href="/" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
+              Get the app
             </Link>
           ) : (
           <button
