@@ -69,7 +69,7 @@ Rules:
 - prepTime and cookTime are in minutes (integers). Estimate if not stated.
 - If the dish requires NO cooking or heat at all (salads, no-bake desserts, dips), set cookTime to 0 and noCook to true. Otherwise noCook is false.
 - servings is an integer. Default to 4 if not stated.
-- category must be one of: starters-snacks, soups, stews, mains, seafood, sides-salads, baking-breads, desserts, sauces-condiments, drinks, braai, holiday-specials
+- category must be one of: starters-snacks, breakfast-brunch, soups, stews, curry, mains, seafood, sides-salads, baking-breads, cakes, desserts, jams-preserves, sauces-condiments, drinks, braai, bbq, holiday-specials
 - protein must be one of: beef, poultry, lamb, pork, seafood, vegetarian, vegan, eggs, mixed (or empty string if unclear)
 - difficulty must be one of: Easy, Medium, Hard
 - tags should be relevant keywords (cuisine type, cooking method, etc.)
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
       prepTime: int(r.prepTime),
       cookTime: int(r.cookTime),
       servings: int(r.servings),
-      category: oneOf(r.category, ["starters-snacks","soups","stews","mains","seafood","sides-salads","baking-breads","desserts","sauces-condiments","drinks","braai","holiday-specials"]),
+      category: oneOf(r.category, ["starters-snacks","breakfast-brunch","soups","stews","curry","mains","seafood","sides-salads","baking-breads","cakes","desserts","jams-preserves","sauces-condiments","drinks","braai","bbq","holiday-specials"]),
       protein: oneOf(r.protein, ["beef","poultry","lamb","pork","seafood","vegetarian","vegan","eggs","mixed"]),
       difficulty: oneOf(r.difficulty, ["Easy","Medium","Hard"]),
       noCook: r.noCook === true ? true : undefined,

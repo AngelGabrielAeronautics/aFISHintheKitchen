@@ -38,7 +38,7 @@ async function checkRate(uid: string): Promise<"ok" | "limited"> {
 const FIXABLE_FIELDS = ["category", "protein", "difficulty", "noCook", "prepTime", "cookTime", "servings", "seasons", "heat"] as const;
 const FLAG_FIELDS = ["title", "description", "ingredients", "instructions", "tags"] as const;
 const ALLOWED = {
-  category: ["starters-snacks","soups","stews","mains","seafood","sides-salads","baking-breads","desserts","sauces-condiments","drinks","braai","holiday-specials"],
+  category: ["starters-snacks","breakfast-brunch","soups","stews","curry","mains","seafood","sides-salads","baking-breads","cakes","desserts","jams-preserves","sauces-condiments","drinks","braai","bbq","holiday-specials"],
   protein: ["beef","poultry","lamb","pork","seafood","vegetarian","vegan","eggs","mixed"],
   difficulty: ["Easy","Medium","Hard"],
   seasons: ["summer","autumn","winter","spring","all-year"],

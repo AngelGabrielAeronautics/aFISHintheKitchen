@@ -39,6 +39,7 @@ const SYSTEM_PROMPT = `You suggest search tags for recipes in a family cookbook 
 
 Rules:
 - lowercase, 1-3 words per tag, no "#"
+- for anything cooked over fire/coals (a braai), also add "bbq" and "grill" so cooks outside South Africa find it
 - never duplicate the recipe's existing tags (they're provided)
 - never invent dietary claims
 - Return ONLY valid JSON: {"suggestions": [{"id": "<recipe id>", "tags": ["tag1", "tag2"]}]}

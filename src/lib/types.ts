@@ -1,15 +1,20 @@
 export type Category =
   | "starters-snacks"
+  | "breakfast-brunch"
   | "soups"
   | "stews"
+  | "curry"
   | "mains"
   | "seafood"
   | "sides-salads"
   | "baking-breads"
+  | "cakes"
   | "desserts"
+  | "jams-preserves"
   | "sauces-condiments"
   | "drinks"
   | "braai"
+  | "bbq"
   | "holiday-specials";
 
 export interface CategoryInfo {
@@ -141,10 +146,34 @@ export const CATEGORIES: CategoryInfo[] = [
     icon: "🍞",
   },
   {
+    slug: "bbq",
+    name: "BBQ",
+    description: "Low, slow, and smoky",
+    icon: "🍖",
+  },
+  {
     slug: "braai",
     name: "Braai",
     description: "Fire, meat, and good company",
     icon: "🔥",
+  },
+  {
+    slug: "breakfast-brunch",
+    name: "Breakfast & Brunch",
+    description: "Start the day around the table",
+    icon: "🍳",
+  },
+  {
+    slug: "cakes",
+    name: "Cakes",
+    description: "Birthdays, bakes, and celebrations",
+    icon: "🎂",
+  },
+  {
+    slug: "curry",
+    name: "Curry",
+    description: "Fragrant, spiced, and warming",
+    icon: "🍛",
   },
   {
     slug: "desserts",
@@ -163,6 +192,12 @@ export const CATEGORIES: CategoryInfo[] = [
     name: "Holiday Specials",
     description: "Traditions that bring everyone to the table",
     icon: "🎄",
+  },
+  {
+    slug: "jams-preserves",
+    name: "Jams & Preserves",
+    description: "Put up the harvest for later",
+    icon: "🍯",
   },
   {
     slug: "mains",
