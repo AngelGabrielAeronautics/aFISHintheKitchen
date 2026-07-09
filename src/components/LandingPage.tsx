@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
+import StoreBadges from "@/components/StoreBadges";
 
 const HOW_IT_WORKS = [
   {
@@ -393,22 +394,11 @@ export default function LandingPage() {
           >
             Cooking together is one of the most human things we do. A private family cookbook to keep your recipes alive, cook them together even when you&rsquo;re apart, and gather everyone around the table again.
           </p>
-          <div
-            className="reveal mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
-            style={{ animationDelay: "1.7s" }}
-          >
-            <Link
-              href="/auth"
-              className="rounded-xl bg-terracotta px-8 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-terracotta-dark hover:shadow-lg"
-            >
-              Get Started Free
-            </Link>
-            <Link
-              href="/auth"
-              className="rounded-xl bg-white px-8 py-3.5 font-sans text-base font-semibold text-charcoal shadow-sm ring-1 ring-cream-dark/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-cream-dark/20 hover:shadow-md"
-            >
-              Sign In
-            </Link>
+          <div className="reveal mt-10" style={{ animationDelay: "1.7s" }}>
+            <StoreBadges />
+            <p className="mt-4 text-center font-sans text-sm text-slate">
+              Download the app to start your 14-day free trial.
+            </p>
           </div>
         </div>
       </section>
@@ -587,12 +577,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/auth"
-                className="mt-8 block rounded-xl bg-terracotta px-8 py-3.5 text-center font-sans text-base font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-terracotta-dark hover:shadow-lg"
-              >
-                Start your free trial
-              </Link>
+              <StoreBadges className="mt-8" />
             </div>
           </Reveal>
         </div>
@@ -670,12 +655,7 @@ export default function LandingPage() {
           <p className="mt-4 font-sans text-sm text-slate">
             Start with a 14-day free trial. Cancel anytime. Invite family members and friends.
           </p>
-          <Link
-            href="/auth"
-            className="mt-8 inline-block rounded-xl bg-terracotta px-8 py-3.5 font-sans text-base font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-terracotta-dark hover:shadow-lg"
-          >
-            Create Your Cookbook
-          </Link>
+          <StoreBadges className="mt-8" />
         </Reveal>
       </section>
     </div>
