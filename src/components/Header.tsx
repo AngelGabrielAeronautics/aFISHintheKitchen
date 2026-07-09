@@ -93,7 +93,7 @@ export default function Header() {
                   Our Story
                 </Link>
                 <Link
-                  href="/"
+                  href="/#download"
                   className="ml-2 px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors"
                 >
                   Get the app
@@ -201,7 +201,7 @@ export default function Header() {
 
           {/* Mobile menu button */}
           {!loading && !user ? (
-            <Link href="/" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
+            <Link href="/#download" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
               Get the app
             </Link>
           ) : (

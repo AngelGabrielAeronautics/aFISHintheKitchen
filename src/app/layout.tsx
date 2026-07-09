@@ -70,7 +70,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${francoisOne.variable} ${inter.variable} h-full antialiased`}
+      className={`${francoisOne.variable} ${inter.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cream text-charcoal font-sans">
         <Providers>

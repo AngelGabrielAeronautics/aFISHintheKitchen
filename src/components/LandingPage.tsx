@@ -394,7 +394,7 @@ export default function LandingPage() {
           >
             Cooking together is one of the most human things we do. A private family cookbook to keep your recipes alive, cook them together even when you&rsquo;re apart, and gather everyone around the table again.
           </p>
-          <div className="reveal mt-10" style={{ animationDelay: "1.7s" }}>
+          <div id="download" className="reveal mt-10 scroll-mt-24" style={{ animationDelay: "1.7s" }}>
             <StoreBadges />
             <p className="mt-4 text-center font-sans text-sm text-cream/90">
               Download the app to start your 14-day free trial.
