@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { TERMS_UPDATED } from "@/lib/legal";
 
 export const metadata = {
   title: "Terms of Service",
   description: "The terms for using A Fish in the Kitchen.",
 };
 
-const UPDATED = "31 May 2026";
+const UPDATED = TERMS_UPDATED;
 
 export default function TermsPage() {
   return (
@@ -87,9 +88,73 @@ export default function TermsPage() {
 
           <Section title="Acceptable use">
             <p>
-              Don&rsquo;t use the app for anything unlawful, abusive, or harmful, and don&rsquo;t try
-              to disrupt, attack, or gain unauthorised access to the service or other users&rsquo;
-              cookbooks.
+              We want this to stay a safe, friendly place for families. When using the app, you agree
+              not to:
+            </p>
+            <ul className="list-disc space-y-1.5 pl-5">
+              <li>break the law, or use the app to help anyone else break it;</li>
+              <li>
+                upload content that is unlawful, hateful, harassing, threatening, defamatory,
+                obscene, or that exploits or endangers a child;
+              </li>
+              <li>
+                post content you don&rsquo;t have the right to share &mdash; including recipes,
+                photos, or text that infringes someone else&rsquo;s copyright, trademark, or privacy;
+              </li>
+              <li>impersonate anyone, or misrepresent who you are or your connection to a cookbook;</li>
+              <li>
+                upload viruses or malicious code, or try to disrupt, overload, attack, or gain
+                unauthorised access to the service, its systems, or other users&rsquo; cookbooks;
+              </li>
+              <li>
+                scrape, harvest, or copy the service or its content by automated means, or reverse-
+                engineer, decompile, or attempt to extract the source code of the app;
+              </li>
+              <li>
+                get around, disable, or interfere with any security feature, subscription limit, seat
+                cap, or usage limit;
+              </li>
+              <li>
+                use the app for commercial purposes beyond running your own family cookbook &mdash;
+                for example, reselling access or using it to operate a public or business catalogue.
+              </li>
+            </ul>
+            <p>
+              If you come across content that breaks these rules, email{" "}
+              <a href="mailto:admin@afishinthekitchen.com" className="font-medium text-terracotta hover:text-terracotta-dark">
+                admin@afishinthekitchen.com
+              </a>{" "}
+              and we&rsquo;ll look into it.
+            </p>
+          </Section>
+
+          <Section title="Our intellectual property">
+            <p>
+              The app itself &mdash; its name, logo, design, and software &mdash; belongs to us. These
+              terms don&rsquo;t give you any right to use our branding or copy the app. You may use the
+              service only as intended, to keep and share your family&rsquo;s cookbook.
+            </p>
+          </Section>
+
+          <Section title="Copyright and takedowns">
+            <p>
+              We respect intellectual property and expect you to as well. If you believe content in the
+              app infringes your copyright, email{" "}
+              <a href="mailto:admin@afishinthekitchen.com" className="font-medium text-terracotta hover:text-terracotta-dark">
+                admin@afishinthekitchen.com
+              </a>{" "}
+              with a description of the work, where it appears in the app, your contact details, and a
+              statement that you believe the use isn&rsquo;t authorised. We&rsquo;ll review valid notices
+              and remove infringing content, and we may suspend accounts that repeatedly infringe.
+            </p>
+          </Section>
+
+          <Section title="Indemnity">
+            <p>
+              You agree to cover us for any claims, losses, or costs (including reasonable legal fees)
+              that arise from content you add, your use of the app, or your breach of these terms. In
+              plain terms: if something you upload or do causes a problem for us with a third party,
+              that&rsquo;s on you, not us.
             </p>
           </Section>
 
@@ -132,6 +197,27 @@ export default function TermsPage() {
               To the fullest extent permitted by law, A Fish in the Kitchen is not liable for any
               indirect or consequential loss, or for loss of data, arising from your use of the app.
             </p>
+            <p>
+              Where liability can&rsquo;t be excluded, our total liability to you for any claim is
+              limited to the greater of the amount you paid us in the twelve months before the claim,
+              or USD&nbsp;50. Nothing in these terms limits liability that can&rsquo;t be limited by
+              law.
+            </p>
+          </Section>
+
+          <Section title="App Store terms (iOS)">
+            <p>
+              If you use our iOS app, you also agree to this section. These terms are between you and
+              us, not Apple, and Apple isn&rsquo;t responsible for the app or its content. Apple has no
+              obligation to provide any support or maintenance for the app. If the app fails to meet an
+              applicable warranty, you may notify Apple and Apple may refund the purchase price (if any);
+              to the maximum extent permitted by law, Apple has no other warranty obligation. We, not
+              Apple, are responsible for addressing any claims about the app &mdash; including product
+              liability, failure to meet legal requirements, and privacy or intellectual-property claims.
+              You confirm you are not located in a country subject to a US&nbsp;Government embargo or on a
+              US&nbsp;Government restricted-parties list. Apple and its subsidiaries are third-party
+              beneficiaries of these terms and may enforce them against you.
+            </p>
           </Section>
 
           <Section title="Changes to these terms">
@@ -139,6 +225,15 @@ export default function TermsPage() {
               We may update these terms from time to time. If we make a material change, we&rsquo;ll
               update the date above and, where appropriate, let you know in the app. Continuing to use
               the app means you accept the updated terms.
+            </p>
+          </Section>
+
+          <Section title="General">
+            <p>
+              These terms are the whole agreement between you and us about the app. If any part is found
+              unenforceable, the rest still applies. Our not enforcing a term isn&rsquo;t a waiver of it.
+              You may not transfer your rights under these terms; we may transfer ours to a company that
+              takes over the service. Headings are for convenience only.
             </p>
           </Section>
 

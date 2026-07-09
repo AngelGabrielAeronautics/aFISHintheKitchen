@@ -8,11 +8,30 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
+  getAdditionalUserInfo,
+  type UserCredential,
 } from "firebase/auth";
+import Link from "next/link";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { sendVerificationEmail, sendResetEmail } from "@/lib/auth-email-client";
+import { updateUserPreferences } from "@/lib/firebase-recipes";
+import { TERMS_VERSION } from "@/lib/legal";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
+
+// Record the accepted Terms version + timestamp on the user's own preferences
+// doc (rules allow a signed-in user to write their own). Best-effort — a failure
+// here must never block getting the user into the app.
+async function recordTermsAcceptance(uid: string) {
+  try {
+    await updateUserPreferences(uid, {
+      termsAcceptedVersion: TERMS_VERSION,
+      termsAcceptedAt: new Date().toISOString(),
+    });
+  } catch {
+    /* non-fatal */
+  }
+}
 
 type AuthMode = "signin" | "signup" | "reset";
 
@@ -167,6 +186,7 @@ function AuthPageContent() {
       await updateProfile(credential.user, {
         displayName: displayName.trim(),
       });
+      await recordTermsAcceptance(credential.user.uid);
 
       // Only run the invite join when they came via an invite link; otherwise
       // /api/join 403s (no_invite) for every self-serve signup.
@@ -234,12 +254,21 @@ function AuthPageContent() {
     }
   }
 
+  // Only a first-time social sign-in is a "signup" that needs acceptance
+  // recorded; returning users already accepted when they first joined.
+  async function recordSocialAcceptance(result: UserCredential) {
+    if (getAdditionalUserInfo(result)?.isNewUser) {
+      await recordTermsAcceptance(result.user.uid);
+    }
+  }
+
   async function handleGoogleSignIn() {
     setError("");
     setSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(getFirebaseAuth(), provider);
+      const result = await signInWithPopup(getFirebaseAuth(), provider);
+      await recordSocialAcceptance(result);
       // Social sign-in is self-serve only (hidden for invites), so there's no
       // invite to join here.
       router.push("/");
@@ -260,7 +289,8 @@ function AuthPageContent() {
       const provider = new OAuthProvider("apple.com");
       provider.addScope("email");
       provider.addScope("name");
-      await signInWithPopup(getFirebaseAuth(), provider);
+      const result = await signInWithPopup(getFirebaseAuth(), provider);
+      await recordSocialAcceptance(result);
       // Social sign-in is self-serve only (hidden for invites), so there's no
       // invite to join here.
       router.push("/");
@@ -642,6 +672,22 @@ function AuthPageContent() {
               </button>
             )}
           </p>
+
+          {/* Agreement — shown wherever an account can be created (email or
+              social, in either tab). Reset mode creates nothing, so skip it. */}
+          {mode !== "reset" && (
+            <p className="mt-6 border-t border-cream-dark/30 pt-4 text-center font-sans text-xs leading-relaxed text-slate/80">
+              By continuing, you agree to our{" "}
+              <Link href="/terms" className="font-medium text-terracotta hover:text-terracotta-dark">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="font-medium text-terracotta hover:text-terracotta-dark">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          )}
         </div>
       </div>
     </div>

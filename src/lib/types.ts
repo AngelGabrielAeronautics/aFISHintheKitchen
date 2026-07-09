@@ -325,6 +325,9 @@ export interface AppNotification {
 
 export interface UserPreferences {
   notifyNewRecipes: boolean;
+  // Terms-of-Service acceptance recorded at signup (version + ISO timestamp).
+  termsAcceptedVersion?: string;
+  termsAcceptedAt?: string;
 }
 
 // ── Multi-tenancy ──
