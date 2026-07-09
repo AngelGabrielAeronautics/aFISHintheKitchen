@@ -33,9 +33,10 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Run on pages only. Never touch /api (the app backend), Next internals, or
-  // static assets (images, the-kookbook.pdf, fonts, etc.).
-  matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|pdf|txt|xml|woff2?|ttf)).*)",
-  ],
+  // Run on page routes only. Exclude /api (the app backend), Next internals,
+  // and anything with a file extension — i.e. every static asset (images,
+  // videos, fonts, the-kookbook.pdf, robots.txt, sitemap.xml, the AASA file).
+  // Matching "any path containing a dot" is more robust than enumerating
+  // extensions (an omitted one — e.g. .mp4 — was redirecting the hero video).
+  matcher: ["/((?!api|_next|.*\\..*).*)"],
 };
