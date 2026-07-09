@@ -396,7 +396,7 @@ export default function LandingPage() {
           </p>
           <div className="reveal mt-10" style={{ animationDelay: "1.7s" }}>
             <StoreBadges />
-            <p className="mt-4 text-center font-sans text-sm text-slate">
+            <p className="mt-4 text-center font-sans text-sm text-cream/90">
               Download the app to start your 14-day free trial.
             </p>
           </div>
