@@ -16,9 +16,67 @@ const HOUR_MS = 60 * 60 * 1000;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 const PROMPT =
-  "Re-shoot this exact dish as a professional food photograph. Improve the lighting (natural, warm, soft), " +
-  "focus, composition, and background styling. Keep the SAME dish, same plating, same portions, and same " +
-  "ingredients — do not add, remove, or alter any food. No text, no watermarks. Appetizing but honest.";
+  "You are a professional food photographer and food stylist. Re-photograph THIS EXACT DISH as a " +
+  "high-end, appetizing food photograph — as if this very same plate of food were placed in a " +
+  "professional studio and shot by a pro who knows how to present it.\n\n" +
+  "KEEP THE FOOD IDENTICAL — this is a real meal the user cooked. Preserve every food component, " +
+  "ingredient, garnish, portion size, quantity, colour, and the way the food is arranged on the plate. " +
+  "Do NOT add, remove, substitute, or restyle any food, and do NOT change the type of dish. It must be " +
+  "recognisably the same meal on the same plate.\n\n" +
+  "IMPROVE EVERYTHING A PROFESSIONAL WOULD: soft, natural, directional lighting (like window light) with " +
+  "gentle highlights and appetizing shadows; the most flattering camera angle for this kind of dish " +
+  "(around a 45-degree hero angle for plated meals, or a straight-down flat-lay for flat dishes like " +
+  "pizza, bowls, or boards); a shallow depth of field with a gently blurred background; clean, balanced " +
+  "composition; and a tasteful surface and setting (natural wood, stone, ceramic, or linen, with subtle " +
+  "complementary props such as cutlery or a napkin only where they help). Rich, natural, mouth-watering " +
+  "colour and professional grading.\n\n" +
+  "The result must look like a real PHOTOGRAPH of the SAME meal taken by a professional — not a different " +
+  "dish, not a cartoon or illustration. No text, no watermarks, and no hands or people in the frame.";
+
+// Cheap vision gate — runs before the (paid) image model. Blocks photos that
+// aren't a dish, and photos that feature a person or child. A generative image
+// model must never re-render someone's face, and this is a family app where
+// kids' photos are everywhere on the camera roll.
+const CLASSIFY_PROMPT =
+  "Look at this photo and reply with JSON only, no other text: " +
+  '{"isDish": boolean, "hasPerson": boolean}. ' +
+  "isDish is true if the main subject is a plate, bowl, board, or glass of prepared food or a drink " +
+  "(a cooked dish or meal). hasPerson is true only if the photo prominently shows a person, a human " +
+  "face, or a child — ignore an incidental hand holding a plate or a blurred person far in the background.";
+
+async function classifyImage(
+  base64: string,
+  mime: string
+): Promise<{ isDish: boolean; hasPerson: boolean } | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ inline_data: { mime_type: mime, data: base64 } }, { text: CLASSIFY_PROMPT }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0 },
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+    const parsed = JSON.parse(text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")) as {
+      isDish?: unknown;
+      hasPerson?: unknown;
+    };
+    return { isDish: parsed.isDish === true, hasPerson: parsed.hasPerson === true };
+  } catch (err) {
+    // Fail open — Gemini's own image-model safety filter is the backstop for
+    // the people case, and a flaky classifier shouldn't block real dishes.
+    console.error("enhance classify failed (continuing):", err);
+    return null;
+  }
+}
 
 async function checkRate(uid: string): Promise<"ok" | "limited"> {
   try {
@@ -57,12 +115,6 @@ export async function POST(req: NextRequest) {
     }
     const membership = await getAdminDb().collection("householdMembers").where("userId", "==", uid).limit(1).get();
     if (membership.empty) return NextResponse.json({ error: "Join or create a cookbook first." }, { status: 403 });
-    if ((await checkRate(uid)) === "limited") {
-      return NextResponse.json(
-        { error: "You've enhanced a lot of photos recently — the limit is 20 a month. Try again later." },
-        { status: 429 }
-      );
-    }
 
     const formData = await req.formData();
     const file = formData.get("image") as File | null;
@@ -70,7 +122,31 @@ export async function POST(req: NextRequest) {
     if (file.size > MAX_IMAGE_BYTES) {
       return NextResponse.json({ error: "That photo is too large. Please use an image under 10 MB." }, { status: 413 });
     }
+    const mime = file.type || "image/jpeg";
     const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+
+    // Content gate before spending on the image model (and before the rate
+    // counter, so a rejected photo doesn't cost a user one of their 20/month).
+    const verdict = await classifyImage(base64, mime);
+    if (verdict?.hasPerson) {
+      return NextResponse.json(
+        { error: "For privacy, we can only enhance photos of the food itself — not photos with people in them. Please use a photo of just the dish." },
+        { status: 422 }
+      );
+    }
+    if (verdict && !verdict.isDish) {
+      return NextResponse.json(
+        { error: "That doesn't look like a photo of a dish. The enhancer works on photos of plated food or drinks." },
+        { status: 422 }
+      );
+    }
+
+    if ((await checkRate(uid)) === "limited") {
+      return NextResponse.json(
+        { error: "You've enhanced a lot of photos recently — the limit is 20 a month. Try again later." },
+        { status: 429 }
+      );
+    }
 
     const geminiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${process.env.GEMINI_API_KEY}`,
@@ -81,7 +157,7 @@ export async function POST(req: NextRequest) {
           contents: [
             {
               parts: [
-                { inline_data: { mime_type: file.type || "image/jpeg", data: base64 } },
+                { inline_data: { mime_type: mime, data: base64 } },
                 { text: PROMPT },
               ],
             },
