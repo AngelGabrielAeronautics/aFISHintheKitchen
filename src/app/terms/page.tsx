@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TERMS_UPDATED } from "@/lib/legal";
+import { TERMS_UPDATED, OPERATOR } from "@/lib/legal";
 
 export const metadata = {
   title: "Terms of Service",
@@ -33,6 +33,14 @@ export default function TermsPage() {
               These terms govern your use of <strong>A Fish in the Kitchen</strong> (&ldquo;we&rdquo;,
               &ldquo;us&rdquo;), a private family-cookbook app. By creating an account or using the
               app, you agree to them. If you don&rsquo;t agree, please don&rsquo;t use the service.
+            </p>
+            <p>
+              A Fish in the Kitchen is operated by {OPERATOR.name}, trading as{" "}
+              {OPERATOR.tradingAs}, {OPERATOR.registration}, of {OPERATOR.address}. You can reach us
+              at{" "}
+              <a href={`mailto:${OPERATOR.email}`} className="font-medium text-terracotta hover:text-terracotta-dark">
+                {OPERATOR.email}
+              </a>.
             </p>
           </section>
 

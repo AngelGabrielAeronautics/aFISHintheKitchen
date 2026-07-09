@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PRIVACY_UPDATED, OPERATOR } from "@/lib/legal";
 
 export const metadata = {
   title: "Privacy Policy",
@@ -6,7 +7,7 @@ export const metadata = {
     "How A Fish in the Kitchen collects, uses, and protects your information.",
 };
 
-const UPDATED = "31 May 2026";
+const UPDATED = PRIVACY_UPDATED;
 
 export default function PrivacyPage() {
   return (
@@ -33,9 +34,14 @@ export default function PrivacyPage() {
               This policy explains how <strong>A Fish in the Kitchen</strong> (&ldquo;we&rdquo;,
               &ldquo;us&rdquo;) handles your information when you use our family-cookbook app. We
               keep this short and plain. If anything is unclear, email us at{" "}
-              <a href="mailto:admin@afishinthekitchen.com" className="font-medium text-terracotta hover:text-terracotta-dark">
-                admin@afishinthekitchen.com
+              <a href={`mailto:${OPERATOR.email}`} className="font-medium text-terracotta hover:text-terracotta-dark">
+                {OPERATOR.email}
               </a>.
+            </p>
+            <p>
+              The service is operated by {OPERATOR.name}, trading as {OPERATOR.tradingAs},{" "}
+              {OPERATOR.registration}, of {OPERATOR.address}. {OPERATOR.name} is the data controller
+              for the personal information described here.
             </p>
           </section>
 

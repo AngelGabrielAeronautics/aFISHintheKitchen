@@ -23,7 +23,7 @@ We are not looking for a full bespoke rewrite unless you judge one necessary —
 ## 2. The business
 
 - **Product:** a private, invite-only digital cookbook. A paying "owner" creates a household cookbook; they can invite family "members" who use it free. Content is recipes, photos/videos, meal plans, shopping lists, kitchen tips, and event menus. Nothing is public or searchable.
-- **Operator:** operated from **Jersey** (Channel Islands). *(Counsel: we need to confirm the exact legal entity name, registration, and registered address to state in the documents — currently the docs say only "we/us". See §6.)*
+- **Operator:** **Dylan Glen Coppard**, an individual **trading as "PNB Apps Apps N Apps"** — a **registered business name** (sole trader), **not a limited company**. Registered in Jersey under the Registration of Business Names (Jersey) Law 1956 (certificate no. 36758, registered 2 June 2026). Address: Glenmoor, L'Amont de la Ville Bagot, St. Ouen, Jersey JE3 2DF. *(Counsel: because this is a sole trader and not a company, there is **no corporate liability shield** — the proprietor is personally liable for the business. Please advise whether incorporating a limited company before commercial launch is prudent, given we are taking payment and hosting user content, and how that interacts with the liability/indemnity clauses below.)*
 - **Users:** expected to be international from day one — the founding family spans multiple continents (notably South Africa, UK, EU). So **users will be UK/EU/US/ZA consumers**, not only Jersey residents.
 - **Platform & billing:** launching **iOS first** via the App Store. Subscriptions are **auto-renewable and sold through Apple** (Apple is merchant of record; we never touch card data). A web app exists but new signups are iOS-only at launch.
 - **Price:** USD 5.99/month or 59.99/year, with a 14-day free trial.
@@ -79,8 +79,9 @@ We just strengthened the Terms and added a signup agreement. Prior to this the o
 
 These are flagged for your view — you may have more:
 
-- **Operator identity not stated.** The documents say "we/us" but name no legal entity, registration number, or address. Consumer law generally requires clear trader identity. **We will provide the entity details; please tell us exactly what must appear and where.**
-- **Privacy Policy "last updated" date is stale** (still 31 May 2026) relative to the Terms (9 July 2026). We'll sync it — flagging so you review the current text, not the date.
+- **Operator identity now stated** (added 9 July 2026): both documents now name the proprietor, trading name, Jersey business-name registration, and address. Please confirm this is the correct and legally sufficient trader disclosure for our regions.
+- **Sole-trader structure** — see §2. Personal-liability exposure is the biggest structural question for the review.
+- **Privacy Policy date** synced to 9 July 2026.
 - **No dispute-resolution / arbitration clause** beyond the Jersey courts provision. Advise if one is warranted.
 - **No explicit consumer cancellation/withdrawal ("cooling-off") language** beyond Apple's cancellation mechanics.
 - **No cookie/consent banner** on the web app.
