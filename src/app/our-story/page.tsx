@@ -38,7 +38,7 @@ export default function OurStoryPage() {
           <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-cream-dark/40">
             <Image
               src="/kookbook-cover.png"
-              alt="The Kookbook by Popsie & Gillian — the original paperback"
+              alt="The Kookbook by Poppie & Gillian — the original paperback"
               width={279}
               height={219}
               className="h-auto w-full"
