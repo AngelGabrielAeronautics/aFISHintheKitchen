@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import StoreBadges from "@/components/StoreBadges";
+import ScanToDownload from "@/components/ScanToDownload";
 
 const HOW_IT_WORKS = [
   {
@@ -656,6 +657,7 @@ export default function LandingPage() {
             Start with a 14-day free trial. Cancel anytime. Invite family members and friends.
           </p>
           <StoreBadges className="mt-8" />
+          <ScanToDownload className="mt-8" />
         </Reveal>
       </section>
     </div>
