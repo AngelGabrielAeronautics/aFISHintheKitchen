@@ -73,11 +73,32 @@ export default function PrivacyPage() {
             <p>We do not sell your personal information, and we don&rsquo;t use it for advertising.</p>
           </Section>
 
-          <Section title="AI recipe import">
+          <Section title="AI features">
             <p>
-              If you use the &ldquo;import from photo&rdquo; feature, the image you upload is sent to{" "}
-              <strong>Anthropic</strong> (the Claude API) to read the recipe and turn it into
-              structured text. This only happens when you choose to use that feature.
+              Some optional features send what you give them to an AI provider. None of this
+              happens unless you choose to use the feature.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <strong>Import from photo</strong> &mdash; the image you upload is sent to{" "}
+                <strong>Anthropic</strong> (the Claude API) to read the recipe and turn it into
+                structured text.
+              </li>
+              <li>
+                <strong>Recipe check and tag suggestions</strong> &mdash; the recipe&rsquo;s text
+                (title, description, ingredients and instructions) is sent to <strong>Anthropic</strong>.
+              </li>
+              <li>
+                <strong>Photo enhancement</strong> &mdash; the photo you choose is sent to{" "}
+                <strong>Google</strong> (the Gemini API), both to check that it is a photo of food
+                and to produce the improved version. We ask Google to tell us whether the photo
+                shows a person, and we refuse to enhance it if so &mdash; but making that check
+                means the photo reaches Google either way.
+              </li>
+            </ul>
+            <p>
+              We don&rsquo;t send your recipes or photos to any AI provider for training, and we
+              don&rsquo;t send them anywhere you haven&rsquo;t asked us to.
             </p>
           </Section>
 
@@ -87,7 +108,8 @@ export default function PrivacyPage() {
               <li><strong>Google Firebase</strong> &mdash; sign-in, database, and file storage.</li>
               <li><strong>Vercel</strong> &mdash; application hosting.</li>
               <li><strong>Twilio SendGrid</strong> &mdash; sending transactional emails.</li>
-              <li><strong>Anthropic</strong> &mdash; AI recipe import (only when you use it).</li>
+              <li><strong>Anthropic</strong> &mdash; AI recipe import, recipe checks and tag suggestions (only when you use them).</li>
+              <li><strong>Google</strong> (Gemini API) &mdash; AI photo enhancement (only when you use it).</li>
             </ul>
             <p>
               Your cookbook is private: only you and the family members you invite can see its

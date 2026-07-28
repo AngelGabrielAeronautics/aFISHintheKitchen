@@ -20,8 +20,10 @@ const FINGERPRINTS = [
   // Debug keystore (~/.android/debug.keystore) — lets links work on a dev
   // device. Harmless in production: it only ever matches a locally-built APK.
   "82:0D:04:EA:03:59:6E:36:3D:D8:01:F0:56:D2:1B:B5:8C:9C:37:20:C0:CD:18:39:6D:D2:96:F9:4C:E8:AE:B3",
-  // TODO: add the Play App Signing certificate once the Play app exists.
-  // Until then, store installs will open links in the browser.
+  // Play App Signing certificate, read from Play Console → Protected with Play
+  // → App signing → Digital Asset Links JSON. This is the key Play re-signs
+  // every store install with, so it is the one that matters to real users.
+  "D5:78:15:9D:79:42:53:56:FA:05:4C:70:A5:79:46:E3:01:65:FA:F2:7D:0F:79:BD:65:9B:5E:E4:42:9C:10:09",
 ];
 
 const ASSET_LINKS = [
