@@ -12,7 +12,17 @@ import { NextRequest, NextResponse } from "next/server";
 const BLOCK_WEB_APP = true;
 
 // Reachable even when the app is blocked (exact matches).
-const ALLOWED_EXACT = new Set(["/", "/our-story", "/terms", "/privacy"]);
+//
+// ⚠ /delete-account MUST stay here. Google Play requires a publicly reachable
+// account-deletion URL and checks it; if the proxy bounced it to the landing,
+// the Data safety declaration would point at a page that doesn't exist.
+const ALLOWED_EXACT = new Set([
+  "/",
+  "/our-story",
+  "/terms",
+  "/privacy",
+  "/delete-account",
+]);
 
 // Reachable even when the app is blocked (prefix matches): public share pages,
 // the auth-email action handler, invite deep-link file, and staff tools.
