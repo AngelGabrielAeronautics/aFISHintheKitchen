@@ -34,17 +34,26 @@ const PLAN_PERKS = [
   "Private & ad-free, always",
 ];
 
-// Locked prices per currency (no live FX — Stripe/Paddle let you set the real
-// charged amount per market at the billing milestone). Pricing rationale: R99
-// anchors against Netflix/Showmax in SA; international tiers approximate that
-// per local conventions. Refine when payment provider is wired.
+// The actual prices Apple charges, read off each storefront's own product page
+// (id6780944935) on 29 July 2026 — not converted, not estimated.
+//
+// ⚠ These must match StoreKit, because this page is where someone decides to
+// trust us and the App Store is where they're charged. The previous values were
+// pre-billing guesses ("refine when payment provider is wired") and were never
+// refined: the site advertised R99 while South Africans were charged R119.99,
+// and £4.99 while the UK was charged £5.99 — both about a fifth under, in the
+// two markets this app actually has.
+//
+// Apple sets these from its own price tiers, so they don't track FX and they
+// change when Apple adjusts a tier. If you change the tier in App Store
+// Connect, change it here in the same sitting.
 type CurrencyCode = "ZAR" | "USD" | "GBP" | "EUR" | "AUD";
 const PLAN_PRICES: Record<CurrencyCode, { prefix: string; monthly: string; annual: string }> = {
-  ZAR: { prefix: "R", monthly: "99", annual: "990" },
-  USD: { prefix: "$", monthly: "5.99", annual: "59" },
-  GBP: { prefix: "£", monthly: "4.99", annual: "49" },
-  EUR: { prefix: "€", monthly: "5.99", annual: "59" },
-  AUD: { prefix: "A$", monthly: "9.99", annual: "99" },
+  ZAR: { prefix: "R", monthly: "119.99", annual: "1,199.99" },
+  USD: { prefix: "$", monthly: "5.99", annual: "59.99" },
+  GBP: { prefix: "£", monthly: "5.99", annual: "59.99" },
+  EUR: { prefix: "€", monthly: "6.99", annual: "69.99" },
+  AUD: { prefix: "A$", monthly: "9.99", annual: "99.99" },
 };
 
 const FAQS = [
