@@ -11,6 +11,7 @@ const client = new Anthropic({
 // Abuse guards for the metered Anthropic call: any Firebase account could
 // otherwise run up the API bill with unlimited oversized requests.
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // matches what phone photos need
+const MAX_TEXT_CHARS = 20_000;             // a very long recipe page, pasted whole
 const RATE_LIMIT = 20;                     // imports per user per hour (burst guard)
 const RATE_WINDOW_MS = 60 * 60 * 1000;     // 1 hour
 const MONTHLY_LIMIT = 50;                  // imports per user per 30 days (cost cap ≈ $1/user worst case)
@@ -46,7 +47,7 @@ async function checkRateLimit(uid: string): Promise<"ok" | "hour" | "month"> {
   }
 }
 
-const SYSTEM_PROMPT = `You are a recipe extraction assistant. Given an image of a recipe (from a cookbook, magazine, handwritten card, or screenshot), extract the recipe data into structured JSON.
+const SYSTEM_PROMPT = `You are a recipe extraction assistant. You are given a recipe either as an image (a cookbook page, magazine, handwritten card or screenshot) or as pasted text (from a website, a message, or an email). Extract the recipe data into structured JSON.
 
 Return ONLY valid JSON with this exact structure (no markdown, no explanation):
 {
@@ -77,7 +78,8 @@ Rules:
 - If the recipe has sections (e.g. "For the crust" / "For the filling"), prefix section headers with "## " in both ingredients and instructions arrays
 - Keep ingredient formatting natural (e.g. "2 cups flour" not "flour: 2 cups")
 - Keep instruction steps clear and concise
-- If you cannot read or extract a recipe from the image, return: {"error": "Could not extract a recipe from this image. Please try a clearer photo."}`;
+- Pasted text often carries the surrounding page with it — navigation, adverts, cookie notices, comment threads, "jump to recipe", a long personal story before the recipe. Ignore all of it and extract only the recipe.
+- If you cannot read or extract a recipe, return: {"error": "Could not extract a recipe from this."}`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,56 +116,67 @@ export async function POST(request: NextRequest) {
     }
     if (rate === "month") {
       return NextResponse.json(
-        { error: "You've reached this month's limit of 50 photo imports. It resets in a few weeks — recipes can still be added by hand anytime." },
+        { error: "You've reached this month's limit of 50 recipe imports. It resets in a few weeks — recipes can still be added by hand anytime." },
         { status: 429 }
       );
     }
 
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
+    // Pasted text is the other way in: someone was sent a recipe in a message,
+    // or copied one off a website. Same extraction, same limits — only the
+    // content block handed to the model differs.
+    const pasted = (formData.get("text") as string | null)?.trim() ?? "";
 
-    if (!file) {
-      return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    if (!file && !pasted) {
+      return NextResponse.json({ error: "No recipe provided" }, { status: 400 });
     }
-    if (file.size > MAX_IMAGE_BYTES) {
+    if (file && file.size > MAX_IMAGE_BYTES) {
       return NextResponse.json(
         { error: "That photo is too large. Please use an image under 10 MB." },
         { status: 413 }
       );
     }
+    if (!file && pasted.length > MAX_TEXT_CHARS) {
+      return NextResponse.json(
+        { error: "That's a lot of text. Please paste just the recipe (under 20,000 characters)." },
+        { status: 413 }
+      );
+    }
 
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
+    let content: Anthropic.MessageParam["content"];
+    if (file) {
+      const bytes = await file.arrayBuffer();
+      const base64 = Buffer.from(bytes).toString("base64");
 
-    // Determine media type
-    let mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp" = "image/jpeg";
-    if (file.type === "image/png") mediaType = "image/png";
-    else if (file.type === "image/gif") mediaType = "image/gif";
-    else if (file.type === "image/webp") mediaType = "image/webp";
+      // Determine media type
+      let mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp" = "image/jpeg";
+      if (file.type === "image/png") mediaType = "image/png";
+      else if (file.type === "image/gif") mediaType = "image/gif";
+      else if (file.type === "image/webp") mediaType = "image/webp";
+
+      content = [
+        { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+        { type: "text", text: "Extract the recipe from this image into structured JSON." },
+      ];
+    } else {
+      content = [
+        {
+          type: "text",
+          text:
+            "Extract the recipe from the following text into structured JSON. " +
+            "Ignore anything that isn't part of the recipe.\n\n<recipe>\n" +
+            pasted +
+            "\n</recipe>",
+        },
+      ];
+    }
 
     const response = await client.messages.create({
       model: "claude-sonnet-5",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: base64,
-              },
-            },
-            {
-              type: "text",
-              text: "Extract the recipe from this image into structured JSON.",
-            },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content }],
     });
 
     const textBlock = response.content.find((b) => b.type === "text");
@@ -179,7 +192,11 @@ export async function POST(request: NextRequest) {
       recipe = JSON.parse(jsonStr);
     } catch {
       return NextResponse.json(
-        { error: "Could not read a recipe from this image. Please try a clearer photo." },
+        {
+          error: file
+            ? "Could not read a recipe from this image. Please try a clearer photo."
+            : "Could not read a recipe from that text. Try pasting just the recipe itself.",
+        },
         { status: 422 }
       );
     }
