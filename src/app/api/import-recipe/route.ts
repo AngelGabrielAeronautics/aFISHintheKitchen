@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { RECIPE_JSON_SPEC, checkThrottle, parseModelJson, sanitiseRecipe } from "@/lib/recipe-ai";
 
 export const runtime = "nodejs";
 
@@ -17,67 +18,12 @@ const RATE_WINDOW_MS = 60 * 60 * 1000;     // 1 hour
 const MONTHLY_LIMIT = 50;                  // imports per user per 30 days (cost cap ≈ $1/user worst case)
 const MONTH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-/// Fixed-window per-uid counter in Firestore (serverless has no memory; this
-/// mirrors the authEmailThrottle pattern). Fail-open on Firestore errors —
-/// availability of the feature beats a perfect limiter here.
-async function checkRateLimit(uid: string): Promise<"ok" | "hour" | "month"> {
-  try {
-    const ref = getAdminDb().collection("importThrottle").doc(uid);
-    const now = Date.now();
-    const snap = await ref.get();
-    const data = snap.data() as
-      | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
-      | undefined;
-
-    const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_WINDOW_MS;
-    const monthStart = monthFresh ? now : data!.monthStart!;
-    const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
-    if (monthCount >= MONTHLY_LIMIT) return "month";
-
-    const hourFresh = !data?.windowStart || now - data.windowStart > RATE_WINDOW_MS;
-    const windowStart = hourFresh ? now : data!.windowStart!;
-    const count = hourFresh ? 0 : data?.count ?? 0;
-    if (count >= RATE_LIMIT) return "hour";
-
-    await ref.set({ windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
-    return "ok";
-  } catch (err) {
-    console.error("import-recipe throttle check failed (continuing):", err);
-    return "ok";
-  }
-}
-
 const SYSTEM_PROMPT = `You are a recipe extraction assistant. You are given a recipe either as an image (a cookbook page, magazine, handwritten card or screenshot) or as pasted text (from a website, a message, or an email). Extract the recipe data into structured JSON.
 
-Return ONLY valid JSON with this exact structure (no markdown, no explanation):
-{
-  "title": "Recipe Title",
-  "description": "A short 1-2 sentence description of the dish",
-  "ingredients": ["ingredient 1", "ingredient 2"],
-  "instructions": ["Step 1 text", "Step 2 text"],
-  "prepTime": 15,
-  "cookTime": 30,
-  "servings": 4,
-  "category": "mains",
-  "protein": "poultry",
-  "difficulty": "Medium",
-  "noCook": false,
-  "tags": ["tag1", "tag2"],
-  "seasons": []
-}
+${RECIPE_JSON_SPEC}
 
-Rules:
-- prepTime and cookTime are in minutes (integers). Estimate if not stated.
-- If the dish requires NO cooking or heat at all (salads, no-bake desserts, dips), set cookTime to 0 and noCook to true. Otherwise noCook is false.
-- servings is an integer. Default to 4 if not stated.
-- category must be one of: starters-snacks, breakfast-brunch, soups, stews, curry, mains, seafood, sides-salads, baking-breads, cakes, desserts, jams-preserves, sauces-condiments, drinks, braai, bbq, holiday-specials
-- protein must be one of: beef, poultry, lamb, pork, seafood, vegetarian, vegan, eggs, mixed (or empty string if unclear)
-- difficulty must be one of: Easy, Medium, Hard
-- tags should be relevant keywords (cuisine type, cooking method, etc.)
-- seasons should be from: summer, autumn, winter, spring, all-year (or empty array if not seasonal)
-- If the recipe has sections (e.g. "For the crust" / "For the filling"), prefix section headers with "## " in both ingredients and instructions arrays
-- Keep ingredient formatting natural (e.g. "2 cups flour" not "flour: 2 cups")
-- Keep instruction steps clear and concise
+Extra rules for extraction:
+- Estimate prepTime and cookTime if they are not stated.
 - Pasted text often carries the surrounding page with it — navigation, adverts, cookie notices, comment threads, "jump to recipe", a long personal story before the recipe. Ignore all of it and extract only the recipe.
 - If you cannot read or extract a recipe, return: {"error": "Could not extract a recipe from this."}`;
 
@@ -107,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Join or create a cookbook first." }, { status: 403 });
     }
 
-    const rate = await checkRateLimit(uid);
+    const rate = await checkThrottle("importThrottle", uid, RATE_LIMIT, MONTHLY_LIMIT);
     if (rate === "hour") {
       return NextResponse.json(
         { error: "You've imported a lot of recipes in the last hour — please try again later." },
@@ -186,11 +132,8 @@ export async function POST(request: NextRequest) {
 
     // Parse the JSON response. The model is told to return raw JSON, but it
     // can wrap it in markdown fences or fail to extract — handle both.
-    const jsonStr = textBlock.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-    let recipe: unknown;
-    try {
-      recipe = JSON.parse(jsonStr);
-    } catch {
+    const recipe = parseModelJson(textBlock.text);
+    if (!recipe) {
       return NextResponse.json(
         {
           error: file
@@ -210,34 +153,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sanitise: the client decodes strictly-typed fields, so coerce/clamp here
-    // rather than let one malformed value sink the whole import.
-    const r = (recipe ?? {}) as Record<string, unknown>;
-    const str = (v: unknown) => (typeof v === "string" ? v : undefined);
-    const strArr = (v: unknown) =>
-      Array.isArray(v) ? v.filter((x) => typeof x === "string").map((x) => String(x).slice(0, 500)) : undefined;
-    const int = (v: unknown) => {
-      const n = typeof v === "number" ? v : typeof v === "string" ? parseInt(v, 10) : NaN;
-      return Number.isFinite(n) ? Math.max(0, Math.min(6000, Math.round(n))) : undefined;
-    };
-    const oneOf = (v: unknown, allowed: string[]) =>
-      typeof v === "string" && allowed.includes(v) ? v : undefined;
-    const clean = {
-      title: str(r.title)?.slice(0, 200),
-      description: str(r.description)?.slice(0, 1000),
-      ingredients: strArr(r.ingredients)?.slice(0, 100),
-      instructions: strArr(r.instructions)?.slice(0, 100),
-      prepTime: int(r.prepTime),
-      cookTime: int(r.cookTime),
-      servings: int(r.servings),
-      category: oneOf(r.category, ["starters-snacks","breakfast-brunch","soups","stews","curry","mains","seafood","sides-salads","baking-breads","cakes","desserts","jams-preserves","sauces-condiments","drinks","braai","bbq","holiday-specials"]),
-      protein: oneOf(r.protein, ["beef","poultry","lamb","pork","seafood","vegetarian","vegan","eggs","mixed"]),
-      difficulty: oneOf(r.difficulty, ["Easy","Medium","Hard"]),
-      noCook: r.noCook === true ? true : undefined,
-      tags: strArr(r.tags)?.slice(0, 15),
-      seasons: strArr(r.seasons)?.filter((x) => ["summer","autumn","winter","spring","all-year"].includes(x)),
-    };
-    return NextResponse.json(clean);
+    return NextResponse.json(sanitiseRecipe(recipe));
   } catch (err) {
     console.error("Recipe import error:", err);
     return NextResponse.json(
