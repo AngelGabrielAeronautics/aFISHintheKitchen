@@ -6,9 +6,20 @@ import { randomUUID } from "crypto";
 export const runtime = "nodejs";
 export const maxDuration = 60; // image generation can take 20-30s
 
-// AI photo enhancement (Gemini image model): re-light and re-style the COVER
-// photo of a dish while keeping the actual food unchanged. Opt-in, previewed,
-// and the original is always kept — this polishes reality, never invents it.
+// AI photo enhancement (Gemini image model): restyle and re-shoot the COVER
+// photo of a dish as a cookbook would print it. Opt-in, previewed, and the
+// original is always kept.
+//
+// The line this draws is DISH IDENTITY, not pixel fidelity. The model may
+// re-plate, change the vessel, garnish, and choose the surface and props — a
+// food stylist's job as much as a photographer's. What it may not do is change
+// what the meal IS: no substituting a different dish, no adding ingredients
+// that would misrepresent the recipe (meat onto a vegetarian plate being the
+// case that actually matters).
+//
+// It used to open with "KEEP THE FOOD IDENTICAL" and forbid restyling outright,
+// which the model read as "return roughly what you were given" — the results
+// were barely distinguishable from the snapshot, so nobody used the feature.
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const HOUR_LIMIT = 10;
 const MONTH_LIMIT = 20;
@@ -16,22 +27,22 @@ const HOUR_MS = 60 * 60 * 1000;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 const PROMPT =
-  "You are a professional food photographer and food stylist. Re-photograph THIS EXACT DISH as a " +
-  "high-end, appetizing food photograph — as if this very same plate of food were placed in a " +
-  "professional studio and shot by a pro who knows how to present it.\n\n" +
-  "KEEP THE FOOD IDENTICAL — this is a real meal the user cooked. Preserve every food component, " +
-  "ingredient, garnish, portion size, quantity, colour, and the way the food is arranged on the plate. " +
-  "Do NOT add, remove, substitute, or restyle any food, and do NOT change the type of dish. It must be " +
-  "recognisably the same meal on the same plate.\n\n" +
-  "IMPROVE EVERYTHING A PROFESSIONAL WOULD: soft, natural, directional lighting (like window light) with " +
-  "gentle highlights and appetizing shadows; the most flattering camera angle for this kind of dish " +
-  "(around a 45-degree hero angle for plated meals, or a straight-down flat-lay for flat dishes like " +
-  "pizza, bowls, or boards); a shallow depth of field with a gently blurred background; clean, balanced " +
-  "composition; and a tasteful surface and setting (natural wood, stone, ceramic, or linen, with subtle " +
-  "complementary props such as cutlery or a napkin only where they help). Rich, natural, mouth-watering " +
-  "colour and professional grading.\n\n" +
-  "The result must look like a real PHOTOGRAPH of the SAME meal taken by a professional — not a different " +
-  "dish, not a cartoon or illustration. No text, no watermarks, and no hands or people in the frame.";
+  "You are a professional food photographer and food stylist. Take THIS DISH and produce the photograph " +
+  "a cookbook would print: properly styled, properly lit, properly shot. The result should look clearly " +
+  "and obviously better than the snapshot you were given — not a subtle touch-up.\n\n" +
+  "RESTYLE IT FREELY. Re-plate the food attractively; choose a more flattering plate, bowl, board or " +
+  "glass; tidy away smears and stray crumbs; wipe the rim; reposition components for balance; and add " +
+  "tasteful garnish that belongs to this dish — its own herbs, a dusting, a drizzle of its own sauce. " +
+  "Choose the surface, background and props: natural wood, stone, ceramic or linen, with cutlery, a " +
+  "napkin or a cloth where they help. Pick the most flattering angle (around 45 degrees for plated " +
+  "meals, straight down for flat dishes, bowls and boards), a shallow depth of field with a gently " +
+  "blurred background, soft directional light like window light, and rich, natural, mouth-watering " +
+  "colour with professional grading.\n\n" +
+  "IT MUST STILL BE THIS MEAL. Same dish, same recipe, same food. Do not substitute a different dish, " +
+  "and do not add any ingredient that would change what the meal is — never add meat, fish or dairy to " +
+  "a plate that has none. The person who cooked this has to recognise it as theirs, cooked well.\n\n" +
+  "The result must be a real PHOTOGRAPH — not an illustration, render or cartoon. No text, no " +
+  "watermarks, no hands and no people in the frame.";
 
 // Cheap vision gate — runs before the (paid) image model. Blocks photos that
 // aren't a dish, and photos that feature a person or child. A generative image
