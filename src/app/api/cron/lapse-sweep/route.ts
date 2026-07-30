@@ -3,41 +3,16 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildTrialEndingEmail } from "@/lib/auth-email";
-import type { Firestore } from "firebase-admin/firestore";
+// Shared with the admin delete action. The copy that used to live here missed
+// Storage entirely and left sharedRecipes/sharedMenus behind, so a household
+// deleted at day 365 kept every photo in the bucket and its PUBLIC share links
+// working.
+import { deleteHouseholdData } from "@/lib/delete-data";
 
 const TRIAL_WARNING_DAYS = 3; // email the owner this many days before trial end
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// Collections whose docs carry a householdId and are deleted with the household.
-const HOUSEHOLD_SCOPED_COLLECTIONS = [
-  "recipes",
-  "members",
-  "mealPlans",
-  "collections",
-  "tips",
-  "notifications",
-  "householdMembers",
-  "invitedUsers",
-];
-
-async function deleteByHousehold(db: Firestore, col: string, householdId: string): Promise<void> {
-  const snap = await db.collection(col).where("householdId", "==", householdId).get();
-  for (let i = 0; i < snap.docs.length; i += 450) {
-    const batch = db.batch();
-    snap.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
-    await batch.commit();
-  }
-}
-
-async function deleteHouseholdData(db: Firestore, householdId: string, ownerId: string): Promise<void> {
-  for (const col of HOUSEHOLD_SCOPED_COLLECTIONS) {
-    await deleteByHousehold(db, col, householdId);
-  }
-  await db.collection("subscriptions").doc(ownerId).delete();
-  await db.collection("households").doc(householdId).delete();
-}
 
 // Daily lapse sweep (Vercel Cron). Advances each lapsed household along the
 // ladder: active → read-only (day 7) → suspended (day 30) → deleted (day 365).
@@ -115,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     if (shouldDelete) {
       if (hardDelete) {
-        await deleteHouseholdData(db, sub.householdId, subSnap.id);
+        await deleteHouseholdData(sub.householdId, subSnap.id);
         deleted++;
       } else {
         // Safety default: mark for review instead of unattended cascade deletion.

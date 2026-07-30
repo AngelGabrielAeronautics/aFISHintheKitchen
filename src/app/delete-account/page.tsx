@@ -8,10 +8,24 @@ import { OPERATOR } from "@/lib/legal";
 // what is kept, and for how long.
 //
 // ⚠ Be careful editing this. It is a public promise about data handling, and
-// the honest version of that promise is currently "email us and a human does
-// it", because AuthService.deleteAccount() removes only the Firebase Auth user.
-// If a real cascade ever lands, update the wording here at the same time —
 // stale copy here is worse than no page at all.
+//
+// The copy below now matches the code exactly, and the code was changed to meet
+// it rather than the other way round:
+//
+//   - "Deleting your sign-in" → POST /api/delete-account, which removes the
+//     account plus the data that is the user's alone (preferences, AI throttle
+//     counters, their push registration). Until 2026-07-30 it removed the Firebase
+//     Auth user and nothing else, so the "push-notification registration" bullet
+//     below was a promise the code did not keep.
+//   - "To have that content deleted as well, email us" → the super-admin
+//     `delete_household` action, which deletes the cookbook's documents, its
+//     media, and its public share links. It used to mean a human deleting
+//     documents in the Firebase console, which missed Storage every time.
+//
+// The distinction between the two is deliberate and load-bearing: see
+// src/lib/delete-data.ts. Deleting one person's account must never wipe a cookbook
+// that other people are still using.
 export const metadata = {
   title: "Delete your account",
   description:
