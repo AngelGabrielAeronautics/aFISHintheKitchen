@@ -101,6 +101,9 @@ export function sanitiseRecipe(raw: unknown): Clean {
     // Generation only: a line to the cook, e.g. "you already have Poppie's
     // chakalaka, which uses those peppers". Extraction never sets it.
     note: str(r.note)?.slice(0, 300),
+    // Where the recipe came from. Set by the caller, never by the model — see
+    // the suggest route.
+    originalSource: str(r.originalSource)?.slice(0, 200),
   };
 }
 

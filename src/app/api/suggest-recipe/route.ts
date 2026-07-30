@@ -147,7 +147,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(sanitiseRecipe(parsed));
+    // Stamp the provenance ourselves rather than asking the model to do it.
+    // This cookbook's whole premise is that the recipes are the family's, so a
+    // generated one has to say where it came from — and it must not be possible
+    // for the model to omit, rename or flatter its way out of that. We know it
+    // is AI-generated because it came out of THIS route.
+    return NextResponse.json({ ...sanitiseRecipe(parsed), originalSource: "AI generated" });
   } catch (err) {
     console.error("suggest-recipe error:", err);
     return NextResponse.json({ error: "Couldn't get a suggestion. Please try again." }, { status: 500 });
