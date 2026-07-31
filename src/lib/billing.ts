@@ -9,7 +9,7 @@ import { computeAccessStateFromLapse } from "./access";
 export interface BillingEvent {
   userId: string; // resolved from the provider customer (e.g. checkout metadata)
   householdId: string; // the one book this subscription pays for
-  provider: "stripe" | "paddle" | "appstore";
+  provider: "stripe" | "paddle" | "appstore" | "play";
   providerCustomerId?: string;
   providerSubscriptionId?: string;
   status: SubscriptionStatus;
@@ -26,7 +26,7 @@ export function isUnpaidStatus(status: SubscriptionStatus): boolean {
 export interface AppliedBilling {
   subscription: {
     householdId: string;
-    provider: "stripe" | "paddle" | "appstore";
+    provider: "stripe" | "paddle" | "appstore" | "play";
     providerCustomerId?: string;
     providerSubscriptionId?: string;
     status: SubscriptionStatus;
