@@ -85,48 +85,73 @@ export async function POST(req: NextRequest) {
     // 3. Duplicate guard (authoritative). invitedUsers is keyed by email, so a
     //    pre-existing doc means the address is already invited — possibly to a
     //    different cookbook, which we must not clobber.
+    //
+    //    A pending invite to THIS household is not an error — it's a resend.
+    //    Invite emails get junked and lost (that is the normal failure mode of
+    //    email, and exactly what happened to the first customer's family), and
+    //    before this the owner's only recourse was finding the hidden
+    //    revoke-then-reinvite dance. Re-submitting the same address now just
+    //    sends the email again.
     const inviteRef = db.collection("invitedUsers").doc(inviteEmail);
     const existingSnap = await inviteRef.get();
+    let resend = false;
     if (existingSnap.exists) {
       const existing = existingSnap.data()!;
       if (existing.householdId && existing.householdId !== householdId) {
         return NextResponse.json({ error: "invited_elsewhere" }, { status: 409 });
       }
-      return NextResponse.json(
-        { error: existing.status === "registered" ? "already_member" : "already_invited" },
-        { status: 409 }
-      );
+      if (existing.status === "registered") {
+        return NextResponse.json({ error: "already_member" }, { status: 409 });
+      }
+      // Throttle: one email per address per 10 minutes, so a double-tap (or an
+      // anxious owner) can't burst SendGrid or the invitee's junk folder.
+      const last = Date.parse(existing.resentAt ?? existing.createdAt ?? "") || 0;
+      if (Date.now() - last < 10 * 60 * 1000) {
+        return NextResponse.json({ error: "resend_too_soon" }, { status: 429 });
+      }
+      resend = true;
     }
 
     // 4. Seat cap (authoritative). Used = active members (role member, owner not
     //    counted) + outstanding pending invites. Mirrors countHouseholdSeats and
-    //    the hard cap re-checked at /api/join.
-    const [membersSnap, pendingSnap, subSnap] = await Promise.all([
-      db.collection("householdMembers")
-        .where("householdId", "==", householdId)
-        .where("role", "==", "member")
-        .get(),
-      db.collection("invitedUsers")
-        .where("householdId", "==", householdId)
-        .where("status", "==", "pending")
-        .get(),
-      db.collection("subscriptions").doc(hh.ownerId).get(),
-    ]);
-    const extraSeats: number = subSnap.exists ? (subSnap.data()?.extraSeats ?? 0) : 0;
-    const limit = MAX_SEATS + extraSeats;
-    const used = membersSnap.size + pendingSnap.size;
-    if (used >= limit) {
-      return NextResponse.json({ error: "seat_limit", limit }, { status: 409 });
+    //    the hard cap re-checked at /api/join. A resend is exempt: that invite
+    //    already holds its seat, and counting it against itself would wrongly
+    //    refuse resends in a full cookbook — the exact case that needs them.
+    if (!resend) {
+      const [membersSnap, pendingSnap, subSnap] = await Promise.all([
+        db.collection("householdMembers")
+          .where("householdId", "==", householdId)
+          .where("role", "==", "member")
+          .get(),
+        db.collection("invitedUsers")
+          .where("householdId", "==", householdId)
+          .where("status", "==", "pending")
+          .get(),
+        db.collection("subscriptions").doc(hh.ownerId).get(),
+      ]);
+      const extraSeats: number = subSnap.exists ? (subSnap.data()?.extraSeats ?? 0) : 0;
+      const limit = MAX_SEATS + extraSeats;
+      const used = membersSnap.size + pendingSnap.size;
+      if (used >= limit) {
+        return NextResponse.json({ error: "seat_limit", limit }, { status: 409 });
+      }
     }
 
-    // 5. Create the invite (server-only write).
-    await inviteRef.set({
-      name: inviteName,
-      invitedBy: inviterName,
-      householdId,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    });
+    // 5. Create or refresh the invite (server-only write). On a resend, keep
+    //    the original createdAt — "Invited 18 Jul" in the owner's list should
+    //    stay honest — and stamp resentAt for the throttle.
+    await inviteRef.set(
+      {
+        name: inviteName,
+        invitedBy: inviterName,
+        householdId,
+        status: "pending",
+        ...(resend
+          ? { resentAt: new Date().toISOString() }
+          : { createdAt: new Date().toISOString() }),
+      },
+      { merge: true }
+    );
 
     // 6. Send the invite email. The allow-list entry already succeeded, so a
     //    send failure is non-fatal — report it so the owner can share the link.
@@ -146,7 +171,7 @@ export async function POST(req: NextRequest) {
       console.error("invite email send failed:", err);
     }
 
-    return NextResponse.json({ ok: true, emailSent });
+    return NextResponse.json({ ok: true, emailSent, resent: resend });
   } catch (err) {
     console.error("invite error:", err);
     return NextResponse.json({ error: "invite_failed" }, { status: 500 });

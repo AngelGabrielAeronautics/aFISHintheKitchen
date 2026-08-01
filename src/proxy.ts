@@ -22,6 +22,7 @@ const ALLOWED_EXACT = new Set([
   "/terms",
   "/privacy",
   "/delete-account",
+  "/invited",
 ]);
 
 // Reachable even when the app is blocked (prefix matches): public share pages,
@@ -34,6 +35,17 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (ALLOWED_EXACT.has(pathname)) return NextResponse.next();
   if (ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
+
+  // Invite-email links point at /auth?email=… so the Universal Link / App Link
+  // opens the app when installed. In a browser (every invitee's first click,
+  // by definition — they don't have the app yet) that used to 307 to the
+  // homepage with the query stripped, silently killing the invite funnel.
+  // Route it to the public invite landing with the context intact instead.
+  if (pathname === "/auth" && req.nextUrl.searchParams.has("email")) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/invited";
+    return NextResponse.redirect(url);
+  }
 
   // Everything else is the in-browser app or /auth — send it to the landing.
   const url = req.nextUrl.clone();

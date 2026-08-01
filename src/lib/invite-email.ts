@@ -2,6 +2,7 @@
 // one place so the server-side /api/invite route is the single source of truth
 // for both invite enforcement and the email it sends.
 import { FROM_NAME } from "@/lib/email";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/app-links";
 
 // Absolute, always-reachable brand asset for the email header (email clients
 // can't load localhost / relative paths).
@@ -78,6 +79,22 @@ export function buildInviteEmail({
   // Reassure the invitee there's no cost — the owner pays the subscription.
   const freeNote = `Joining is completely free &mdash; ${safeInviter} covers the subscription. All you need to do is choose a password.`;
 
+  // The button depends on this email being opened on a phone. Spell out the
+  // self-sufficient path too: get the app, sign up with THIS address (the
+  // address IS the invitation — /api/join matches on it), and the cookbook
+  // opens automatically. Without this, an invitee reading on a laptop, or one
+  // who downloads the app on their own, has no instructions at all.
+  const howTo =
+    `A Fish in the Kitchen is an app for iPhone, iPad and Android. ` +
+    `Download it, then sign up using <strong>${escapeHtml(email)}</strong> &mdash; ` +
+    `this address is your invitation, so the cookbook opens automatically.`;
+
+  const storeLinks =
+    `<a href="${APP_STORE_URL}" style="display:inline-block;margin:0 6px;padding:10px 18px;border:1px solid ${COLOR.charcoal};border-radius:8px;color:${COLOR.charcoal};text-decoration:none;font-size:13px;font-weight:600;">App Store</a>` +
+    (PLAY_STORE_URL
+      ? `<a href="${PLAY_STORE_URL}" style="display:inline-block;margin:0 6px;padding:10px 18px;border:1px solid ${COLOR.charcoal};border-radius:8px;color:${COLOR.charcoal};text-decoration:none;font-size:13px;font-weight:600;">Google Play</a>`
+      : "");
+
   const html = `<!DOCTYPE html>
 <html>
   <body style="margin:0;padding:0;background:${COLOR.cream};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLOR.charcoal};">
@@ -118,7 +135,17 @@ export function buildInviteEmail({
               </td>
             </tr>
             <tr>
-              <td style="padding:12px 40px 36px 40px;font-size:13px;line-height:1.6;color:${COLOR.muted};">
+              <td style="padding:20px 40px 6px 40px;font-size:14px;line-height:1.6;color:${COLOR.slate};">
+                ${howTo}
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:8px 40px 16px 40px;">
+                ${storeLinks}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:4px 40px 36px 40px;font-size:13px;line-height:1.6;color:${COLOR.muted};">
                 Or copy this link into your browser:<br />
                 <a href="${safeUrl}" style="color:${COLOR.green};word-break:break-all;">${safeUrl}</a>
               </td>
@@ -143,6 +170,11 @@ export function buildInviteEmail({
     `Joining is completely free — ${inviterName} covers the subscription. All you need to do is choose a password.`,
     "",
     `Accept your invitation: ${safeUrl}`,
+    "",
+    `A Fish in the Kitchen is an app for iPhone, iPad and Android. Download it, then sign up using ${email} — this address is your invitation, so the cookbook opens automatically.`,
+    "",
+    `App Store: ${APP_STORE_URL}`,
+    ...(PLAY_STORE_URL ? [`Google Play: ${PLAY_STORE_URL}`] : []),
     "",
     "— A Fish in the Kitchen",
   ].join("\n");
