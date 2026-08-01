@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE = "https://afishinthekitchen.com";
+const BASE = "https://www.afishinthekitchen.com";
 
 // Public, crawlable pages only — the marketing landing, our story, and legal.
 // The app pages and token-only share links are intentionally excluded.

@@ -108,17 +108,22 @@ export default function OurStoryPage() {
         </div>
       </section>
 
-      {/* Pull quote from Poppie (placeholder) */}
+      {/* Pull quote from Poppie — HIDDEN until Dylan supplies the real line.
+          The scaffolding text ("A line from Poppie — Dylan to provide.") was
+          live on the public page for weeks; an empty section beats a visible
+          placeholder. Restore the block below with the genuine quote.
+
       <section className="bg-cream-dark/30 py-16 sm:py-20">
         <Reveal className="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <p className="font-serif text-2xl italic leading-snug text-charcoal sm:text-3xl">
-            &ldquo;A line from Poppie &mdash; Dylan to provide.&rdquo;
+            &ldquo;THE REAL QUOTE&rdquo;
           </p>
           <p className="mt-4 font-sans text-xs uppercase tracking-wider text-slate/60">
             &mdash; Poppie
           </p>
         </Reveal>
       </section>
+      */}
 
       {/* Soft CTA */}
       <section className="py-16 sm:py-24">

@@ -34,21 +34,27 @@ export const metadata: Metadata = {
     default: "A Fish in the Kitchen — The food your family is built on",
     template: "%s | A Fish in the Kitchen",
   },
+  // Product positioning, not the pre-pivot personal-cookbook line — this is
+  // what every Google result and pasted link shows. www is the canonical host
+  // (apex 307s to it), so metadataBase must be www or og:image resolves
+  // through a redirect some scrapers refuse to follow.
   description:
-    "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
-  metadataBase: new URL("https://afishinthekitchen.com"),
+    "Your family's private cookbook app. Keep the recipes, stories, and cooks together — plan the week, cook hands-free, and pass it all down.",
+  metadataBase: new URL("https://www.afishinthekitchen.com"),
   openGraph: {
-    title: "A Fish in the Kitchen",
-    description: "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
-    url: "https://afishinthekitchen.com",
+    title: "A Fish in the Kitchen — The food your family is built on",
+    description:
+      "Your family's private cookbook app. Keep the recipes, stories, and cooks together — plan the week, cook hands-free, and pass it all down.",
+    url: "https://www.afishinthekitchen.com",
     siteName: "A Fish in the Kitchen",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "A Fish in the Kitchen" }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "A Fish in the Kitchen",
-    description: "A Coppard & Fish family cookbook — our best recipes, passed down and shared with love.",
+    title: "A Fish in the Kitchen — The food your family is built on",
+    description:
+      "Your family's private cookbook app. Keep the recipes, stories, and cooks together — plan the week, cook hands-free, and pass it all down.",
     images: ["/og-image.png"],
   },
   manifest: "/manifest.json",
