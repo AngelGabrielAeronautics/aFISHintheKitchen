@@ -4,12 +4,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
+import StoreBadges from "@/components/StoreBadges";
 
-// New cookbooks are created in the iOS app (decided 2026-07-03): StoreKit owns
-// the 14-day trial + billing, so web self-serve creation is closed. Invited
-// members never land here — they join via their invite link. Set the App Store
-// URL at launch; until then the page shows "coming soon".
-const APP_STORE_URL: string | null = null;
+// New cookbooks are created in the native apps (decided 2026-07-03): the stores
+// own the trial + billing, so web self-serve creation is closed. Invited
+// members never land here — they join via their invite link.
 
 export default function SetupPage() {
   const { user, loading: authLoading } = useAuth();
@@ -44,25 +43,14 @@ export default function SetupPage() {
             Start your cookbook in the app
           </h1>
           <p className="mt-2 font-sans text-sm text-slate">
-            Family cookbooks are created in A Fish in the Kitchen for iPhone —
-            with a free 14-day trial, recipe photo scanning, and cook mode at
-            the stove.
+            Family cookbooks are created in the A Fish in the Kitchen app — with
+            a free 14-day trial, recipe photo scanning, and cook mode at the
+            stove.
           </p>
         </div>
 
         <div className="rounded-2xl bg-white p-6 sm:p-8 shadow-lg ring-1 ring-charcoal/5 space-y-4 text-center">
-          {APP_STORE_URL ? (
-            <a
-              href={APP_STORE_URL}
-              className="block w-full rounded-lg bg-terracotta py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
-            >
-              Download on the App Store
-            </a>
-          ) : (
-            <p className="font-sans text-sm font-medium text-charcoal">
-              Coming to the App Store very soon.
-            </p>
-          )}
+          <StoreBadges />
           <p className="font-sans text-xs text-slate/70">
             Been invited to a family cookbook? Open the link in your invite
             email — joining is free and doesn&apos;t need a subscription.

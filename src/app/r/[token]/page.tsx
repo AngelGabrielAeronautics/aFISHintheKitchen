@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { formatTime } from "@/lib/types";
+import StoreBadges from "@/components/StoreBadges";
 
 // Public shared-recipe page: the full recipe (the sharer MEANT to give it),
 // wrapped in the family-cookbook story with app CTAs. Token-only + noindex —
@@ -30,8 +31,6 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     twitter: { card: "summary_large_image" },
   };
 }
-
-const APP_STORE_URL: string | null = null; // set at launch (same constant idea as setup page)
 
 export default async function SharedRecipePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -141,20 +140,12 @@ export default async function SharedRecipePage({ params }: { params: Promise<{ t
             and the people who cook them. Save this recipe to your own cookbook, plan the week,
             and cook hands-free at the stove.
           </p>
-          {APP_STORE_URL ? (
-            <a
-              href={APP_STORE_URL}
-              className="mt-5 inline-block rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold text-white shadow-md"
-            >
-              Get the app — save this recipe
-            </a>
-          ) : (
-            <p className="mt-5 inline-block rounded-lg bg-cream-dark/40 px-6 py-3 font-sans text-sm font-semibold text-slate">
-              The iOS app is coming soon — this link will open it directly.
-            </p>
-          )}
+          {/* Both badges, rather than the single App Store button this used to
+              carry: the person receiving a shared recipe is whoever the sharer
+              knows, and half this family is on Android. */}
+          <StoreBadges className="mt-5" />
           <p className="mt-4 font-sans text-xs text-slate/70">
-            Already have the app? Open this link on your iPhone and it appears there.
+            Already have the app? Open this link on your phone and it appears there.
           </p>
         </section>
       </div>

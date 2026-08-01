@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { APP_STORE_URL } from "@/lib/app-links";
+import StoreBadges from "@/components/StoreBadges";
 
 // Public live view of a shared event menu — who's bringing what, right now.
 // View-only on web; claiming and commenting happen in the app. Token-only,
@@ -142,20 +142,8 @@ export default async function SharedMenuPage({ params }: { params: Promise<{ tok
             Open this link in the A Fish in the Kitchen app to say what you&rsquo;ll bring and
             join the planning — comments, claims, and the family cookbook itself.
           </p>
-          {/* Mirrors the same block on /r/[token]: a real download button once
-              the store listing is live, and an honest holding line before it. */}
-          {APP_STORE_URL ? (
-            <a
-              href={APP_STORE_URL}
-              className="mt-5 inline-block rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold text-white shadow-md"
-            >
-              Get the app — claim a dish
-            </a>
-          ) : (
-            <p className="mt-5 inline-block rounded-lg bg-cream-dark/40 px-6 py-3 font-sans text-sm font-semibold text-slate">
-              The iOS app is coming soon — this link will open it directly.
-            </p>
-          )}
+          {/* Mirrors the same block on /r/[token]. */}
+          <StoreBadges className="mt-5" />
         </section>
       </div>
     </main>
