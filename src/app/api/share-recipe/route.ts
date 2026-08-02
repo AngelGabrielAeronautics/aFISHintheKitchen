@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { randomBytes } from "crypto";
+import { buildShareSnapshot } from "@/lib/share-snapshot";
 
 // Create a share link for a recipe: a frozen SNAPSHOT in sharedRecipes/{token}.
 // A snapshot (a) never opens cross-household read access and (b) freezes what
@@ -46,27 +47,7 @@ export async function POST(req: NextRequest) {
       (household.data()?.name as string | undefined) ??
       "a family cookbook";
 
-    // The public snapshot — family-private fields deliberately absent.
-    const snapshot = {
-      title: recipe.title ?? "",
-      description: recipe.description ?? "",
-      image: recipe.image ?? "",
-      images: recipe.images ?? [],
-      category: recipe.category ?? "other",
-      prepTime: recipe.prepTime ?? 0,
-      cookTime: recipe.cookTime ?? 0,
-      noCook: recipe.noCook ?? false,
-      servings: recipe.servings ?? 0,
-      difficulty: recipe.difficulty ?? "Medium",
-      protein: recipe.protein ?? null,
-      heat: recipe.heat ?? null,
-      ingredients: recipe.ingredients ?? [],
-      instructions: recipe.instructions ?? [],
-      story: recipe.story ?? null,
-      originalSource: recipe.originalSource ?? null,
-      contributedBy: recipe.contributedBy ?? "",
-      tags: recipe.tags ?? [],
-    };
+    const snapshot = buildShareSnapshot(recipe);
 
     // Reuse an existing live share of the same recipe by the same user, so
     // repeated shares don't mint endless tokens — but RE-FREEZE the snapshot
