@@ -46,8 +46,35 @@ export async function POST(req: NextRequest) {
       (household.data()?.name as string | undefined) ??
       "a family cookbook";
 
+    // The public snapshot — family-private fields deliberately absent.
+    const snapshot = {
+      title: recipe.title ?? "",
+      description: recipe.description ?? "",
+      image: recipe.image ?? "",
+      images: recipe.images ?? [],
+      category: recipe.category ?? "other",
+      prepTime: recipe.prepTime ?? 0,
+      cookTime: recipe.cookTime ?? 0,
+      noCook: recipe.noCook ?? false,
+      servings: recipe.servings ?? 0,
+      difficulty: recipe.difficulty ?? "Medium",
+      protein: recipe.protein ?? null,
+      heat: recipe.heat ?? null,
+      ingredients: recipe.ingredients ?? [],
+      instructions: recipe.instructions ?? [],
+      story: recipe.story ?? null,
+      originalSource: recipe.originalSource ?? null,
+      contributedBy: recipe.contributedBy ?? "",
+      tags: recipe.tags ?? [],
+    };
+
     // Reuse an existing live share of the same recipe by the same user, so
-    // repeated shares don't mint endless tokens.
+    // repeated shares don't mint endless tokens — but RE-FREEZE the snapshot
+    // first. Each share should send the recipe as it is NOW; the frozen copy
+    // exists so later edits don't leak, not to trap old recipients on the
+    // version from the first-ever share. (Already-sent links update too —
+    // acceptable: the sharer just re-shared this recipe, so "current as of the
+    // latest share" is what they mean.)
     const existing = await db
       .collection("sharedRecipes")
       .where("recipeId", "==", recipeId)
@@ -55,6 +82,12 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .get();
     if (!existing.empty) {
+      await existing.docs[0].ref.update({
+        snapshot,
+        bookName,
+        sharedByName: sharerName,
+        updatedAt: new Date().toISOString(),
+      });
       return NextResponse.json({ ok: true, token: existing.docs[0].id });
     }
 
@@ -66,27 +99,7 @@ export async function POST(req: NextRequest) {
       sharedByName: sharerName,
       bookName,
       createdAt: new Date().toISOString(),
-      // The public snapshot — family-private fields deliberately absent.
-      snapshot: {
-        title: recipe.title ?? "",
-        description: recipe.description ?? "",
-        image: recipe.image ?? "",
-        images: recipe.images ?? [],
-        category: recipe.category ?? "other",
-        prepTime: recipe.prepTime ?? 0,
-        cookTime: recipe.cookTime ?? 0,
-        noCook: recipe.noCook ?? false,
-        servings: recipe.servings ?? 0,
-        difficulty: recipe.difficulty ?? "Medium",
-        protein: recipe.protein ?? null,
-        heat: recipe.heat ?? null,
-        ingredients: recipe.ingredients ?? [],
-        instructions: recipe.instructions ?? [],
-        story: recipe.story ?? null,
-        originalSource: recipe.originalSource ?? null,
-        contributedBy: recipe.contributedBy ?? "",
-        tags: recipe.tags ?? [],
-      },
+      snapshot,
     });
     return NextResponse.json({ ok: true, token: shareToken });
   } catch (e) {
