@@ -24,3 +24,19 @@ export function buildShareSnapshot(recipe: FirebaseFirestore.DocumentData) {
     tags: recipe.tags ?? [],
   };
 }
+
+/**
+ * Is this a share token we could have minted?
+ *
+ * Tokens are `randomBytes(12).toString("base64url")` — 16 url-safe chars. A
+ * value with a slash in it is not just absent, it is an INVALID Firestore
+ * document path, and `doc(token).get()` throws rather than returning "not
+ * found" — so a mangled link returned a hard 500 instead of the app's friendly
+ * "that share isn't available any more" screen.
+ *
+ * That is not hypothetical: WhatsApp appended junk to a real customer's share
+ * token in July. Validate first, 404 on anything that can't be ours.
+ */
+export function isShareToken(token: string): boolean {
+  return /^[A-Za-z0-9_-]{1,64}$/.test(token);
+}

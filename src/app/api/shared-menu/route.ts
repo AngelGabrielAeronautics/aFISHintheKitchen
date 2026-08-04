@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { isShareToken } from "@/lib/share-snapshot";
 
 // Public: the LIVE state of a shared event menu — dishes with claim state and
 // comments. Used by the iOS guest view and the /m/{token} web page.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token")?.trim();
   if (!token) return NextResponse.json({ error: "missing_token" }, { status: 400 });
+  if (!isShareToken(token)) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const db = getAdminDb();
   const shareSnap = await db.collection("sharedMenus").doc(token).get();
   if (!shareSnap.exists) return NextResponse.json({ error: "not_found" }, { status: 404 });
