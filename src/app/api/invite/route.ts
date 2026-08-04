@@ -3,6 +3,7 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildInviteEmail } from "@/lib/invite-email";
 import { MAX_SEATS } from "@/lib/access";
+import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
@@ -169,11 +170,15 @@ export async function POST(req: NextRequest) {
       emailSent = true;
     } catch (err) {
       console.error("invite email send failed:", err);
+      // The invite row is already written, so the UI says "sent" — without
+      // this, a mailer outage looks like success. See Meg, 18 Jul.
+      reportError(err, { route: "invite", stage: "email" });
     }
 
     return NextResponse.json({ ok: true, emailSent, resent: resend });
   } catch (err) {
     console.error("invite error:", err);
+    reportError(err, { route: "invite" });
     return NextResponse.json({ error: "invite_failed" }, { status: 500 });
   }
 }

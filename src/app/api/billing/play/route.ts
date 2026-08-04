@@ -7,6 +7,7 @@ import {
   obfuscatedAccountIdForUid,
   statusForState,
 } from "@/lib/play-verify";
+import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
       // the app to give up on a sale the customer has already paid for. 502 says
       // "unknown, try again".
       console.error("play: purchase verification failed:", err);
+      reportError(err, { route: "billing/play", stage: "verify" });
       return NextResponse.json({ error: "verification_unavailable" }, { status: 502 });
     }
 
@@ -147,6 +149,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, accessState: applied.accessState });
   } catch (err) {
     console.error("play billing sync failed:", err);
+    reportError(err, { route: "billing/play", stage: "sync" });
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }

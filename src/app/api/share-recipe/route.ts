@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { randomBytes } from "crypto";
 import { buildShareSnapshot } from "@/lib/share-snapshot";
+import { reportError } from "@/lib/error-reporting";
 
 // Create a share link for a recipe: a frozen SNAPSHOT in sharedRecipes/{token}.
 // A snapshot (a) never opens cross-household read access and (b) freezes what
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, token: shareToken });
   } catch (e) {
     console.error("share-recipe", e);
+    reportError(e, { route: "share-recipe" });
     return NextResponse.json({ error: "share_failed" }, { status: 500 });
   }
 }

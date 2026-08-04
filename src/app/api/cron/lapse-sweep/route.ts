@@ -8,6 +8,7 @@ import { buildTrialEndingEmail } from "@/lib/auth-email";
 // deleted at day 365 kept every photo in the bucket and its PUBLIC share links
 // working.
 import { deleteHouseholdData } from "@/lib/delete-data";
+import { reportError } from "@/lib/error-reporting";
 
 const TRIAL_WARNING_DAYS = 3; // email the owner this many days before trial end
 
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
         } catch (err) {
           // Best-effort: a failed email must not block the sweep; retried tomorrow.
           console.error(`lapse-sweep: trial warning failed for ${subSnap.id}:`, err);
+          reportError(err, { route: "cron/lapse-sweep", stage: "trial-warning", subId: subSnap.id });
         }
       }
       continue;

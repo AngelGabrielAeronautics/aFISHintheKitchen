@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
 import { verifyAppStoreTransaction, appAccountTokenForUid } from "@/lib/appstore-verify";
+import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
       transaction = await verifyAppStoreTransaction(jws);
     } catch (err) {
       console.error("appstore: transaction verification failed:", err);
+      reportError(err, { route: "billing/appstore", stage: "verify" });
       return NextResponse.json({ error: "invalid_transaction" }, { status: 400 });
     }
 
@@ -119,6 +121,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, accessState: applied.accessState });
   } catch (err) {
     console.error("appstore billing error:", err);
+    reportError(err, { route: "billing/appstore", stage: "sync" });
     return NextResponse.json({ error: "appstore_sync_failed" }, { status: 500 });
   }
 }

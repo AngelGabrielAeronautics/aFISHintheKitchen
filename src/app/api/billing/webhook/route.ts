@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
+import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, accessState: applied.accessState });
   } catch (err) {
     console.error("billing webhook error:", err);
+    reportError(err, { route: "billing/webhook" });
     return NextResponse.json({ error: "webhook_failed" }, { status: 500 });
   }
 }

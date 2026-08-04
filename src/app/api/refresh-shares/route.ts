@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { buildShareSnapshot } from "@/lib/share-snapshot";
+import { reportError } from "@/lib/error-reporting";
 
 // After editing a recipe, the apps ask whether it has live share links and —
 // with the editor's say-so — push the latest version to all of them (every
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, updated: shares.size });
   } catch (e) {
     console.error("refresh-shares", e);
+    reportError(e, { route: "refresh-shares" });
     return NextResponse.json({ error: "refresh_failed" }, { status: 500 });
   }
 }
