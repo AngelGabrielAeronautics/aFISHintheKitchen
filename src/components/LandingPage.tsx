@@ -637,9 +637,9 @@ export default function LandingPage() {
                       />
                     </svg>
                   </button>
+                  {/* whitespace-pre-line so a two-paragraph answer stays two
+                      paragraphs — JSX collapses the newlines otherwise. */}
                   {openFaq === i && (
-                    {/* whitespace-pre-line so a two-paragraph answer stays two
-                        paragraphs — JSX collapses the newlines otherwise. */}
                     <p className="whitespace-pre-line px-6 pb-4 font-sans text-sm leading-relaxed text-slate">
                       {faq.a}
                     </p>
