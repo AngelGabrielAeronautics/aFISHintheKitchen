@@ -84,7 +84,11 @@ const FAQS = [
     // recipes are safe" alone is the reassuring half of a true answer, and
     // they'd meet the rest at the worst possible moment.
     q: "What happens to my recipes if I cancel?",
-    a: "Nothing is deleted. You keep full access to the end of the period you've paid for, and for a week after that. Your cookbook then becomes read-only — every recipe, photo and meal plan is still there to read, you just can't add or edit. If it stays unpaid for a month it locks until you subscribe again, and we keep everything for a year, so it's all waiting for you exactly as you left it.",
+    // "Paused", not "locked" — that is the word on the screen they'd actually
+    // hit, and one vocabulary beats two. It also says what paused MEANS,
+    // because "locked" left people imagining anything from a nag screen to
+    // deletion.
+    a: "Nothing is deleted. You keep full access to the end of the period you've paid for, and for a week after that. Your cookbook then becomes read-only — every recipe, photo and meal plan is still there to read and cook from, you just can't add or change anything.\n\nA month later it's paused: you can still sign in, but the recipes are hidden until you subscribe again. Paused, not deleted — we keep everything for a year, and subscribing puts it all back instantly, exactly as you left it. Anyone you invited sees the same, since it's one shared cookbook.",
   },
   {
     q: "What happens after the free trial?",
@@ -634,7 +638,11 @@ export default function LandingPage() {
                     </svg>
                   </button>
                   {openFaq === i && (
-                    <p className="px-6 pb-4 font-sans text-sm leading-relaxed text-slate">{faq.a}</p>
+                    {/* whitespace-pre-line so a two-paragraph answer stays two
+                        paragraphs — JSX collapses the newlines otherwise. */}
+                    <p className="whitespace-pre-line px-6 pb-4 font-sans text-sm leading-relaxed text-slate">
+                      {faq.a}
+                    </p>
                   )}
                 </div>
               ))}
