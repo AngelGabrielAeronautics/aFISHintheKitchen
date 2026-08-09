@@ -23,7 +23,8 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-slate italic">
-              Dedicated to my father who shaped the flavours of my family for generations
+              Dedicated to my father, Patrick Fish, who shaped the flavours of my family
+              for generations.
             </p>
           </div>
 
