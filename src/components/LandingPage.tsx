@@ -112,7 +112,7 @@ type Feature = {
 const FEATURES: Feature[] = [
   {
     title: "Family Recipes",
-    description: "Collect and organise your family's best recipes in one beautiful place. Add photos, videos, ingredients, and step-by-step instructions.",
+    description: "Collect your family's best recipes in one beautiful place — photos, videos, and step-by-step instructions. Share one with a link when someone asks for it.",
     frontImage: "/card-family-recipes.jpg",
     backVideo: "/card-family-recipes.mp4",
     icon: (
@@ -123,7 +123,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: "Cooking Mode",
-    description: "Full-screen step-by-step instructions with built-in timers, swipe navigation, and wake lock so your screen stays on while you cook.",
+    description: "Full-screen steps, each with its own photo and just the ingredients that step needs. Timers keep running when you put the phone down, and the screen stays awake while you cook.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
         <path d="M15 11h.01M11 15h.01M16 16h.01M2 16l20 6-6-20A20 20 0 0 0 2 16" />
@@ -164,6 +164,28 @@ const FEATURES: Feature[] = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
         <path d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+      </svg>
+    ),
+  },
+  // The AI suite, which this section didn't mention at all — seven features
+  // and the clearest reason to pick this over a notes app. Deliberately LAST:
+  // the pitch is a family cookbook, not an AI product, and leading with it
+  // would argue against the "phones at the table" thesis the page closes on.
+  {
+    title: "Add a Recipe in Seconds",
+    description: "Photograph a page from a cookbook or a handwritten card, paste one you were sent, or just say what you fancy — AI reads it and fills in the form. You check it before it saves.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
+        <path d="M3 8V5.25A2.25 2.25 0 0 1 5.25 3H8M16 3h2.75A2.25 2.25 0 0 1 21 5.25V8M21 16v2.75A2.25 2.25 0 0 1 18.75 21H16M8 21H5.25A2.25 2.25 0 0 1 3 18.75V16M7.5 9h9M7.5 12h9M7.5 15h5.25" />
+      </svg>
+    ),
+  },
+  {
+    title: "A Hand in the Kitchen",
+    description: "AI can restyle a dish photo, spot a step that uses something missing from the ingredients, and suggest tags. Suggestions only — nothing changes until you say so.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8">
+        <path d="m15 4 1.2 2.8L19 8l-2.8 1.2L15 12l-1.2-2.8L11 8l2.8-1.2L15 4ZM6.5 12.5l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7L4 15l1.7-.8.8-1.7ZM13.5 10.5 4 20" />
       </svg>
     ),
   },
