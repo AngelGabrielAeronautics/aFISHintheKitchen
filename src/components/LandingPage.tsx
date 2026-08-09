@@ -78,6 +78,15 @@ const FAQS = [
     a: "Yes. Cancel whenever you like and you'll keep full access until the end of your billing period.",
   },
   {
+    // A real customer asked this before buying (2026-08-09). The honest answer
+    // is the whole ladder in lib/access.ts — full access to period end, a
+    // week's grace, then read-only, locked at 30 days, kept for a year. "Your
+    // recipes are safe" alone is the reassuring half of a true answer, and
+    // they'd meet the rest at the worst possible moment.
+    q: "What happens to my recipes if I cancel?",
+    a: "Nothing is deleted. You keep full access to the end of the period you've paid for, and for a week after that. Your cookbook then becomes read-only — every recipe, photo and meal plan is still there to read, you just can't add or edit. If it stays unpaid for a month it locks until you subscribe again, and we keep everything for a year, so it's all waiting for you exactly as you left it.",
+  },
+  {
     q: "What happens after the free trial?",
     a: "The 14-day trial is completely free — we won't charge you during it, and we'll email you a reminder before it ends. When it ends, your trial rolls into a paid subscription automatically, so your cookbook keeps working without a break. Not for you? Cancel any time before the trial ends and you won't be charged a cent.",
   },
