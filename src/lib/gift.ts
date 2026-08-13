@@ -160,11 +160,25 @@ export function canRedeem(params: {
   if (gift.purchasedByUid === redeemerUid) return { ok: false, reason: "own_gift" };
 
   // A live STORE subscription blocks; a gift or the signup trial does not.
-  const paying =
-    existing != null &&
-    (existing.provider === "appstore" || existing.provider === "stripe" || existing.provider === "paddle") &&
-    (existing.status === "active" || existing.status === "trialing");
-  if (paying) return { ok: false, reason: "already_subscribed" };
+  //
+  // ⚠ FAIL CLOSED — an ALLOW-list of what may be replaced, not a block-list of
+  // what may not. The first version of this listed the blocking providers and
+  // omitted "play", which meant an Android subscriber could redeem a gift on
+  // top of a live Google subscription: their subscription doc would be
+  // overwritten with provider "gift" while Google carried on billing them, and
+  // we would have lost the record that a Play subscription existed at all.
+  // (Found by Dylan asking whether gifting works across platforms — the guard
+  // protected iOS subscribers and not Android ones, which is exactly the
+  // asymmetry a block-list produces.)
+  //
+  // Written this way, a provider added in future blocks by default. The failure
+  // mode of over-blocking is a support email; the failure mode of
+  // under-blocking is charging somebody twice.
+  const REPLACEABLE = new Set(["none", "gift"]);
+  const live = existing != null && (existing.status === "active" || existing.status === "trialing");
+  if (live && !REPLACEABLE.has(existing!.provider ?? "")) {
+    return { ok: false, reason: "already_subscribed" };
+  }
 
   // Start at the later of now and whatever they have already been promised —
   // an unexpired trial, or an unexpired gift being topped up.
