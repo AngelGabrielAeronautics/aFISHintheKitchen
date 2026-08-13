@@ -16,6 +16,8 @@ import {
 import { deleteHouseholdData } from "@/lib/delete-data";
 import { copyGiftedImages } from "@/lib/cookbook-copy";
 import { reportError } from "@/lib/error-reporting";
+import { recordHeartbeat } from "@/lib/heartbeat";
+import { refreshReachStats } from "@/lib/reach";
 
 const TRIAL_WARNING_DAYS = 3;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.afishinthekitchen.com"; // email the owner this many days before trial end
@@ -296,8 +298,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
+  const summary = {
     scanned: unpaid.size,
     trialsExpired,
     trialWarningsSent,
@@ -311,5 +312,22 @@ export async function GET(req: NextRequest) {
     flaggedForDelete,
     deleted,
     hardDelete,
-  });
+  };
+
+  // Reach rides this cron rather than one of its own — it is a once-a-day
+  // number and a second schedule is a second thing that can silently stop.
+  //
+  // ⚠ Wrapped: Apple or Play being unavailable must never fail the sweep that
+  // enforces billing.
+  let reach: unknown = null;
+  try {
+    reach = await refreshReachStats();
+  } catch (err) {
+    reportError(err, { route: "cron/lapse-sweep", step: "reach" });
+  }
+
+  // ⚠ Recorded AFTER the work, so a heartbeat means "finished", not "started".
+  await recordHeartbeat("lapse-sweep", summary);
+
+  return NextResponse.json({ ok: true, ...summary, reach });
 }

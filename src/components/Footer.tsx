@@ -87,6 +87,31 @@ export default function Footer() {
           </div>
           <p className="text-xs text-slate text-center">
             &copy; {year} A Fish in the Kitchen. Made for your family with love and a pinch of salt.
+            {/* The way in to the back office. Deliberately a small unlabelled
+                padlock rather than an "Admin" link: it is for one person, and a
+                named link in a public footer is an invitation to go and rattle
+                the handle. It is NOT the security — /superadmin verifies a
+                super-admin token server-side and shows a stranger nothing. */}
+            <Link
+              href="/superadmin"
+              aria-label="Admin"
+              title="Admin"
+              className="ml-2 inline-block align-middle text-slate/25 transition-colors hover:text-terracotta"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-3 w-3"
+                aria-hidden="true"
+              >
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+              </svg>
+            </Link>
           </p>
           <a
             href="https://www.pinkieandthebrain.com"
