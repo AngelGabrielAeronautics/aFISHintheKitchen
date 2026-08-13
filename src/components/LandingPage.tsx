@@ -640,6 +640,45 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Give it as a gift.
+          ⚠ AFTER Pricing and before the FAQ. Gifting is a purchase decision, so
+          it only makes sense once the reader knows what the thing costs — and
+          putting it among the features would read as an upsell before they know
+          what the app even is. Same ordering on both app landing screens. */}
+      <section className="py-16 sm:py-24">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="flex flex-col items-center gap-10 md:flex-row md:gap-14">
+            <Image
+              src="/gift-logo.png"
+              alt=""
+              width={600}
+              height={575}
+              className="h-auto w-48 max-w-full shrink-0 md:w-64"
+            />
+            <div className="text-center md:text-left">
+              <p className="font-sans text-sm font-semibold uppercase tracking-widest text-terracotta">
+                Give a cookbook
+              </p>
+              <h2 className="mt-3 font-serif text-3xl font-bold text-charcoal md:text-4xl">
+                The recipes they grew up on, as a gift
+              </h2>
+              <p className="mt-4 font-sans text-base leading-relaxed text-slate md:text-lg">
+                Buy someone a year of their own cookbook — for a wedding, a kitchen tea, a first
+                flat. It&rsquo;s theirs outright, with room to invite their own family in. And you
+                can send a copy of your whole cookbook with it, so they start with every recipe
+                they were raised on rather than an empty shelf.
+              </p>
+              <Link
+                href="/gift"
+                className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+              >
+                How gifting works
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
