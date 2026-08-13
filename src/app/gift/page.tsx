@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
 import StoreBadges from "@/components/StoreBadges";
-import { PLAN_PRICES, type CurrencyCode } from "@/components/LandingPage";
+import { PLAN_PRICES, type CurrencyCode } from "@/lib/prices";
 
 // "Gift a cookbook" — the marketing page for gifting.
 //
@@ -72,8 +72,9 @@ export default async function GiftPage() {
           </p>
           <p className="mt-6 font-serif text-3xl font-bold text-charcoal">{price}</p>
           <p className="mt-1 font-sans text-sm text-slate">
-            One payment. It doesn&rsquo;t renew, and it&rsquo;s separate from any subscription
-            of your own. Your store shows the exact price before you pay.
+            You pay once and are never charged again. When their year is up they decide
+            whether to carry on themselves — nothing is deleted either way. Your store shows
+            the exact price before you pay.
           </p>
         </div>
 

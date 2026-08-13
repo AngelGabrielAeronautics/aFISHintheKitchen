@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import StoreBadges from "@/components/StoreBadges";
+import { PLAN_PRICES, type CurrencyCode } from "@/lib/prices";
 import ScanToDownload from "@/components/ScanToDownload";
 
 const HOW_IT_WORKS = [
@@ -37,45 +38,14 @@ const PLAN_PERKS = [
 // The actual prices Apple charges, read off each storefront's own product page
 // (id6780944935) on 29 July 2026 — not converted, not estimated.
 //
-// ⚠ These must match StoreKit, because this page is where someone decides to
-// trust us and the App Store is where they're charged. The previous values were
-// pre-billing guesses ("refine when payment provider is wired") and were never
-// refined: the site advertised R99 while South Africans were charged R119.99,
-// and £4.99 while the UK was charged £5.99 — both about a fifth under, in the
-// two markets this app actually has.
-//
-// Apple sets these from its own price tiers, so they don't track FX and they
-// change when Apple adjusts a tier. If you change the tier in App Store
-// Connect, change it here in the same sitting.
-// ⚠ `gift` is a ONE-OFF purchase of a year, priced to match the annual
-// subscription — and quoted at APPLE's tier, which is what the rest of this
-// table already uses.
-//
-// ⚠ The two stores do NOT charge the same. Play's own regional table puts the
-// GB annual at £53.99 where Apple's tier is £59.99. Quoting the HIGHER of the
-// two is deliberate: the documented failure of this table was under-quoting
-// (the site said £4.99 while the UK was charged £5.99), and a Play buyer
-// pleasantly surprised is a far better outcome than an Apple buyer who feels
-// misled at checkout.
-export type CurrencyCode = "ZAR" | "USD" | "GBP" | "EUR" | "AUD";
-export const PLAN_PRICES: Record<
-  CurrencyCode,
-  { prefix: string; monthly: string; annual: string; gift: string }
-> = {
-  ZAR: { prefix: "R", monthly: "119.99", annual: "1,199.99", gift: "1,199.99" },
-  USD: { prefix: "$", monthly: "5.99", annual: "59.99", gift: "59.99" },
-  GBP: { prefix: "£", monthly: "5.99", annual: "59.99", gift: "59.99" },
-  EUR: { prefix: "€", monthly: "6.99", annual: "69.99", gift: "69.99" },
-  AUD: { prefix: "A$", monthly: "9.99", annual: "99.99", gift: "99.99" },
-};
-
 /** What a gift buys, in place of the subscription perks. */
 const GIFT_PERKS = [
   "A full year of their own private cookbook",
   "Theirs outright — they invite their own 5 people",
   "Optionally send a copy of your whole cookbook",
   "A card emailed on the day you choose",
-  "One payment — it never renews",
+  "You pay once — never charged again",
+  "After the year, they choose whether to continue",
 ];
 
 const FAQS = [
@@ -599,7 +569,7 @@ export default function LandingPage() {
             </h2>
             <p className="mt-4 text-center font-sans text-sm text-slate max-w-2xl mx-auto">
               {billing === "gift"
-                ? "Buy someone a year of their own cookbook. One payment, no renewal — and you can send a copy of your recipes with it."
+                ? "Gift someone a year of their own cookbook. You pay once and are never charged again \u2014 when their year is up, they decide for themselves whether to carry on."
                 : "Start with a 14-day free trial. One subscription covers you plus up to 5 family members."}
             </p>
             <div className="mt-8 flex items-center justify-center">
@@ -659,7 +629,7 @@ export default function LandingPage() {
               </div>
               <p className="mt-1 font-sans text-xs text-slate/60">
                 {billing === "gift"
-                  ? `A single payment in ${currency}. It never renews, and it's separate from any subscription of your own.`
+                  ? `A single payment in ${currency} — nothing renews and you are never charged again. Their year then ends; carrying on is their choice, and their cookbook is never deleted.`
                   : `14-day free trial, then billed ${billing} in ${currency}. Cancel anytime.`}
               </p>
               <ul className="mt-6 space-y-3">
