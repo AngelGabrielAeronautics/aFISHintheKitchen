@@ -181,9 +181,10 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
           {gift.includesCookbook && (
             <p className="mt-3 font-sans text-base text-slate">
               And it doesn&rsquo;t arrive empty:{" "}
-              {gift.fromName ? `${gift.fromName} has` : "the giver has"} sent you a copy of their
-              whole cookbook — every recipe and kitchen tip, with who contributed each one kept
-              intact.
+              {gift.fromName ? `${gift.fromName} has` : "the giver has"} added a copy of their
+              whole cookbook with it — every recipe and kitchen tip, from{" "}
+              {gift.fromName ? `${gift.fromName.split(" ")[0]}\u2019s` : "their"} own cookbook.
+              Arguably this is the real gift!
             </p>
           )}
         </section>

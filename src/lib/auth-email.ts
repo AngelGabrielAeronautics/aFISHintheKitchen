@@ -291,11 +291,17 @@ export function buildGiftCardEmail(opts: {
     html: `${FROM_NAME} is a cookbook app for your recipes &mdash; somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list. Share <strong style="color:${COLOR.charcoal};">your cookbook</strong> with five of your friends or family.`,
   });
   if (opts.includesCookbook) {
+    // ⚠ First name only in the second half, which is why it is derived rather
+    // than reusing `from`. "from Jane Whitfield's own cookbook" is a stranger
+    // signing a legal document; "from Jane's own cookbook" is a friend. A
+    // single-word name yields itself, and an empty one falls back to the
+    // impersonal wording rather than printing "from 's own cookbook".
+    const firstName = from.split(" ")[0] ?? "";
     rows.push({
       kind: "p",
       html: from
-        ? `And it does not arrive empty: ${from} has sent a copy of their whole cookbook with it &mdash; every recipe and kitchen tip, with who contributed each one kept intact.`
-        : `And it does not arrive empty &mdash; a copy of the giver&rsquo;s whole cookbook comes with it, every recipe and kitchen tip.`,
+        ? `And it does not arrive empty: ${from} has added a copy of their whole cookbook with it &mdash; every recipe and kitchen tip, from ${firstName}&rsquo;s own cookbook. Arguably this is the real gift!`
+        : `And it does not arrive empty &mdash; a copy of the giver&rsquo;s whole cookbook comes with it, every recipe and kitchen tip. Arguably this is the real gift!`,
     });
   }
   rows.push({ kind: "code", label: "Your gift code", value: pretty });
