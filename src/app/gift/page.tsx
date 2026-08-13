@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
 import StoreBadges from "@/components/StoreBadges";
-import { PLAN_PRICES, type CurrencyCode } from "@/lib/prices";
+import { PLAN_PRICES, currencyForCountry } from "@/lib/prices";
 
 // "Gift a cookbook" — the marketing page for gifting.
 //
@@ -28,23 +28,11 @@ export const metadata: Metadata = {
     "Give someone a year of their own private family cookbook — and send a copy of yours with it.",
 };
 
-/**
- * ⚠ ONE price table for the whole site — the landing page's. A second copy
- * here quoted Play's GB price (£53.99) while the landing quoted Apple's
- * (£59.99), so the same visitor could read two different numbers two clicks
- * apart. That file already carries the warning about this table being wrong
- * once before; duplicating it was asking for the same failure twice.
- */
-const COUNTRY_CURRENCY: Record<string, CurrencyCode> = {
-  GB: "GBP", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR",
-  US: "USD", CA: "USD", ZA: "ZAR", AU: "AUD", NZ: "AUD",
-};
-
 export default async function GiftPage() {
   // Vercel resolves the visitor's country at the edge. Falls back to GB, the
   // home storefront — never to a bare number with no currency.
   const country = (await headers()).get("x-vercel-ip-country")?.toUpperCase() ?? "GB";
-  const currency = COUNTRY_CURRENCY[country] ?? "GBP";
+  const currency = currencyForCountry(country);
   const plan = PLAN_PRICES[currency];
   const price = `${plan.prefix}${plan.gift}`;
 

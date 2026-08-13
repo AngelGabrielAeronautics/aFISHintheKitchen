@@ -38,3 +38,30 @@ export const PLAN_PRICES: Record<
   AUD: { prefix: "A$", monthly: "9.99", annual: "99.99", gift: "99.99" },
 };
 
+
+/**
+ * Which currency a visitor is shown, by ISO country.
+ *
+ * ⚠ ONE map, shared by /api/geo (the landing) and /gift. There were two, and
+ * they disagreed: Jersey fell through to USD on the landing and to GBP on the
+ * gift page, so the same visitor saw $5.99 and £59.99 two clicks apart.
+ *
+ * ⚠ JE / GG / IM were missing entirely — the Channel Islands and the Isle of
+ * Man all pay in sterling, and Jersey is where this business is REGISTERED and
+ * where its owner lives. The home market was being quoted in dollars.
+ */
+export const COUNTRY_TO_CURRENCY: Record<string, CurrencyCode> = {
+  ZA: "ZAR",
+  US: "USD", CA: "USD",
+  GB: "GBP", JE: "GBP", GG: "GBP", IM: "GBP",
+  IE: "EUR",
+  AU: "AUD", NZ: "AUD",
+  DE: "EUR", FR: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", BE: "EUR",
+  PT: "EUR", AT: "EUR", FI: "EUR", GR: "EUR", LU: "EUR", SK: "EUR",
+  SI: "EUR", EE: "EUR", LV: "EUR", LT: "EUR", MT: "EUR", CY: "EUR", HR: "EUR",
+};
+
+/** Falls back to USD, the global default, for anywhere unlisted. */
+export function currencyForCountry(country: string | null | undefined): CurrencyCode {
+  return COUNTRY_TO_CURRENCY[(country ?? "").toUpperCase()] ?? "USD";
+}
