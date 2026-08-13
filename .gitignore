@@ -43,3 +43,9 @@ next-env.d.ts
 The kookbook April 2026 C redux.pdf
 favicon/
 firebase-debug.log
+
+# Firestore emulator artefacts (see lib/gift-refund.ts — the refund tests run
+# against the emulator, and it drops these in the project root).
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
