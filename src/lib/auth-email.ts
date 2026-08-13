@@ -280,16 +280,15 @@ export function buildGiftCardEmail(opts: {
   ];
   // The most personal thing on the page gets the most presence.
   if (note) rows.push({ kind: "quote", html: `&ldquo;${note}&rdquo;` });
+  // ⚠ Dylan's wording (2026-08-13). Note what it does: "YOUR cookbook … share
+  // it with five of your friends" carries the ownership point by implication
+  // rather than stating it. The explicit line it replaced ("The cookbook will
+  // be yours") existed to kill the obvious misreading — that you are being
+  // added to somebody else's book. If that misunderstanding ever shows up in
+  // support, this sentence is the place to look first.
   rows.push({
     kind: "p",
-    html: `${FROM_NAME} is a private cookbook for your family&rsquo;s recipes &mdash; somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list.`,
-  });
-  // ⚠ The line that stops the obvious misreading: being sent a link like this
-  // reads as "you are being added to somebody's cookbook", which is the one
-  // thing a gift is NOT.
-  rows.push({
-    kind: "p",
-    html: `The cookbook will be <strong style="color:${COLOR.charcoal};">yours</strong> &mdash; your own, private, with room to invite five people of your own into it.`,
+    html: `${FROM_NAME} is a cookbook app for your recipes &mdash; somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list. Share <strong style="color:${COLOR.charcoal};">your cookbook</strong> with five of your friends or family.`,
   });
   if (opts.includesCookbook) {
     rows.push({
@@ -382,7 +381,7 @@ export function buildGiftReminderEmail(opts: {
       from
         ? `${from} gave you a year of ${FROM_NAME} and it has not been claimed yet.`
         : `You were given a year of ${FROM_NAME} and it has not been claimed yet.`,
-      "It is a private cookbook for your family's recipes — yours to keep, with room to invite five people of your own.",
+      "It is a cookbook app for your recipes — somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list. Share your cookbook with five of your friends or family.",
       `Your code is <strong style="font-family:monospace;letter-spacing:2px;">${esc(opts.code)}</strong>`,
       "There is no rush and the code does not expire — but it is sitting here unused.",
     ],
