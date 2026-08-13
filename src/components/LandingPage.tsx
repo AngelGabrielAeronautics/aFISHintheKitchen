@@ -726,12 +726,20 @@ export default function LandingPage() {
                 , so they start with a copy of your recipe book and your tips &amp; tricks. This
                 arguably is the real gift!
               </p>
-              <Link
-                href="/gift"
-                className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
-              >
-                How gifting works
-              </Link>
+              {/* ⚠ THE BUY BUTTON CANNOT BE A BUY BUTTON. Guideline 3.1.1:
+                  digital vouchers redeemable for digital goods can only be sold
+                  IN THE APP via in-app purchase, so the closest this page may
+                  get to "buy now" is sending people to the store. Badges first,
+                  because that is the action; the explainer second. */}
+              <div className="mt-6 flex flex-col items-center gap-3 md:items-start">
+                <StoreBadges />
+                <p className="font-sans text-sm text-slate">
+                  Gifts are bought in the app —{" "}
+                  <Link href="/gift" className="font-semibold text-terracotta underline">
+                    how gifting works
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>
