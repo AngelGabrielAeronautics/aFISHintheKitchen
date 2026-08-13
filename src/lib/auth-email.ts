@@ -40,9 +40,36 @@ export interface BuiltEmail {
 // Shared shell: a heading, one or more body lines, a single CTA button, and a
 // muted "copy this link" fallback. `bodyLines` are plain text (already safe —
 // we never interpolate user input here).
+/**
+ * A row in an email body.
+ *
+ * ⚠ Exists because the gift card was a WALL OF EQUAL PARAGRAPHS — the personal
+ * note and the code, the only two things on the page that carry any weight,
+ * rendered exactly like the boilerplate around them. Types let a template give
+ * those presence while every email keeps the same chrome.
+ */
+export type EmailRow =
+  | { kind: "p"; html: string }
+  /** A pull-quote: left rule, warm ground. Mirrors the recipe story block. */
+  | { kind: "quote"; html: string }
+  /** A boxed, letter-spaced code. */
+  | { kind: "code"; label: string; value: string };
+
+/** Plain-text form of a row: entities decoded, tags removed. */
+function stripTags(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&mdash;/g, "—").replace(/&rsquo;/g, "’")
+    .replace(/&ldquo;/g, "“").replace(/&rdquo;/g, "”")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+}
+
 function shell(opts: {
   heading: string;
   bodyLines: string[];
+  /** Richer alternative to bodyLines; when present, bodyLines is ignored. */
+  bodyRows?: EmailRow[];
   ctaLabel: string;
   actionUrl: string;
   /**
@@ -54,11 +81,41 @@ function shell(opts: {
 }): { html: string; text: string } {
   const { heading, bodyLines, ctaLabel, actionUrl } = opts;
   const logo = opts.logo ?? { url: LOGO_URL, width: 120, height: 120, round: true };
-  const bodyHtml = bodyLines
-    .map(
-      (line) =>
-        `<tr><td style="padding:8px 40px 0 40px;font-size:16px;line-height:1.6;color:${COLOR.slate};">${line}</td></tr>`
-    )
+  // ⚠ 18px between paragraphs, not 8. At 8 the lines packed into a slab with
+  // no rhythm — the reader had nothing to rest on and no sense of where one
+  // thought ended.
+  const para = (html: string) =>
+    `<tr><td style="padding:0 40px 18px 40px;font-size:16px;line-height:1.65;color:${COLOR.slate};">${html}</td></tr>`;
+
+  const rows: EmailRow[] =
+    opts.bodyRows ?? bodyLines.map((line) => ({ kind: "p", html: line }) as EmailRow);
+
+  const bodyHtml = rows
+    .map((row) => {
+      if (row.kind === "quote") {
+        // Left rule + warm ground: the same treatment a recipe's story gets in
+        // the app, so a handwritten note looks like the app's own voice.
+        return `<tr><td style="padding:6px 40px 22px 40px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${COLOR.cream};border-radius:10px;">
+            <tr>
+              <td width="4" style="background:${COLOR.green};border-radius:10px 0 0 10px;font-size:0;line-height:0;">&nbsp;</td>
+              <td style="padding:16px 20px;font-size:16px;line-height:1.6;color:${COLOR.slate};font-style:italic;">${row.html}</td>
+            </tr>
+          </table>
+        </td></tr>`;
+      }
+      if (row.kind === "code") {
+        return `<tr><td style="padding:6px 40px 24px 40px;" align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="border:1px dashed ${COLOR.muted};border-radius:12px;">
+            <tr><td align="center" style="padding:16px 28px;">
+              <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${COLOR.muted};padding-bottom:6px;">${row.label}</div>
+              <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:26px;font-weight:700;letter-spacing:5px;color:${COLOR.charcoal};">${row.value}</div>
+            </td></tr>
+          </table>
+        </td></tr>`;
+      }
+      return para(row.html);
+    })
     .join("");
 
   const html = `<!DOCTYPE html>
@@ -70,19 +127,19 @@ function shell(opts: {
         <td align="center">
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${COLOR.white};border-radius:16px;box-shadow:0 2px 14px rgba(26,26,26,0.08);overflow:hidden;">
             <tr>
-              <td align="center" style="padding:36px 40px 0 40px;">
+              <td align="center" style="padding:40px 40px 4px 40px;">
                 <img src="${logo.url}" alt="A Fish in the Kitchen" width="${logo.width}" height="${logo.height}" style="display:block;${logo.round === false ? "" : "border-radius:50%;"}border:0;outline:none;text-decoration:none;" />
               </td>
             </tr>
             <tr>
-              <td style="padding:24px 40px 0 40px;">
-                <h1 style="margin:0;font-family:${HEADING_FONT};font-weight:700;font-size:28px;line-height:1.2;color:${COLOR.charcoal};">${heading}</h1>
+              <td style="padding:22px 40px 18px 40px;">
+                <h1 style="margin:0;font-family:${HEADING_FONT};font-weight:700;font-size:30px;line-height:1.15;color:${COLOR.charcoal};">${heading}</h1>
               </td>
             </tr>
             ${bodyHtml}
             <tr>
-              <td align="center" style="padding:24px 40px 8px 40px;">
-                <a href="${actionUrl}" style="display:inline-block;background:${COLOR.green};color:${COLOR.white};text-decoration:none;font-weight:600;padding:14px 32px;border-radius:10px;font-size:15px;">${ctaLabel}</a>
+              <td align="center" style="padding:10px 40px 8px 40px;">
+                <a href="${actionUrl}" style="display:inline-block;background:${COLOR.green};color:${COLOR.white};text-decoration:none;font-weight:600;padding:15px 36px;border-radius:10px;font-size:16px;">${ctaLabel}</a>
               </td>
             </tr>
             <tr>
@@ -99,7 +156,14 @@ function shell(opts: {
   </body>
 </html>`;
 
-  const text = [heading, "", ...bodyLines, "", `${ctaLabel}: ${actionUrl}`, "", "— A Fish in the Kitchen"].join("\n");
+  // ⚠ Built from `rows`, not bodyLines — the gift card passes rows only, and
+  // reading bodyLines here shipped it with an EMPTY text/plain part. Plenty of
+  // clients (and every spam filter) read that half.
+  const textLines = rows.map((r) =>
+    // ⚠ No extra quotes around a quote row — it already carries its own.
+    r.kind === "code" ? `${r.label}: ${r.value}` : stripTags(r.html)
+  );
+  const text = [heading, "", ...textLines, "", `${ctaLabel}: ${actionUrl}`, "", "— A Fish in the Kitchen"].join("\n");
   return { html, text };
 }
 
@@ -196,32 +260,49 @@ export function buildGiftCardEmail(opts: {
   const from = esc(opts.fromName.trim());
   const note = esc(opts.message.trim());
   const code = esc(opts.code);
+  const pretty = code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
 
-  const lines = [
-    to ? `${to}, you have been given a year of ${FROM_NAME}.` : `You have been given a year of ${FROM_NAME}.`,
-    from ? `It is from ${from}.` : "",
-    note ? `<em style="color:${COLOR.slate};">&ldquo;${note}&rdquo;</em>` : "",
-    `${FROM_NAME} is a private cookbook for your family's recipes — somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list.`,
-    // Say plainly that the book is theirs. The obvious assumption on receiving
-    // this is that you are being added to somebody else's cookbook, and that is
-    // exactly what a gift is NOT.
-    `The cookbook will be <strong>yours</strong> — your own, private, with room to invite five people of your own into it.`,
-    // ⚠ Say this, or the best part of the gift is a surprise nobody mentioned.
-    opts.includesCookbook
-      ? (from
-          ? `And it does not arrive empty: ${from} has sent you a copy of their whole cookbook, every recipe and kitchen tip, with who contributed each one kept intact.`
-          : `And it does not arrive empty — a copy of the giver's whole cookbook comes with it, every recipe and kitchen tip.`)
-      : "",
-    `Your code is <strong style="font-family:monospace;letter-spacing:2px;">${code}</strong>`,
-  ].filter(Boolean);
+  // ⚠ Ordered for a STRANGER. They have never heard of us and were sent this by
+  // a friend, so: who it is from and what they said, then what the thing even
+  // is, then the one line that prevents the obvious misreading, then the code.
+  const rows: EmailRow[] = [
+    {
+      kind: "p",
+      html: from
+        ? `<strong style="color:${COLOR.charcoal};">${from}</strong> has given you a year of ${FROM_NAME}.`
+        : `You have been given a year of ${FROM_NAME}.`,
+    },
+  ];
+  // The most personal thing on the page gets the most presence.
+  if (note) rows.push({ kind: "quote", html: `&ldquo;${note}&rdquo;` });
+  rows.push({
+    kind: "p",
+    html: `${FROM_NAME} is a private cookbook for your family&rsquo;s recipes &mdash; somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list.`,
+  });
+  // ⚠ The line that stops the obvious misreading: being sent a link like this
+  // reads as "you are being added to somebody's cookbook", which is the one
+  // thing a gift is NOT.
+  rows.push({
+    kind: "p",
+    html: `The cookbook will be <strong style="color:${COLOR.charcoal};">yours</strong> &mdash; your own, private, with room to invite five people of your own into it.`,
+  });
+  if (opts.includesCookbook) {
+    rows.push({
+      kind: "p",
+      html: from
+        ? `And it does not arrive empty: ${from} has sent a copy of their whole cookbook with it &mdash; every recipe and kitchen tip, with who contributed each one kept intact.`
+        : `And it does not arrive empty &mdash; a copy of the giver&rsquo;s whole cookbook comes with it, every recipe and kitchen tip.`,
+    });
+  }
+  rows.push({ kind: "code", label: "Your gift code", value: pretty });
 
   const { html, text } = shell({
     heading: to ? `A gift for ${to}` : "A gift for you",
-    bodyLines: lines,
+    bodyLines: [],
+    bodyRows: rows,
     ctaLabel: "Open your gift",
     actionUrl: opts.redeemUrl,
-    // The fish in a bow, uncropped — see GIFT_LOGO_URL.
-    logo: { url: GIFT_LOGO_URL, width: 200, height: 192, round: false },
+    logo: { url: GIFT_LOGO_URL, width: 170, height: 163, round: false },
   });
   return {
     subject: from ? `${from} has given you a year of ${FROM_NAME}` : `A gift: a year of ${FROM_NAME}`,
