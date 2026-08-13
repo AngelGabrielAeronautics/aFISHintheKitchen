@@ -106,7 +106,8 @@ export interface Gift {
   message: string;
   /** ISO date the card should be delivered — the cron sends it on or after. */
   sendOn: string;
-  sentAt?: string;
+  /** null until delivered — see the sweep's query. Never omit it. */
+  sentAt: string | null;
   createdAt: string;
   status: GiftStatus;
   redeemedByUid?: string;

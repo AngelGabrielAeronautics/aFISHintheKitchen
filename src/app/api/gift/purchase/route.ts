@@ -160,6 +160,11 @@ export async function POST(req: NextRequest) {
       sendOn,
       createdAt: now.toISOString(),
       status: "unredeemed",
+      // ⚠ Explicitly null, not omitted. The sweep finds undelivered cards with
+      // `where("sentAt","==",null)`, and Firestore cannot match equality
+      // against a field that does not exist — omitting it makes the card
+      // invisible to the retry and it would never be sent.
+      sentAt: null,
     };
 
     await db.collection("gifts").doc(code).set(gift);

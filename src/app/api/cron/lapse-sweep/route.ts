@@ -85,14 +85,20 @@ export async function GET(req: NextRequest) {
   // the moment the day starts. Cards for "today" are sent immediately at
   // purchase instead, so this only ever handles future dates and retries.
   let giftCardsSent = 0;
-  const dueCards = await db
-    .collection("gifts")
-    .where("sendOn", "<=", now.toISOString())
-    .get();
+  //
+  // ⚠ ONE equality filter, and the date compared in code. Two reasons. Every
+  // other query in this file is single-filter and the two-field queries in this
+  // codebase have hand-declared composite indexes — an undeclared one throws,
+  // and a throw here takes down the REAL lapse ladder along with it. And a
+  // range on sendOn would re-read every gift ever sent, for ever; unsent gifts
+  // are a naturally tiny set. This is why purchase/route.ts writes
+  // `sentAt: null` explicitly rather than omitting the field — you cannot query
+  // equality against a field that isn't there.
+  const dueCards = await db.collection("gifts").where("sentAt", "==", null).get();
   for (const giftSnap of dueCards.docs) {
     const gift = giftSnap.data();
-    if (gift.sentAt) continue;
     if (gift.status === "revoked") continue;
+    if (!gift.sendOn || new Date(gift.sendOn) > now) continue;
     try {
       const { subject, html, text } = buildGiftCardEmail({
         recipientName: gift.recipientName ?? "",
@@ -123,13 +129,18 @@ export async function GET(req: NextRequest) {
   // the same expiry date and freeze it at day zero of the ladder for ever.
   let giftsExpired = 0;
   let giftWarningsSent = 0;
-  const gifted = await db
-    .collection("subscriptions")
-    .where("provider", "==", "gift")
-    .where("status", "==", "active")
-    .get();
+  //
+  // ⚠ ONE filter, status checked in code — the same reason as above, and the
+  // same shape the trial loop uses ("status == trialing", then provider tested
+  // in code). Adding `.where("status","==","active")` here needs a composite
+  // index that is not declared, and the failure is not a slow query: the whole
+  // cron throws and every lapsed household stops advancing.
+  const gifted = await db.collection("subscriptions").where("provider", "==", "gift").get();
   for (const subSnap of gifted.docs) {
     const sub = subSnap.data();
+    // Already walked down the ladder — the unpaid loop below owns it now.
+    // Re-expiring it would reset lapsedAt every night and freeze it at day zero.
+    if (sub.status !== "active") continue;
     if (!sub.currentPeriodEnd) continue;
     const endsAt = new Date(sub.currentPeriodEnd);
 
