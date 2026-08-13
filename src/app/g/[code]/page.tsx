@@ -165,20 +165,18 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
 
         <section className="mt-10 text-left">
           <h2 className="font-serif text-2xl font-bold text-charcoal">What you&rsquo;ve been given</h2>
+          {/* ⚠ Dylan's wording, matching the gift card word for word — this page
+              is where the card lands, and two descriptions of the same product
+              one click apart is worse than either. It carries the "it will be
+              yours" point by implication ("YOUR cookbook") rather than stating
+              it; see the note in lib/auth-email.ts. */}
           <p className="mt-3 font-sans text-base text-slate">
-            A Fish in the Kitchen is a private cookbook for your family&rsquo;s recipes —
-            somewhere to keep them, cook them hands-free at the stove with step timers, plan
-            the week, and share a shopping list.
+            A Fish in the Kitchen is a cookbook app for your recipes — somewhere to keep them,
+            cook them hands-free at the stove, plan the week and share a shopping list. Share{" "}
+            <strong className="text-charcoal">your cookbook</strong> with five of your friends
+            or family.
           </p>
-          {/* The single most important sentence on the page. The natural
-              assumption on being sent a link like this is that you're being
-              added to somebody else's cookbook, which is exactly what this is
-              not. */}
-          <p className="mt-3 font-sans text-base text-slate">
-            The cookbook will be <strong className="text-charcoal">yours</strong> — your own,
-            private, and you can invite five people of your own into it. A full year, already
-            paid for.
-          </p>
+          <p className="mt-3 font-sans text-base text-slate">A full year, already paid for.</p>
           {/* Say this, or the best part of the gift is a surprise nobody mentioned. */}
           {gift.includesCookbook && (
             <p className="mt-3 font-sans text-base text-slate">

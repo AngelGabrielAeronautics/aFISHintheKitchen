@@ -82,9 +82,10 @@ export default async function GiftPage() {
           <h2 className="font-serif text-2xl font-bold text-charcoal">What they get</h2>
           <ul className="mt-4 space-y-3 font-sans text-base text-slate">
             <li>
-              <strong className="text-charcoal">Their own cookbook</strong> — private, theirs
-              outright, with room to invite five people of their own into it. They never get
-              access to yours, and you never get access to theirs.
+              <strong className="text-charcoal">Their own cookbook app</strong> — somewhere to
+              keep their recipes, cook hands-free at the stove, plan the week and share a
+              shopping list. They can share their cookbook with five of their friends or
+              family. They never get access to yours, and you never get access to theirs.
             </li>
             <li>
               <strong className="text-charcoal">A full year</strong> — hands-free Cook Mode with
