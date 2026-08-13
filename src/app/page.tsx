@@ -530,6 +530,45 @@ function HomeContent() {
         </div>
       </section>
 
+      {/* Give it as a gift.
+          ⚠ Placed AFTER the features and before the family story: everything
+          above is what the app does for you, this is something you do for
+          somebody else. Leading with it would read as an upsell before the
+          reader knows what the thing is. */}
+      <section className="bg-cream py-12 sm:py-20 md:py-28">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="flex flex-col items-center gap-10 md:flex-row md:gap-14">
+            <Image
+              src="/gift-logo.png"
+              alt=""
+              width={600}
+              height={575}
+              className="h-auto w-48 max-w-full shrink-0 md:w-64"
+            />
+            <div className="text-center md:text-left">
+              <p className="font-sans text-sm font-semibold uppercase tracking-widest text-terracotta">
+                Give a cookbook
+              </p>
+              <h2 className="mt-3 font-serif text-3xl font-bold text-charcoal md:text-4xl">
+                The recipes they grew up on, as a gift
+              </h2>
+              <p className="mt-4 font-sans text-base leading-relaxed text-slate md:text-lg">
+                Buy someone a year of their own cookbook — for a wedding, a kitchen tea, a first
+                flat. It&rsquo;s theirs outright, with room to invite their own family in. And you
+                can send a copy of your whole cookbook with it, so they start with every recipe
+                they were raised on rather than an empty shelf.
+              </p>
+              <Link
+                href="/gift"
+                className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+              >
+                How gifting works
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* About / Family Story */}
       <section className="bg-cream-dark py-12 sm:py-20 md:py-28">
         <div className="mx-auto max-w-3xl px-6 text-center">
