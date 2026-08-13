@@ -27,7 +27,10 @@ const ALLOWED_EXACT = new Set([
 
 // Reachable even when the app is blocked (prefix matches): public share pages,
 // the auth-email action handler, invite deep-link file, and staff tools.
-const ALLOWED_PREFIXES = ["/r/", "/m/", "/auth/action", "/.well-known/", "/admin", "/superadmin"];
+// ⚠ "/g/" is the gift-card landing. It MUST stay reachable: the recipient is a
+// stranger clicking a link in an email, and bouncing them to the marketing home
+// page loses the code — the one thing the email existed to deliver.
+const ALLOWED_PREFIXES = ["/r/", "/m/", "/g/", "/auth/action", "/.well-known/", "/admin", "/superadmin"];
 
 export function proxy(req: NextRequest) {
   if (!BLOCK_WEB_APP) return NextResponse.next();
