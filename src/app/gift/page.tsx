@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
 import StoreBadges from "@/components/StoreBadges";
+import { PLAN_PRICES, type CurrencyCode } from "@/components/LandingPage";
 
 // "Give a cookbook" — the marketing page for gifting.
 //
@@ -24,31 +25,24 @@ export const metadata: Metadata = {
 };
 
 /**
- * What the gift costs, per storefront.
- *
- * ⚠ These MIRROR the annual subscription price and are set in App Store Connect
- * and Play Console, not here. If they are changed there, change them here — a
- * page quoting a price the store does not charge is worse than quoting none,
- * which is why the line below says the store shows the exact price.
+ * ⚠ ONE price table for the whole site — the landing page's. A second copy
+ * here quoted Play's GB price (£53.99) while the landing quoted Apple's
+ * (£59.99), so the same visitor could read two different numbers two clicks
+ * apart. That file already carries the warning about this table being wrong
+ * once before; duplicating it was asking for the same failure twice.
  */
-const PRICES: Record<string, string> = {
-  GB: "£53.99",
-  US: "$59.99",
-  AU: "A$93.99",
-  ZA: "R1 149.99",
-  IE: "€59.99",
-  DE: "€59.99",
-  FR: "€59.99",
-  NL: "€59.99",
-  CA: "$59.99",
-  NZ: "$59.99",
+const COUNTRY_CURRENCY: Record<string, CurrencyCode> = {
+  GB: "GBP", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR",
+  US: "USD", CA: "USD", ZA: "ZAR", AU: "AUD", NZ: "AUD",
 };
 
 export default async function GiftPage() {
   // Vercel resolves the visitor's country at the edge. Falls back to GB, the
   // home storefront — never to a bare number with no currency.
   const country = (await headers()).get("x-vercel-ip-country")?.toUpperCase() ?? "GB";
-  const price = PRICES[country] ?? PRICES.GB;
+  const currency = COUNTRY_CURRENCY[country] ?? "GBP";
+  const plan = PLAN_PRICES[currency];
+  const price = `${plan.prefix}${plan.gift}`;
 
   return (
     <main className="min-h-screen bg-cream">

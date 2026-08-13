@@ -47,14 +47,36 @@ const PLAN_PERKS = [
 // Apple sets these from its own price tiers, so they don't track FX and they
 // change when Apple adjusts a tier. If you change the tier in App Store
 // Connect, change it here in the same sitting.
-type CurrencyCode = "ZAR" | "USD" | "GBP" | "EUR" | "AUD";
-const PLAN_PRICES: Record<CurrencyCode, { prefix: string; monthly: string; annual: string }> = {
-  ZAR: { prefix: "R", monthly: "119.99", annual: "1,199.99" },
-  USD: { prefix: "$", monthly: "5.99", annual: "59.99" },
-  GBP: { prefix: "£", monthly: "5.99", annual: "59.99" },
-  EUR: { prefix: "€", monthly: "6.99", annual: "69.99" },
-  AUD: { prefix: "A$", monthly: "9.99", annual: "99.99" },
+// ⚠ `gift` is a ONE-OFF purchase of a year, priced to match the annual
+// subscription — and quoted at APPLE's tier, which is what the rest of this
+// table already uses.
+//
+// ⚠ The two stores do NOT charge the same. Play's own regional table puts the
+// GB annual at £53.99 where Apple's tier is £59.99. Quoting the HIGHER of the
+// two is deliberate: the documented failure of this table was under-quoting
+// (the site said £4.99 while the UK was charged £5.99), and a Play buyer
+// pleasantly surprised is a far better outcome than an Apple buyer who feels
+// misled at checkout.
+export type CurrencyCode = "ZAR" | "USD" | "GBP" | "EUR" | "AUD";
+export const PLAN_PRICES: Record<
+  CurrencyCode,
+  { prefix: string; monthly: string; annual: string; gift: string }
+> = {
+  ZAR: { prefix: "R", monthly: "119.99", annual: "1,199.99", gift: "1,199.99" },
+  USD: { prefix: "$", monthly: "5.99", annual: "59.99", gift: "59.99" },
+  GBP: { prefix: "£", monthly: "5.99", annual: "59.99", gift: "59.99" },
+  EUR: { prefix: "€", monthly: "6.99", annual: "69.99", gift: "69.99" },
+  AUD: { prefix: "A$", monthly: "9.99", annual: "99.99", gift: "99.99" },
 };
+
+/** What a gift buys, in place of the subscription perks. */
+const GIFT_PERKS = [
+  "A full year of their own private cookbook",
+  "Theirs outright — they invite their own 5 people",
+  "Optionally send a copy of your whole cookbook",
+  "A card emailed on the day you choose",
+  "One payment — it never renews",
+];
 
 const FAQS = [
   {
@@ -371,7 +393,7 @@ function FeatureCard({
 }
 
 export default function LandingPage() {
-  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const [billing, setBilling] = useState<"monthly" | "annual" | "gift">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [currency, setCurrency] = useState<CurrencyCode>("USD");
   // Only one feature card can be flipped open at a time, to avoid visual chaos
@@ -576,7 +598,9 @@ export default function LandingPage() {
               One simple plan
             </h2>
             <p className="mt-4 text-center font-sans text-sm text-slate max-w-2xl mx-auto">
-              Start with a 14-day free trial. One subscription covers you plus up to 5 family members.
+              {billing === "gift"
+                ? "Buy someone a year of their own cookbook. One payment, no renewal — and you can send a copy of your recipes with it."
+                : "Start with a 14-day free trial. One subscription covers you plus up to 5 family members."}
             </p>
             <div className="mt-8 flex items-center justify-center">
               <div className="inline-flex rounded-full bg-cream-dark/30 p-1">
@@ -598,26 +622,48 @@ export default function LandingPage() {
                 >
                   Annual <span className="text-terracotta">· 2 months free</span>
                 </button>
+                {/* ⚠ Third position, not a fourth card elsewhere on the page.
+                    Somebody weighing up the price is exactly the person who
+                    might be buying it for a wedding rather than themselves, and
+                    this is the only place on the page where that thought is
+                    already in their head. */}
+                <button
+                  type="button"
+                  onClick={() => setBilling("gift")}
+                  className={`rounded-full px-5 py-1.5 font-sans text-sm font-medium transition-colors cursor-pointer ${
+                    billing === "gift" ? "bg-white text-charcoal shadow-sm" : "text-slate"
+                  }`}
+                >
+                  Gift
+                </button>
               </div>
             </div>
           </Reveal>
           <Reveal delay={0.1} className="mt-10">
             <div className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-xl ring-1 ring-cream-dark/30">
-              <p className="font-serif text-xl font-bold text-charcoal">Family Plan</p>
+              <p className="font-serif text-xl font-bold text-charcoal">
+                {billing === "gift" ? "Give a Year" : "Family Plan"}
+              </p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-serif text-5xl font-bold text-charcoal">
                   {price.prefix}
-                  {billing === "monthly" ? price.monthly : price.annual}
+                  {billing === "monthly"
+                    ? price.monthly
+                    : billing === "annual"
+                      ? price.annual
+                      : price.gift}
                 </span>
                 <span className="font-sans text-sm text-slate">
-                  /{billing === "monthly" ? "month" : "year"}
+                  {billing === "monthly" ? "/month" : billing === "annual" ? "/year" : "one-off"}
                 </span>
               </div>
               <p className="mt-1 font-sans text-xs text-slate/60">
-                14-day free trial, then billed {billing} in {currency}. Cancel anytime.
+                {billing === "gift"
+                  ? `A single payment in ${currency}. It never renews, and it's separate from any subscription of your own.`
+                  : `14-day free trial, then billed ${billing} in ${currency}. Cancel anytime.`}
               </p>
               <ul className="mt-6 space-y-3">
-                {PLAN_PERKS.map((perk) => (
+                {(billing === "gift" ? GIFT_PERKS : PLAN_PERKS).map((perk) => (
                   <li key={perk} className="flex items-start gap-2.5 font-sans text-sm text-charcoal">
                     <svg
                       viewBox="0 0 20 20"
@@ -634,7 +680,18 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <StoreBadges className="mt-8" />
+              {billing === "gift" && (
+                <Link
+                  href="/gift"
+                  className="mt-8 block rounded-lg bg-terracotta px-6 py-3 text-center font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+                >
+                  How gifting works
+                </Link>
+              )}
+              {/* ⚠ Badges either way: gifts are bought IN THE APP. Guideline
+                  3.1.1 — digital vouchers redeemable for digital goods can only
+                  be sold via in-app purchase, so this page can never check out. */}
+              <StoreBadges className="mt-4" />
             </div>
           </Reveal>
         </div>
