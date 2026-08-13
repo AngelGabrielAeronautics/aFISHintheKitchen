@@ -4,7 +4,11 @@ import { headers } from "next/headers";
 import StoreBadges from "@/components/StoreBadges";
 import { PLAN_PRICES, type CurrencyCode } from "@/components/LandingPage";
 
-// "Give a cookbook" — the marketing page for gifting.
+// "Gift a cookbook" — the marketing page for gifting.
+//
+// ⚠ The verb is GIFT, not "give", everywhere the product names the action.
+// Dylan's call (2026-08-13): one word for one thing, on the web, in both apps
+// and in both store listings.
 //
 // ⚠ THIS PAGE CANNOT SELL ANYTHING, and that is not a limitation to design
 // around — it is the rule. App Review guideline 3.1.1, verbatim: "Digital gift
@@ -19,7 +23,7 @@ import { PLAN_PRICES, type CurrencyCode } from "@/components/LandingPage";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Give a cookbook — A Fish in the Kitchen",
+  title: "Gift a cookbook — A Fish in the Kitchen",
   description:
     "Give someone a year of their own private family cookbook — and send a copy of yours with it.",
 };
@@ -57,7 +61,7 @@ export default async function GiftPage() {
             className="mx-auto mb-6 h-auto w-56 max-w-full"
           />
           <p className="font-sans text-sm font-semibold uppercase tracking-widest text-terracotta">
-            Give a cookbook
+            Gift a cookbook
           </p>
           <h1 className="mt-3 font-serif text-4xl font-bold text-charcoal">
             A year of their own family cookbook

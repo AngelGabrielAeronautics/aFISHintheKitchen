@@ -41,7 +41,7 @@ export default function Footer() {
                 href="/gift"
                 className="text-sm text-slate hover:text-terracotta transition-colors"
               >
-                Give a Cookbook
+                Gift a Cookbook
               </Link>
               <Link
                 href="/recipes"

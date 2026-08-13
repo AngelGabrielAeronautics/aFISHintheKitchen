@@ -642,7 +642,7 @@ export default function LandingPage() {
           <Reveal delay={0.1} className="mt-10">
             <div className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-xl ring-1 ring-cream-dark/30">
               <p className="font-serif text-xl font-bold text-charcoal">
-                {billing === "gift" ? "Give a Year" : "Family Plan"}
+                {billing === "gift" ? "Gift a Year" : "Family Plan"}
               </p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-serif text-5xl font-bold text-charcoal">
@@ -697,7 +697,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Give it as a gift.
+      {/* Gift a cookbook.
           ⚠ AFTER Pricing and before the FAQ. Gifting is a purchase decision, so
           it only makes sense once the reader knows what the thing costs — and
           putting it among the features would read as an upsell before they know
@@ -714,7 +714,7 @@ export default function LandingPage() {
             />
             <div className="text-center md:text-left">
               <p className="font-sans text-sm font-semibold uppercase tracking-widest text-terracotta">
-                Give a cookbook
+                Gift a cookbook
               </p>
               <h2 className="mt-3 font-serif text-3xl font-bold text-charcoal md:text-4xl">
                 The recipes they grew up on, as a gift
