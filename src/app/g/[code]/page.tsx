@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminDb } from "@/lib/firebase-admin";
 import StoreBadges from "@/components/StoreBadges";
+import Image from "next/image";
 import { formatGiftCode, normaliseGiftCode } from "@/lib/gift";
 
 // Where a gift card's "Open your gift" button lands.
@@ -63,6 +64,7 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
     return (
       <main className="min-h-screen bg-cream flex items-center justify-center px-6">
         <div className="text-center max-w-md">
+          <Image src="/gift-logo.png" alt="" width={600} height={575} className="mx-auto mb-5 h-auto w-36 max-w-full" />
           <h1 className="font-serif text-3xl font-bold text-charcoal">
             We couldn&rsquo;t find that gift
           </h1>
@@ -85,6 +87,7 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
     return (
       <main className="min-h-screen bg-cream flex items-center justify-center px-6">
         <div className="text-center max-w-md">
+          <Image src="/gift-logo.png" alt="" width={600} height={575} className="mx-auto mb-5 h-auto w-36 max-w-full" />
           <h1 className="font-serif text-3xl font-bold text-charcoal">
             This gift has been claimed
           </h1>
@@ -103,6 +106,7 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
     return (
       <main className="min-h-screen bg-cream flex items-center justify-center px-6">
         <div className="text-center max-w-md">
+          <Image src="/gift-logo.png" alt="" width={600} height={575} className="mx-auto mb-5 h-auto w-36 max-w-full" />
           <h1 className="font-serif text-3xl font-bold text-charcoal">
             This gift is no longer available
           </h1>
@@ -120,6 +124,17 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
   return (
     <main className="min-h-screen bg-cream">
       <div className="mx-auto max-w-xl px-6 py-14 text-center">
+        {/* The gift mark — the fish wearing a bow. Transparent PNG, so it sits
+            on the cream without a visible plate behind it. `priority` because
+            it is the hero of the page the recipient lands on from an email. */}
+        <Image
+          src="/gift-logo.png"
+          alt=""
+          width={600}
+          height={575}
+          priority
+          className="mx-auto mb-6 h-auto w-56 max-w-full"
+        />
         <p className="font-sans text-sm font-semibold uppercase tracking-widest text-terracotta">
           A gift
         </p>

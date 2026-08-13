@@ -6,6 +6,15 @@
 import { FROM_NAME } from "@/lib/email";
 
 const LOGO_URL = "https://www.afishinthekitchen.com/logo.png";
+/**
+ * The gift-branded mark — the fish wearing a bow.
+ *
+ * ⚠ A SEPARATE FILE from the app logo, flattened onto the brand cream rather
+ * than transparent: some mail clients still render PNG alpha badly, and every
+ * one of them renders a flat image correctly. The transparent version lives at
+ * /gift-logo.png and is for the web page.
+ */
+const GIFT_LOGO_URL = "https://www.afishinthekitchen.com/gift-logo-email.png";
 const HEADING_FONT = "'Arial Narrow', Arial, Helvetica, sans-serif";
 
 const COLOR = {
@@ -23,6 +32,11 @@ export interface BuiltEmail {
   text: string;
 }
 
+// ⚠ The <head> carries an explicit charset. SendGrid does set utf-8 on the MIME
+// part, so this is belt-and-braces — but every line of this copy uses em dashes
+// and curly quotes, and a client that falls back to windows-1252 renders them as
+// "â€"" in somebody's inbox. One line to remove the possibility.
+//
 // Shared shell: a heading, one or more body lines, a single CTA button, and a
 // muted "copy this link" fallback. `bodyLines` are plain text (already safe —
 // we never interpolate user input here).
@@ -31,8 +45,15 @@ function shell(opts: {
   bodyLines: string[];
   ctaLabel: string;
   actionUrl: string;
+  /**
+   * Overrides the round app logo. ⚠ `round` must be false for any mark that
+   * is not square — the default crops to a circle, which would take the bow
+   * clean off the gift logo.
+   */
+  logo?: { url: string; width: number; height: number; round?: boolean };
 }): { html: string; text: string } {
   const { heading, bodyLines, ctaLabel, actionUrl } = opts;
+  const logo = opts.logo ?? { url: LOGO_URL, width: 120, height: 120, round: true };
   const bodyHtml = bodyLines
     .map(
       (line) =>
@@ -42,6 +63,7 @@ function shell(opts: {
 
   const html = `<!DOCTYPE html>
 <html>
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /></head>
   <body style="margin:0;padding:0;background:${COLOR.cream};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLOR.charcoal};">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${COLOR.cream};padding:40px 16px;">
       <tr>
@@ -49,7 +71,7 @@ function shell(opts: {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${COLOR.white};border-radius:16px;box-shadow:0 2px 14px rgba(26,26,26,0.08);overflow:hidden;">
             <tr>
               <td align="center" style="padding:36px 40px 0 40px;">
-                <img src="${LOGO_URL}" alt="A Fish in the Kitchen" width="120" height="120" style="display:block;border-radius:50%;border:0;outline:none;text-decoration:none;" />
+                <img src="${logo.url}" alt="A Fish in the Kitchen" width="${logo.width}" height="${logo.height}" style="display:block;${logo.round === false ? "" : "border-radius:50%;"}border:0;outline:none;text-decoration:none;" />
               </td>
             </tr>
             <tr>
@@ -190,6 +212,8 @@ export function buildGiftCardEmail(opts: {
     bodyLines: lines,
     ctaLabel: "Open your gift",
     actionUrl: opts.redeemUrl,
+    // The fish in a bow, uncropped — see GIFT_LOGO_URL.
+    logo: { url: GIFT_LOGO_URL, width: 200, height: 192, round: false },
   });
   return {
     subject: from ? `${from} has given you a year of ${FROM_NAME}` : `A gift: a year of ${FROM_NAME}`,
