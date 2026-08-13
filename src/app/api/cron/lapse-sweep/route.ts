@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
 import { sendTransactionalEmail } from "@/lib/email";
-import { buildTrialEndingEmail, buildGiftEndingEmail } from "@/lib/auth-email";
+import { buildTrialEndingEmail, buildGiftEndingEmail, buildGiftCardEmail } from "@/lib/auth-email";
 // Shared with the admin delete action. The copy that used to live here missed
 // Storage entirely and left sharedRecipes/sharedMenus behind, so a household
 // deleted at day 365 kept every photo in the bucket and its PUBLIC share links
@@ -10,7 +10,8 @@ import { buildTrialEndingEmail, buildGiftEndingEmail } from "@/lib/auth-email";
 import { deleteHouseholdData } from "@/lib/delete-data";
 import { reportError } from "@/lib/error-reporting";
 
-const TRIAL_WARNING_DAYS = 3; // email the owner this many days before trial end
+const TRIAL_WARNING_DAYS = 3;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.afishinthekitchen.com"; // email the owner this many days before trial end
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +71,45 @@ export async function GET(req: NextRequest) {
       updatedAt: now.toISOString(),
     });
     trialsExpired++;
+  }
+
+  // Deliver gift cards that are due: post-dated ones, and any whose send failed
+  // at purchase time.
+  //
+  // ⚠ This lives in the lapse sweep rather than a cron of its own ON PURPOSE.
+  // It is a daily job either way, and Vercel's Hobby plan allows only two cron
+  // entries — a third would silently not be scheduled. If this file is ever
+  // split up, check the plan before adding a cron rather than assuming.
+  //
+  // The cost is timing: a card dated for today goes out at 03:00 rather than
+  // the moment the day starts. Cards for "today" are sent immediately at
+  // purchase instead, so this only ever handles future dates and retries.
+  let giftCardsSent = 0;
+  const dueCards = await db
+    .collection("gifts")
+    .where("sendOn", "<=", now.toISOString())
+    .get();
+  for (const giftSnap of dueCards.docs) {
+    const gift = giftSnap.data();
+    if (gift.sentAt) continue;
+    if (gift.status === "revoked") continue;
+    try {
+      const { subject, html, text } = buildGiftCardEmail({
+        recipientName: gift.recipientName ?? "",
+        fromName: gift.purchasedByName ?? "",
+        message: gift.message ?? "",
+        code: giftSnap.id,
+        redeemUrl: `${SITE_URL}/g/${giftSnap.id}`,
+      });
+      await sendTransactionalEmail({ to: gift.recipientEmail, subject, html, text });
+      await giftSnap.ref.update({ sentAt: now.toISOString() });
+      giftCardsSent++;
+    } catch (err) {
+      // Retried tomorrow. A gift nobody can find is worse than a late one, so
+      // this never gives up — but it also never blocks the rest of the sweep.
+      console.error(`lapse-sweep: gift card send failed for ${giftSnap.id}:`, err);
+      reportError(err, { route: "cron/lapse-sweep", stage: "gift-card", code: giftSnap.id });
+    }
   }
 
   // Expire GIFTED years. Same problem as the signup trial and the same
@@ -177,6 +217,7 @@ export async function GET(req: NextRequest) {
     trialWarningsSent,
     giftsExpired,
     giftWarningsSent,
+    giftCardsSent,
     transitioned,
     flaggedForDelete,
     deleted,

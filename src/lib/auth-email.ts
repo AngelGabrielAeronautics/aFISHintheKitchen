@@ -133,6 +133,71 @@ export function buildGiftEndingEmail(daysLeft: number, fromName: string): BuiltE
   return { subject: `Your ${FROM_NAME} gift ends ${when}`, html, text };
 }
 
+/**
+ * Escape for interpolation into an email body.
+ *
+ * ⚠ The `shell` helper above says its bodyLines are "already safe — we never
+ * interpolate user input here". The gift card is the first template that
+ * breaks that assumption: it carries a recipient's name, the giver's name and
+ * a free-text personal message, all typed by a member of the public. Anything
+ * from those three goes through here first. Without it, a message containing
+ * markup is delivered as markup, and the send is to a THIRD PARTY who never
+ * used our app — the worst possible audience for it.
+ */
+function esc(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * The gift card itself — sent to the RECIPIENT, who has almost certainly never
+ * heard of us. It has to explain what the thing is before it asks for anything.
+ *
+ * ⚠ Sent to somebody who did not sign up. Keep it a single, obvious message
+ * with one action; anything resembling a newsletter to a stranger is spam,
+ * however well meant.
+ */
+export function buildGiftCardEmail(opts: {
+  recipientName: string;
+  fromName: string;
+  message: string;
+  code: string;
+  redeemUrl: string;
+}): BuiltEmail {
+  const to = esc(opts.recipientName.trim());
+  const from = esc(opts.fromName.trim());
+  const note = esc(opts.message.trim());
+  const code = esc(opts.code);
+
+  const lines = [
+    to ? `${to}, you have been given a year of ${FROM_NAME}.` : `You have been given a year of ${FROM_NAME}.`,
+    from ? `It is from ${from}.` : "",
+    note ? `<em style="color:${COLOR.slate};">&ldquo;${note}&rdquo;</em>` : "",
+    `${FROM_NAME} is a private cookbook for your family's recipes — somewhere to keep them, cook them hands-free at the stove, plan the week and share a shopping list.`,
+    // Say plainly that the book is theirs. The obvious assumption on receiving
+    // this is that you are being added to somebody else's cookbook, and that is
+    // exactly what a gift is NOT.
+    `The cookbook will be <strong>yours</strong> — your own, private, with room to invite five people of your own into it.`,
+    `Your code is <strong style="font-family:monospace;letter-spacing:2px;">${code}</strong>`,
+  ].filter(Boolean);
+
+  const { html, text } = shell({
+    heading: to ? `A gift for ${to}` : "A gift for you",
+    bodyLines: lines,
+    ctaLabel: "Open your gift",
+    actionUrl: opts.redeemUrl,
+  });
+  return {
+    subject: from ? `${from} has given you a year of ${FROM_NAME}` : `A gift: a year of ${FROM_NAME}`,
+    html,
+    text,
+  };
+}
+
 export function buildResetEmail(actionUrl: string): BuiltEmail {
   const { html, text } = shell({
     heading: "Reset your password",

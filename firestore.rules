@@ -218,6 +218,28 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
     }
 
+    // ── Gift codes ──
+    match /gifts/{code} {
+      // ⚠ NO CLIENT READS AT ALL, and that is the whole point. The doc id IS
+      // the gift code, and the code is a BEARER TOKEN — anybody holding a valid
+      // one can claim a year. A rule permitting signed-in reads would let any
+      // account enumerate or confirm codes; there is no version of "read a gift
+      // you don't hold" that is safe.
+      //
+      // The recipient never needs a read: /g/{code} renders server-side, and
+      // /api/gift/redeem does the lookup with the Admin SDK, which bypasses
+      // these rules entirely. The buyer sees their code in the purchase
+      // response.
+      //
+      // Writes are server-only for the same reason writes to invitedUsers are:
+      // the API route is the authoritative enforcement point for the verified
+      // store receipt, the one-redemption-only transaction, and the refusal
+      // rules in lib/gift.ts. A client that could write here could mint itself
+      // a free year.
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
     // ── User preferences (private to the user) ──
     match /userPreferences/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;

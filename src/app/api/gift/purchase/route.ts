@@ -9,10 +9,14 @@ import {
   generateGiftCode,
   type Gift,
 } from "@/lib/gift";
+import { sendTransactionalEmail } from "@/lib/email";
+import { buildGiftCardEmail } from "@/lib/auth-email";
 import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.afishinthekitchen.com";
 
 // Records a gift purchase and mints its code.
 //
@@ -160,7 +164,30 @@ export async function POST(req: NextRequest) {
 
     await db.collection("gifts").doc(code).set(gift);
 
-    return NextResponse.json({ ok: true, code, sendOn });
+    // Deliver now if it isn't post-dated; the nightly sweep picks up the rest.
+    //
+    // ⚠ A failed send must NOT fail the request. The money has already left the
+    // buyer's account and the gift exists — throwing here would show them an
+    // error for a purchase that actually succeeded, and the obvious response to
+    // that is to buy it again. The card is retried by the sweep, and the buyer
+    // has the code on screen regardless.
+    let sent = false;
+    if (new Date(sendOn) <= now) {
+      try {
+        const { subject, html, text } = buildGiftCardEmail({
+          recipientName, fromName: buyerName, message, code,
+          redeemUrl: `${SITE_URL}/g/${code}`,
+        });
+        await sendTransactionalEmail({ to: recipientEmail, subject, html, text });
+        await db.collection("gifts").doc(code).update({ sentAt: new Date().toISOString() });
+        sent = true;
+      } catch (err) {
+        console.error("gift/purchase: card send failed:", err);
+        reportError(err, { route: "gift/purchase", stage: "send-card", code });
+      }
+    }
+
+    return NextResponse.json({ ok: true, code, sendOn, sent });
   } catch (err) {
     console.error("gift/purchase error:", err);
     reportError(err, { route: "gift/purchase" });
