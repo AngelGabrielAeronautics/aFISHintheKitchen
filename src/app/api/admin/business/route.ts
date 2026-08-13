@@ -16,6 +16,7 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { verifySuperAdmin } from "@/lib/admin-auth";
 import { getReachStats } from "@/lib/reach";
 import { readHeartbeats } from "@/lib/heartbeat";
+import { summariseAiUsage } from "@/lib/ai-usage";
 import { PLAN_PRICES } from "@/lib/prices";
 
 export const runtime = "nodejs";
@@ -26,11 +27,14 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const db = getAdminDb();
-  const [subsSnap, giftsSnap, reach, jobs] = await Promise.all([
+  const [subsSnap, giftsSnap, reach, jobs, ai] = await Promise.all([
     db.collection("subscriptions").get(),
     db.collection("gifts").get(),
     getReachStats(),
     readHeartbeats(),
+    // ⚠ Tolerated: usage logging only started on 2026-08-13, so this is empty
+    // until the routes have run. An empty panel is correct, not an error.
+    summariseAiUsage(30).catch(() => null),
   ]);
 
   // ── Money ────────────────────────────────────────────────────────────────
@@ -107,5 +111,6 @@ export async function GET(req: NextRequest) {
     giftPrice: PLAN_PRICES.GBP.gift,
     reach,
     jobs,
+    ai,
   });
 }

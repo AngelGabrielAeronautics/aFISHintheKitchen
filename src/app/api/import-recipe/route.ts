@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { recordAiCall } from "@/lib/ai-usage";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { RECIPE_JSON_SPEC, checkThrottle, parseModelJson, sanitiseRecipe } from "@/lib/recipe-ai";
@@ -123,6 +124,15 @@ export async function POST(request: NextRequest) {
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content }],
+    });
+
+    // Bookkeeping only — see lib/ai-usage.ts. Fire-and-forget: it must
+    // never fail or slow the request the user is waiting on.
+    recordAiCall({
+      route: "import-recipe",
+      model: "claude-sonnet-5",
+      usage: response.usage,
+      uid,
     });
 
     const textBlock = response.content.find((b) => b.type === "text");

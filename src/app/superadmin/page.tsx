@@ -42,6 +42,11 @@ interface Business {
     updatedAt: number; notes: string[];
   } | null;
   jobs: Record<string, { at: string; summary: Record<string, unknown>; error?: string }>;
+  ai: {
+    since: string; calls: number; inputTokens: number; outputTokens: number;
+    estimatedUsd: number; byRoute: Record<string, { calls: number; usd: number }>;
+    unpricedModels: string[]; topHouseholds: { householdId: string; calls: number }[];
+  } | null;
 }
 
 interface Overview {
@@ -269,7 +274,7 @@ function formatDate(iso: string | null): string {
  * rewritten daily — so they carry separate dates and are never added up.
  */
 function BusinessPanels({ biz }: { biz: Business }) {
-  const { money, gifts, reach, jobs } = biz;
+  const { money, gifts, reach, jobs, ai } = biz;
   const sweep = jobs["lapse-sweep"];
   const sweepAge = sweep ? (Date.now() - Date.parse(sweep.at)) / 3_600_000 : null;
   // The sweep runs at 03:00 daily, so anything past ~26h means it missed one.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { recordAiCall } from "@/lib/ai-usage";
 import { getStorage } from "firebase-admin/storage";
 import { randomUUID } from "crypto";
 
@@ -182,7 +183,22 @@ export async function POST(req: NextRequest) {
     }
     const gemini = (await geminiRes.json()) as {
       candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string }; inline_data?: { mime_type?: string; data?: string } }[] } }[];
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     };
+
+    // ⚠ Gemini names its token counts differently to Anthropic, and this is an
+    // IMAGE model — lib/ai-usage.ts has no rate for it, so it is deliberately
+    // recorded and left UNPRICED rather than costed with a made-up figure. The
+    // console lists unpriced models so the gap is visible rather than silent.
+    recordAiCall({
+      route: "enhance-photo",
+      model: "gemini-2.5-flash-image",
+      usage: {
+        input_tokens: gemini.usageMetadata?.promptTokenCount ?? 0,
+        output_tokens: gemini.usageMetadata?.candidatesTokenCount ?? 0,
+      },
+      uid,
+    });
     const parts = gemini.candidates?.[0]?.content?.parts ?? [];
     const normalised = parts
       .map((p) => p.inlineData ?? p.inline_data)
