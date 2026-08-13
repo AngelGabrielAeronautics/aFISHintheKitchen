@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
 import { sendTransactionalEmail } from "@/lib/email";
-import { buildTrialEndingEmail } from "@/lib/auth-email";
+import { buildTrialEndingEmail, buildGiftEndingEmail } from "@/lib/auth-email";
 // Shared with the admin delete action. The copy that used to live here missed
 // Storage entirely and left sharedRecipes/sharedMenus behind, so a household
 // deleted at day 365 kept every photo in the bucket and its PUBLIC share links
@@ -72,6 +72,60 @@ export async function GET(req: NextRequest) {
     trialsExpired++;
   }
 
+  // Expire GIFTED years. Same problem as the signup trial and the same
+  // solution: nobody is billed at the end of a gift, so no ASSN or RTDN will
+  // ever arrive to close it — only the clock can. A gift that outlives its year
+  // would be free access forever.
+  //
+  // ⚠ Deliberately keyed on provider "gift" AND status "active". A gift that
+  // has already been walked down the ladder is "canceled" and belongs to the
+  // loop below; picking it up again here would keep resetting its lapsedAt to
+  // the same expiry date and freeze it at day zero of the ladder for ever.
+  let giftsExpired = 0;
+  let giftWarningsSent = 0;
+  const gifted = await db
+    .collection("subscriptions")
+    .where("provider", "==", "gift")
+    .where("status", "==", "active")
+    .get();
+  for (const subSnap of gifted.docs) {
+    const sub = subSnap.data();
+    if (!sub.currentPeriodEnd) continue;
+    const endsAt = new Date(sub.currentPeriodEnd);
+
+    if (endsAt > now) {
+      const daysLeft = Math.ceil((endsAt.getTime() - now.getTime()) / 86_400_000);
+      if (daysLeft <= TRIAL_WARNING_DAYS && !sub.giftWarningSentAt) {
+        try {
+          const email = (await getAdminAuth().getUser(subSnap.id)).email;
+          if (email) {
+            // Name the giver — a year on, "your gift" alone is ambiguous.
+            let fromName = "";
+            if (sub.giftCode) {
+              const giftSnap = await db.collection("gifts").doc(sub.giftCode).get();
+              fromName = (giftSnap.data()?.purchasedByName as string | undefined) ?? "";
+            }
+            const { subject, html, text } = buildGiftEndingEmail(daysLeft, fromName);
+            await sendTransactionalEmail({ to: email, subject, html, text });
+            await subSnap.ref.update({ giftWarningSentAt: now.toISOString() });
+            giftWarningsSent++;
+          }
+        } catch (err) {
+          console.error(`lapse-sweep: gift warning failed for ${subSnap.id}:`, err);
+          reportError(err, { route: "cron/lapse-sweep", stage: "gift-warning", subId: subSnap.id });
+        }
+      }
+      continue;
+    }
+
+    await subSnap.ref.update({
+      status: "canceled",
+      lapsedAt: sub.currentPeriodEnd,
+      updatedAt: now.toISOString(),
+    });
+    giftsExpired++;
+  }
+
   // Only unpaid subscriptions drive the ladder; recovered ones are reset to
   // active by the webhook and have no lapsedAt.
   const unpaid = await db
@@ -121,6 +175,8 @@ export async function GET(req: NextRequest) {
     scanned: unpaid.size,
     trialsExpired,
     trialWarningsSent,
+    giftsExpired,
+    giftWarningsSent,
     transitioned,
     flaggedForDelete,
     deleted,

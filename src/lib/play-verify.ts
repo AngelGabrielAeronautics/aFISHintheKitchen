@@ -119,6 +119,56 @@ export async function verifyPlayPurchase(purchaseToken: string): Promise<PlaySub
   };
 }
 
+/** One purchase of a one-time product (the gift), not a subscription. */
+export interface PlayProductPurchase {
+  purchased: boolean;
+  productId: string | null;
+  orderId: string;
+  obfuscatedAccountId: string | null;
+  acknowledged: boolean;
+}
+
+/**
+ * Verify a ONE-TIME product purchase — the gift.
+ *
+ * ⚠ A different endpoint from [verifyPlayPurchase]. Subscriptions live under
+ * `purchases/subscriptionsv2`; one-time products live under
+ * `purchases/products`, and calling the subscription endpoint with a product
+ * token returns a 400 that reads like a bad token rather than a wrong URL.
+ *
+ * `purchaseState` is 0 = purchased, 1 = cancelled, 2 = pending. ⚠ PENDING IS
+ * NOT PURCHASED: Play supports deferred payment methods (cash at a kiosk, some
+ * carrier billing) where the buyer completes payment hours later. Treating 2 as
+ * a sale would mint a gift year for money that may never arrive.
+ */
+export async function verifyPlayProduct(
+  purchaseToken: string,
+  productId: string
+): Promise<PlayProductPurchase> {
+  const client = await auth().getClient();
+  const url =
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${PACKAGE_NAME}/purchases/products/${encodeURIComponent(productId)}/tokens/` +
+    `${encodeURIComponent(purchaseToken)}`;
+
+  const res = await client.request<{
+    purchaseState?: number;
+    orderId?: string;
+    productId?: string;
+    obfuscatedExternalAccountId?: string;
+    acknowledgementState?: number;
+  }>({ url, method: "GET" });
+
+  const d = res.data;
+  return {
+    purchased: d.purchaseState === 0,
+    productId: d.productId ?? productId,
+    orderId: d.orderId ?? "",
+    obfuscatedAccountId: d.obfuscatedExternalAccountId ?? null,
+    acknowledged: d.acknowledgementState === 1,
+  };
+}
+
 /**
  * The obfuscated account id the app must attach at purchase, derived from the
  * Firebase uid.

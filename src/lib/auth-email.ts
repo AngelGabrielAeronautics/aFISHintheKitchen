@@ -110,6 +110,29 @@ export function buildTrialEndingEmail(daysLeft: number): BuiltEmail {
   return { subject: `Your ${FROM_NAME} trial ends ${when}`, html, text };
 }
 
+// Sent once by the lapse sweep before a GIFTED year runs out.
+//
+// ⚠ Not the trial email with a different number. Somebody a year into a gift
+// has a real cookbook full of their own food by now, and "your free trial is
+// ending" would read as though none of it counted. It also has to name the
+// giver — a year is long enough that "your gift" alone is genuinely ambiguous.
+export function buildGiftEndingEmail(daysLeft: number, fromName: string): BuiltEmail {
+  const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
+  const from = fromName.trim();
+  const { html, text } = shell({
+    heading: "Your gifted year is nearly up",
+    bodyLines: [
+      from
+        ? `The year of ${FROM_NAME} that ${from} gave you ends ${when}.`
+        : `Your gifted year of ${FROM_NAME} ends ${when}.`,
+      "Subscribe in the app to carry on where you left off. Every recipe, photo and note stays exactly as it is — nothing is deleted, and your cookbook stays yours.",
+    ],
+    ctaLabel: "Keep your cookbook going",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Your ${FROM_NAME} gift ends ${when}`, html, text };
+}
+
 export function buildResetEmail(actionUrl: string): BuiltEmail {
   const { html, text } = shell({
     heading: "Reset your password",

@@ -392,7 +392,13 @@ export interface Subscription {
   householdId: string; // the one book this subscription pays for
   // "none" = the signup trial before any store purchase exists; a real
   // provider replaces it when the first verified purchase syncs.
-  provider: "stripe" | "paddle" | "appstore" | "none" | null;
+  //
+  // ⚠ "gift" is NOT a store subscription — nobody is billed at the end of it,
+  // so no ASSN or RTDN will ever arrive to close it. Like "none", it is expired
+  // by the clock in the nightly lapse-sweep. Anything that branches on provider
+  // must decide deliberately which side "gift" falls on: it is PAID (a real
+  // year, bought by somebody) but it is NOT RENEWING.
+  provider: "stripe" | "paddle" | "appstore" | "play" | "gift" | "none" | null;
   providerCustomerId?: string;
   providerSubscriptionId?: string;
   status: SubscriptionStatus;
