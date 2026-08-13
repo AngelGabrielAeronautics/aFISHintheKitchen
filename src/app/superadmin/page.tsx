@@ -1,9 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getFirebaseAuth } from "@/lib/firebase";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+} from "firebase/auth";
 
 interface HouseholdRow {
   id: string;
@@ -58,7 +63,6 @@ const stateColors: Record<string, string> = {
 
 export default function SuperAdminPage() {
   const { user, isSuperAdmin, loading } = useAuth();
-  const router = useRouter();
   const [data, setData] = useState<Overview | null>(null);
   const [biz, setBiz] = useState<Business | null>(null);
   const [error, setError] = useState("");
@@ -85,13 +89,9 @@ export default function SuperAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
-    if (!user || !isSuperAdmin) {
-      router.push("/");
-      return;
-    }
+    if (loading || !user || !isSuperAdmin) return;
     load();
-  }, [loading, user, isSuperAdmin, router, load]);
+  }, [loading, user, isSuperAdmin, load]);
 
   async function act(householdId: string, action: string, days?: number) {
     setBusy(`${householdId}:${action}`);
@@ -108,10 +108,35 @@ export default function SuperAdminPage() {
     }
   }
 
-  if (loading || !user || !isSuperAdmin) {
+  if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cream">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream-dark border-t-terracotta" />
+      </main>
+    );
+  }
+
+  // ⚠ SIGN IN HERE, not at /auth. The launch gate (proxy.ts BLOCK_WEB_APP)
+  // blocks the web app's own auth pages, so there is nowhere else to do it —
+  // which is why the footer padlock used to bounce straight back to the home
+  // page and look broken.
+  if (!user) return <SignIn />;
+
+  // Signed in as somebody else. Say so rather than redirect: a silent bounce
+  // is indistinguishable from a broken link, which is exactly how this read.
+  if (!isSuperAdmin) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-cream px-6 text-center">
+        <p className="font-serif text-xl font-bold text-charcoal">Not an admin account</p>
+        <p className="max-w-sm font-sans text-sm text-slate">
+          You&rsquo;re signed in as {user.email}, which isn&rsquo;t on the admin list.
+        </p>
+        <button
+          onClick={() => signOut(getFirebaseAuth())}
+          className="mt-1 rounded-lg bg-terracotta px-4 py-2 font-sans text-sm font-semibold text-white"
+        >
+          Sign out
+        </button>
       </main>
     );
   }
@@ -329,6 +354,76 @@ function BusinessPanels({ biz }: { biz: Business }) {
         </div>
       </Panel>
     </div>
+  );
+}
+
+/** The back office's own front door. Email/password plus Google, because the
+ *  admin account may be either and locking out the one person who needs this
+ *  page is the worst possible failure mode. */
+function SignIn() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function run(fn: () => Promise<unknown>) {
+    setBusy(true);
+    setErr("");
+    try {
+      await fn();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message.replace(/^Firebase:\s*/, "") : "Could not sign in.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-cream px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-charcoal/10 bg-white p-6">
+        <h1 className="font-serif text-2xl font-bold text-charcoal">Back office</h1>
+        <p className="mt-1 font-sans text-sm text-slate">Admin accounts only.</p>
+        <form
+          className="mt-5 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password));
+          }}
+        >
+          <input
+            type="email"
+            autoComplete="username"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-lg border border-charcoal/15 px-3 py-2 font-sans text-sm"
+          />
+          <input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-lg border border-charcoal/15 px-3 py-2 font-sans text-sm"
+          />
+          <button
+            type="submit"
+            disabled={busy || !email || !password}
+            className="w-full rounded-lg bg-terracotta py-2 font-sans text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+        <button
+          onClick={() => run(() => signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider()))}
+          disabled={busy}
+          className="mt-3 w-full rounded-lg border border-charcoal/15 py-2 font-sans text-sm font-semibold text-charcoal disabled:opacity-50"
+        >
+          Continue with Google
+        </button>
+        {err && <p className="mt-3 font-sans text-xs text-red-600">{err}</p>}
+      </div>
+    </main>
   );
 }
 
