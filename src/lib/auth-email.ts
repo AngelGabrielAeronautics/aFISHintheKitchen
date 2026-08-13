@@ -189,6 +189,8 @@ export function buildGiftCardEmail(opts: {
   message: string;
   code: string;
   redeemUrl: string;
+  /** A copy of the giver's cookbook comes with the year. */
+  includesCookbook?: boolean;
 }): BuiltEmail {
   const to = esc(opts.recipientName.trim());
   const from = esc(opts.fromName.trim());
@@ -204,6 +206,12 @@ export function buildGiftCardEmail(opts: {
     // this is that you are being added to somebody else's cookbook, and that is
     // exactly what a gift is NOT.
     `The cookbook will be <strong>yours</strong> — your own, private, with room to invite five people of your own into it.`,
+    // ⚠ Say this, or the best part of the gift is a surprise nobody mentioned.
+    opts.includesCookbook
+      ? (from
+          ? `And it does not arrive empty: ${from} has sent you a copy of their whole cookbook, every recipe and kitchen tip, with who contributed each one kept intact.`
+          : `And it does not arrive empty — a copy of the giver's whole cookbook comes with it, every recipe and kitchen tip.`)
+      : "",
     `Your code is <strong style="font-family:monospace;letter-spacing:2px;">${code}</strong>`,
   ].filter(Boolean);
 

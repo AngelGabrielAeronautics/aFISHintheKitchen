@@ -204,6 +204,7 @@ export async function POST(req: NextRequest) {
         const { subject, html, text } = buildGiftCardEmail({
           recipientName, fromName: buyerName, message, code,
           redeemUrl: `${SITE_URL}/g/${code}`,
+          includesCookbook: includeCookbook,
         });
         await sendTransactionalEmail({ to: recipientEmail, subject, html, text });
         await db.collection("gifts").doc(code).update({ sentAt: new Date().toISOString() });

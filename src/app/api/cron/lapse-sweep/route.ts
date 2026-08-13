@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
         message: gift.message ?? "",
         code: giftSnap.id,
         redeemUrl: `${SITE_URL}/g/${giftSnap.id}`,
+        includesCookbook: gift.includeCookbook === true,
       });
       await sendTransactionalEmail({ to: gift.recipientEmail, subject, html, text });
       await giftSnap.ref.update({ sentAt: now.toISOString() });

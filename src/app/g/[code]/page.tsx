@@ -34,6 +34,7 @@ async function loadGift(rawCode: string) {
     recipientName: (g.recipientName as string) ?? "",
     message: (g.message as string) ?? "",
     status: (g.status as string) ?? "unredeemed",
+    includesCookbook: g.includeCookbook === true,
   };
 }
 
@@ -178,6 +179,15 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
             private, and you can invite five people of your own into it. A full year, already
             paid for.
           </p>
+          {/* Say this, or the best part of the gift is a surprise nobody mentioned. */}
+          {gift.includesCookbook && (
+            <p className="mt-3 font-sans text-base text-slate">
+              And it doesn&rsquo;t arrive empty:{" "}
+              {gift.fromName ? `${gift.fromName} has` : "the giver has"} sent you a copy of their
+              whole cookbook — every recipe and kitchen tip, with who contributed each one kept
+              intact.
+            </p>
+          )}
         </section>
 
         <section className="mt-10 text-left">
