@@ -72,6 +72,21 @@ export default function SuperAdminPage() {
   const [biz, setBiz] = useState<Business | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  /**
+   * The action waiting on confirmation.
+   *
+   * ⚠ EVERY button in the table writes to a REAL FAMILY'S COOKBOOK — suspend
+   * locks them out, cancel starts the lapse ladder that eventually deletes
+   * their recipes. They sit inches apart in a dense row, so a misclick was one
+   * pixel away from cutting somebody off. Nothing fires now without a typed
+   * confirmation.
+   */
+  const [confirm, setConfirm] = useState<{
+    householdId: string;
+    name: string;
+    action: string;
+    days?: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     const token = await getFirebaseAuth().currentUser?.getIdToken();
@@ -97,6 +112,48 @@ export default function SuperAdminPage() {
     if (loading || !user || !isSuperAdmin) return;
     load();
   }, [loading, user, isSuperAdmin, load]);
+
+  /**
+   * What each action does, in the words of its consequence. "Cancel" and
+   * "Comp" say nothing to a tired person at 11pm; "starts the lapse ladder"
+   * does.
+   */
+  const ACTION_COPY: Record<string, { title: string; detail: string; danger?: boolean }> = {
+    suspend: {
+      title: "Suspend this cookbook?",
+      detail:
+        "Everyone in it loses access immediately — they can sign in and see nothing. Reversible with Reactivate.",
+      danger: true,
+    },
+    reactivate: {
+      title: "Reactivate this cookbook?",
+      detail: "Access is restored for everyone in it.",
+    },
+    comp: {
+      title: "Give this cookbook free access?",
+      detail:
+        "It stops being billed and never lapses. Use for family and staff — not as a way to fix a payment problem.",
+    },
+    extend_trial: {
+      title: "Add 14 days to this trial?",
+      detail: "The trial end date moves back by two weeks. There is no undo button for this one.",
+    },
+    cancel: {
+      title: "Cancel this subscription?",
+      detail:
+        "Starts the lapse ladder: full access for 7 days, then read-only, then suspended, and eventually the recipes are deleted.",
+      danger: true,
+    },
+    clear_seat_request: {
+      title: "Mark this seat request handled?",
+      detail: "It disappears from the list. Nothing changes for the owner.",
+    },
+    delete_household: {
+      title: "Delete this cookbook?",
+      detail: "Everything in it goes — recipes, photos, members. This cannot be undone.",
+      danger: true,
+    },
+  };
 
   async function act(householdId: string, action: string, days?: number) {
     setBusy(`${householdId}:${action}`);
@@ -148,6 +205,18 @@ export default function SuperAdminPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      {confirm && (
+        <ConfirmDialog
+          name={confirm.name}
+          copy={ACTION_COPY[confirm.action] ?? { title: "Are you sure?", detail: confirm.action }}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            const c = confirm;
+            setConfirm(null);
+            void act(c.householdId, c.action, c.days);
+          }}
+        />
+      )}
       <h1 className="mb-1 font-serif text-3xl font-bold text-charcoal">Super Admin</h1>
       <p className="mb-6 font-sans text-sm text-slate">Platform-wide oversight of every cookbook.</p>
 
@@ -190,7 +259,7 @@ export default function SuperAdminPage() {
                         </div>
                       </div>
                       <ActionBtn
-                        onClick={() => act(h.id, "clear_seat_request")}
+                        onClick={() => setConfirm({ householdId: h.id, name: h.name || h.id, action: "clear_seat_request" })}
                         busy={busy === `${h.id}:clear_seat_request`}
                       >
                         Mark handled
@@ -227,21 +296,21 @@ export default function SuperAdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
                         {h.accessState === "suspended" ? (
-                          <ActionBtn onClick={() => act(h.id, "reactivate")} busy={busy === `${h.id}:reactivate`}>
+                          <ActionBtn onClick={() => setConfirm({ householdId: h.id, name: h.name || h.id, action: "reactivate" })} busy={busy === `${h.id}:reactivate`}>
                             Reactivate
                           </ActionBtn>
                         ) : (
-                          <ActionBtn onClick={() => act(h.id, "suspend")} busy={busy === `${h.id}:suspend`} danger>
+                          <ActionBtn onClick={() => setConfirm({ householdId: h.id, name: h.name || h.id, action: "suspend" })} busy={busy === `${h.id}:suspend`} danger>
                             Suspend
                           </ActionBtn>
                         )}
-                        <ActionBtn onClick={() => act(h.id, "comp")} busy={busy === `${h.id}:comp`}>
+                        <ActionBtn onClick={() => setConfirm({ householdId: h.id, name: h.name || h.id, action: "comp" })} busy={busy === `${h.id}:comp`}>
                           Comp
                         </ActionBtn>
-                        <ActionBtn onClick={() => act(h.id, "extend_trial", 14)} busy={busy === `${h.id}:extend_trial`}>
+                        <ActionBtn onClick={() => setConfirm({ householdId: h.id, name: h.name || h.id, action: "extend_trial", days: 14 })} busy={busy === `${h.id}:extend_trial`}>
                           +14d trial
                         </ActionBtn>
-                        <ActionBtn onClick={() => act(h.id, "cancel")} busy={busy === `${h.id}:cancel`} danger>
+                        <ActionBtn onClick={() => setConfirm({ householdId: h.id, name: h.name || h.id, action: "cancel" })} busy={busy === `${h.id}:cancel`} danger>
                           Cancel
                         </ActionBtn>
                       </div>
@@ -477,6 +546,83 @@ function Metric({ label, value }: { label: string; value: number }) {
     <div className="rounded-xl border border-gold-light bg-white p-4">
       <div className="font-serif text-2xl text-charcoal">{value}</div>
       <div className="font-sans text-xs uppercase tracking-wide text-slate/60">{label}</div>
+    </div>
+  );
+}
+
+/**
+ * Type-to-confirm. Dylan's call: nothing in this table should be one stray
+ * click from happening.
+ *
+ * ⚠ THE TYPING IS THE POINT. An OK button is muscle memory — you dismiss it
+ * without reading, which is exactly the failure this is meant to stop. Having
+ * to type the word forces you to have actually looked at which cookbook is
+ * named above it.
+ */
+function ConfirmDialog({
+  name,
+  copy,
+  onCancel,
+  onConfirm,
+}: {
+  name: string;
+  copy: { title: string; detail: string; danger?: boolean };
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [typed, setTyped] = useState("");
+  const ready = typed.trim().toLowerCase() === "yes";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
+      // Clicking the backdrop cancels; it is the safe outcome, so it is the
+      // one a stray click should reach.
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-charcoal/10 bg-white p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="font-serif text-xl font-bold text-charcoal">{copy.title}</h2>
+        {/* The cookbook's NAME, prominently — the whole risk is doing the right
+            thing to the wrong family. */}
+        <p className="mt-1 font-sans text-sm font-semibold text-terracotta">{name}</p>
+        <p className="mt-3 font-sans text-sm leading-relaxed text-slate">{copy.detail}</p>
+
+        <label className="mt-5 block font-sans text-xs font-semibold text-charcoal">
+          Type <span className="font-mono text-terracotta">yes</span> to confirm
+        </label>
+        <input
+          autoFocus
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && ready) onConfirm();
+            if (e.key === "Escape") onCancel();
+          }}
+          className="mt-1.5 w-full rounded-lg border border-charcoal/15 px-3 py-2 font-sans text-sm"
+          placeholder="yes"
+        />
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-lg border border-charcoal/15 px-4 py-2 font-sans text-sm font-semibold text-charcoal"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!ready}
+            className={`rounded-lg px-4 py-2 font-sans text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 ${
+              copy.danger ? "bg-red-600" : "bg-terracotta"
+            }`}
+          >
+            {copy.danger ? "Yes, do it" : "Confirm"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
