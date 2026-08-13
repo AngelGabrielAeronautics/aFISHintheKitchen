@@ -96,7 +96,7 @@ export default function Header() {
                   href="/gift"
                   className="px-3 py-2 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors"
                 >
-                  Gift
+                  Gift the app
                 </Link>
                 <Link
                   href="/#download"
