@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { GIFT_PRODUCT_ID } from "@/lib/gift";
+import { revokeGiftByTransaction } from "@/lib/gift-refund";
 import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
 import { verifyAppStoreNotification, verifyAppStoreTransaction } from "@/lib/appstore-verify";
 import { NotificationTypeV2 } from "@apple/app-store-server-library";
@@ -36,6 +38,21 @@ export async function POST(req: NextRequest) {
 
     const tx = await verifyAppStoreTransaction(signedTx);
     const productId = tx.productId;
+
+    // ⚠ GIFTS ARE HANDLED BEFORE THE SUBSCRIPTION CHECK BELOW, which returns
+    // early for any product that is not one of the two subscriptions — a gift
+    // refund would otherwise be silently discarded here.
+    if (productId === GIFT_PRODUCT_ID) {
+      if (
+        notification.notificationType === NotificationTypeV2.REFUND ||
+        notification.notificationType === NotificationTypeV2.REVOKE
+      ) {
+        const result = await revokeGiftByTransaction(String(tx.transactionId ?? ""));
+        return NextResponse.json({ received: true, gift: result });
+      }
+      return NextResponse.json({ received: true });
+    }
+
     if (productId !== MONTHLY_PRODUCT && productId !== ANNUAL_PRODUCT) {
       return NextResponse.json({ received: true });
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { revokeGiftByTransaction } from "@/lib/gift-refund";
 import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
 import { verifyPlayPurchase, statusForState } from "@/lib/play-verify";
 
@@ -67,6 +68,18 @@ export async function POST(req: NextRequest) {
     const sub = notification.subscriptionNotification;
     const purchaseToken = sub?.purchaseToken ?? voided?.purchaseToken;
     if (!purchaseToken) return NextResponse.json({ received: true });
+
+    // ⚠ GIFTS FIRST, and specifically before verifyPlayPurchase below — that
+    // call hits the SUBSCRIPTION endpoint, which fails outright for a one-time
+    // product token. A voided gift matched here on the order id, which is what
+    // /api/gift/purchase stored as the transaction id for Play.
+    if (voided?.orderId) {
+      const result = await revokeGiftByTransaction(voided.orderId);
+      if (result.revoked) {
+        return NextResponse.json({ received: true, gift: result });
+      }
+      // Not a gift — fall through and treat it as a voided subscription.
+    }
 
     // ⚠ The notification is only a HINT that something changed. Every field we
     // act on is re-read from Google, so a forged or replayed message can at
