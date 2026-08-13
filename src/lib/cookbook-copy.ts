@@ -59,11 +59,25 @@ function objectPathFromUrl(url: unknown): string | null {
  */
 export async function mayCopyCookbook(uid: string, householdId: string): Promise<boolean> {
   if (!uid || !householdId) return false;
+  // ⚠ householdMembers uses AUTO-GENERATED doc ids with userId/householdId as
+  // FIELDS. There is no `${householdId}_${uid}` key and there never was — this
+  // function invented one and so returned false for every user alive, which
+  // silently disabled the entire copy-my-cookbook half of gifting. Buyers
+  // ticked the box, paid, and got a gift with no cookbook attached, and the
+  // giver email told them the recipient would "start with an empty cookbook".
+  // Found 2026-08-13 by Dylan testing a real purchase. Match the rest of the
+  // codebase: query the fields.
+  //
+  // ⚠ ONE equality filter, then match in code. Two equality filters would want
+  // a composite index, and an undeclared index THROWS — see the lapse-sweep
+  // notes. A user belongs to a handful of households, so this is cheap.
   const snap = await getAdminDb()
     .collection("householdMembers")
-    .doc(`${householdId}_${uid}`)
+    .where("userId", "==", uid)
     .get();
-  return snap.exists && snap.data()?.role === "owner";
+  return snap.docs.some(
+    (d) => d.data()?.householdId === householdId && d.data()?.role === "owner"
+  );
 }
 
 export interface CopyResult {

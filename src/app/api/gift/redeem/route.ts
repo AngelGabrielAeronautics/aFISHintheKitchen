@@ -60,12 +60,18 @@ export async function POST(req: NextRequest) {
       // access using a gift meant for the guest.
       const householdId = existing?.householdId;
       if (!householdId) return { error: "no_household" as const, status: 409 };
+      // ⚠ Query the FIELDS. householdMembers doc ids are auto-generated; the
+      // `${householdId}_${uid}` key this used to build does not exist, so this
+      // check refused every redemption with not_owner. Same bug as
+      // mayCopyCookbook — see the note there. One equality filter only, to stay
+      // clear of the undeclared-composite-index trap.
       const memberSnap = await tx.get(
-        db.collection("householdMembers").doc(`${householdId}_${uid}`)
+        db.collection("householdMembers").where("userId", "==", uid)
       );
-      if (!memberSnap.exists || memberSnap.data()?.role !== "owner") {
-        return { error: "not_owner" as const, status: 409 };
-      }
+      const owns = memberSnap.docs.some(
+        (d) => d.data()?.householdId === householdId && d.data()?.role === "owner"
+      );
+      if (!owns) return { error: "not_owner" as const, status: 409 };
 
       const verdict = canRedeem({ gift, redeemerUid: uid, existing });
       if (!verdict.ok) {
