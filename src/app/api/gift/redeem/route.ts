@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { canRedeem, giftExpiryFrom, normaliseGiftCode, type Gift } from "@/lib/gift";
 import type { Subscription } from "@/lib/types";
+import { copyCookbook, mayCopyCookbook, type CopyResult } from "@/lib/cookbook-copy";
 import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
@@ -114,13 +115,45 @@ export async function POST(req: NextRequest) {
         { merge: true }
       );
 
-      return { ok: true as const, expiresAt, householdId };
+      return { ok: true as const, expiresAt, householdId, gift };
     });
 
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
-    return NextResponse.json({ ok: true, expiresAt: result.expiresAt });
+
+    // ── The cookbook, if one was given with the year ────────────────────────
+    //
+    // ⚠ AFTER the transaction, never inside it. Copying a few hundred recipes
+    // is far too much work for a Firestore transaction, which would retry the
+    // WHOLE thing on contention — and the year is already safely granted by
+    // this point. A failure here costs the recipes, not the subscription.
+    //
+    // ⚠ Ownership is re-checked at redemption, not trusted from the gift. The
+    // purchase recorded it, but months can pass: the giver may have left the
+    // household, been removed, or handed it on. Copying a book somebody no
+    // longer owns is not a gift they were entitled to give.
+    let copied: CopyResult | null = null;
+    if (result.gift.includeCookbook && result.gift.sourceHouseholdId) {
+      try {
+        const stillAllowed = await mayCopyCookbook(
+          result.gift.purchasedByUid,
+          result.gift.sourceHouseholdId
+        );
+        if (stillAllowed && !result.gift.copiedAt) {
+          copied = await copyCookbook(result.gift.sourceHouseholdId, result.householdId, {
+            includeTips: true,
+          });
+          await db.collection("gifts").doc(code).update({ copiedAt: new Date().toISOString() });
+        }
+      } catch (err) {
+        // The year stands regardless. Reported so it can be re-run by hand.
+        console.error("gift/redeem: cookbook copy failed:", err);
+        reportError(err, { route: "gift/redeem", stage: "copy-cookbook", code });
+      }
+    }
+
+    return NextResponse.json({ ok: true, expiresAt: result.expiresAt, copied });
   } catch (err) {
     console.error("gift/redeem error:", err);
     reportError(err, { route: "gift/redeem" });

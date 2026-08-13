@@ -106,6 +106,23 @@ export interface Gift {
   message: string;
   /** ISO date the card should be delivered — the cron sends it on or after. */
   sendOn: string;
+  /**
+   * Send a copy of the giver's cookbook along with the year.
+   *
+   * ⚠ Captured at PURCHASE but acted on at REDEMPTION, so what arrives is the
+   * cookbook as it stands on the day it is claimed, not the day it was bought
+   * (Dylan's call, 2026-08-13). Someone buying in October for a December
+   * wedding gives everything added in between.
+   */
+  includeCookbook: boolean;
+  /**
+   * Whose cookbook to copy. ⚠ Recorded at purchase because the giver may have
+   * switched households, left, or lost access by the time it is redeemed —
+   * resolving "their cookbook" later would copy the wrong one, or none.
+   */
+  sourceHouseholdId: string | null;
+  /** Stamped once the copy has run, so a retry cannot double it. */
+  copiedAt?: string;
   /** null until delivered — see the sweep's query. Never omit it. */
   sentAt: string | null;
   createdAt: string;

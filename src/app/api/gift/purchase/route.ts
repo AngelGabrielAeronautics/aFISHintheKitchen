@@ -11,6 +11,7 @@ import {
 } from "@/lib/gift";
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildGiftCardEmail } from "@/lib/auth-email";
+import { mayCopyCookbook } from "@/lib/cookbook-copy";
 import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
       recipientEmail?: string;
       message?: string;
       sendOn?: string; // ISO date, optional — defaults to now
+      includeCookbook?: boolean;
+      householdId?: string; // whose cookbook to copy, if includeCookbook
     };
 
     const recipientName = (body.recipientName ?? "").trim();
@@ -107,6 +110,23 @@ export async function POST(req: NextRequest) {
 
     const db = getAdminDb();
 
+    // ⚠ OWNERS ONLY may send a copy of a cookbook, enforced here rather than
+    // trusted from the request. The body names the household to copy and it
+    // arrives from a client; without this check anyone could ask for any
+    // household id and walk off with a family's entire cookbook.
+    //
+    // A non-owner who somehow got this far still GETS THEIR GIFT — the year is
+    // the thing they paid for. The copy is simply not recorded, which is the
+    // only outcome that does not either charge them for nothing or leak a book.
+    let includeCookbook = body.includeCookbook === true;
+    if (includeCookbook) {
+      const allowed = await mayCopyCookbook(uid, body.householdId ?? "");
+      if (!allowed) {
+        console.warn(`gift/purchase: ${uid} asked to copy ${body.householdId} without owning it`);
+        includeCookbook = false;
+      }
+    }
+
     // ⚠ Idempotent on the store transaction. Both stores can deliver the same
     // purchase more than once — a retried finish, a restored transaction, a
     // replayed notification — and each redelivery arriving as a fresh year
@@ -158,6 +178,8 @@ export async function POST(req: NextRequest) {
       recipientEmail,
       message,
       sendOn,
+      includeCookbook: includeCookbook,
+      sourceHouseholdId: includeCookbook ? (body.householdId ?? null) : null,
       createdAt: now.toISOString(),
       status: "unredeemed",
       // ⚠ Explicitly null, not omitted. The sweep finds undelivered cards with

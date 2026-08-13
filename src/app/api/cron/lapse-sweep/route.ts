@@ -8,6 +8,7 @@ import { buildTrialEndingEmail, buildGiftEndingEmail, buildGiftCardEmail } from 
 // deleted at day 365 kept every photo in the bucket and its PUBLIC share links
 // working.
 import { deleteHouseholdData } from "@/lib/delete-data";
+import { copyGiftedImages } from "@/lib/cookbook-copy";
 import { reportError } from "@/lib/error-reporting";
 
 const TRIAL_WARNING_DAYS = 3;
@@ -116,6 +117,17 @@ export async function GET(req: NextRequest) {
       console.error(`lapse-sweep: gift card send failed for ${giftSnap.id}:`, err);
       reportError(err, { route: "cron/lapse-sweep", stage: "gift-card", code: giftSnap.id });
     }
+  }
+
+  // Duplicate the Storage files behind any gifted cookbook, so the copy stops
+  // depending on the giver's account. See lib/cookbook-copy.ts for why a gifted
+  // book that points at somebody else's files is a hostage.
+  let giftImages = { copied: 0, failed: 0, recipes: 0, done: true };
+  try {
+    giftImages = await copyGiftedImages();
+  } catch (err) {
+    console.error("lapse-sweep: gifted image copy failed:", err);
+    reportError(err, { route: "cron/lapse-sweep", stage: "gift-images" });
   }
 
   // Expire GIFTED years. Same problem as the signup trial and the same
@@ -229,6 +241,7 @@ export async function GET(req: NextRequest) {
     giftsExpired,
     giftWarningsSent,
     giftCardsSent,
+    giftImages,
     transitioned,
     flaggedForDelete,
     deleted,
