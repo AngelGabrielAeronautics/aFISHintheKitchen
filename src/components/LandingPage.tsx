@@ -86,6 +86,26 @@ const FAQS = [
     q: "What happens after the free trial?",
     a: "The 14-day trial is completely free — we won't charge you during it, and we'll email you a reminder before it ends. When it ends, your trial rolls into a paid subscription automatically, so your cookbook keeps working without a break. Not for you? Cancel any time before the trial ends and you won't be charged a cent.",
   },
+  // ── Gifting ──
+  // ⚠ Every answer here is checked against what the code actually does, not
+  // what the marketing implies. Getting a gifting FAQ wrong is expensive: these
+  // are the questions somebody asks with their card already in their hand.
+  {
+    q: "How does gifting work?",
+    a: "Buy it in the app under More → Gift a year. We email them a card with a code on the day you choose, and you get a copy too. They redeem it in the app and the year lands on their own cookbook.",
+  },
+  {
+    q: "Does a gift renew?",
+    a: "No. You pay once and are never charged again. When their year is up they decide for themselves whether to carry on — and nothing is deleted either way, so their cookbook is still there if they do.",
+  },
+  {
+    q: "Can I send them my recipes too?",
+    a: "Yes, if you own a cookbook. Tick “Include my recipes” and they start with a copy of your whole cookbook — every recipe and kitchen tip, with who contributed each one kept intact. Yours is untouched, and they never get access to it.",
+  },
+  {
+    q: "What if they never claim it?",
+    a: "The code doesn't expire, so it keeps. We remind them after a week, and if it's still sitting there after three we let you know — usually it's a mistyped address or a spam folder, and you can send the code on yourself.",
+  },
   {
     q: "Can I join more than one cookbook?",
     a: "Yes — you can be a free member of up to 3 other families' cookbooks, on top of your own.",
@@ -441,7 +461,12 @@ export default function LandingPage() {
             className="reveal mt-6 mx-auto max-w-2xl font-sans text-lg leading-relaxed text-cream/90"
             style={{ animationDelay: "0.85s" }}
           >
-            Cooking together is one of the most human things we do. A private family cookbook to keep your recipes alive, cook them together even when you&rsquo;re apart, and gather everyone around the table again.
+            {/* ⚠ This used to open "Cooking together is one of the most human
+                things we do" — the SAME construction the mission section opens
+                with further down the page. On one page that reads as a
+                copy-paste rather than a theme. The thesis belongs to the story
+                section; the hero's job is to say what the thing is. */}
+            Keep every family recipe safe, cook them hands-free at the stove, and plan the week together &mdash; then gather everyone back around the table.
           </p>
           <div id="download" className="reveal mt-10 scroll-mt-24" style={{ animationDelay: "1.7s" }}>
             <StoreBadges />
@@ -687,13 +712,19 @@ export default function LandingPage() {
                 Gift a cookbook
               </p>
               <h2 className="mt-3 font-serif text-3xl font-bold text-charcoal md:text-4xl">
-                The recipes they grew up on, as a gift
+                Give A Fish in the Kitchen, as a gift
               </h2>
+              {/* Dylan's copy. ⚠ The cookbook clause is BOLD on purpose — it is
+                  the part people are actually buying, and the closing line says
+                  so outright. Everything before it is the wrapper. */}
               <p className="mt-4 font-sans text-base leading-relaxed text-slate md:text-lg">
                 Buy someone a year of their own cookbook — for a wedding, a kitchen tea, a first
-                flat. It&rsquo;s theirs outright, with room to invite their own family in. And you
-                can send a copy of your whole cookbook with it, so they start with every recipe
-                they were raised on rather than an empty shelf.
+                flat. It&rsquo;s theirs outright, with room to invite their own family in.{" "}
+                <strong className="text-charcoal">
+                  And you can choose to add a copy of your whole cookbook with it
+                </strong>
+                , so they start with a copy of your recipe book and your tips &amp; tricks. This
+                arguably is the real gift!
               </p>
               <Link
                 href="/gift"
