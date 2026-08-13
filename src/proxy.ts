@@ -23,6 +23,8 @@ const ALLOWED_EXACT = new Set([
   "/privacy",
   "/delete-account",
   "/invited",
+  // The gift marketing page — it sells nothing, it walks people to the app.
+  "/gift",
 ]);
 
 // Reachable even when the app is blocked (prefix matches): public share pages,

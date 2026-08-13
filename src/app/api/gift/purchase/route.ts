@@ -10,7 +10,7 @@ import {
   type Gift,
 } from "@/lib/gift";
 import { sendTransactionalEmail } from "@/lib/email";
-import { buildGiftCardEmail } from "@/lib/auth-email";
+import { buildGiftCardEmail, buildGiftSentEmail } from "@/lib/auth-email";
 import { mayCopyCookbook } from "@/lib/cookbook-copy";
 import { reportError } from "@/lib/error-reporting";
 
@@ -213,6 +213,24 @@ export async function POST(req: NextRequest) {
         console.error("gift/purchase: card send failed:", err);
         reportError(err, { route: "gift/purchase", stage: "send-card", code });
       }
+    }
+
+    // The buyer's own copy — their durable record of what was sent, and their
+    // only way back to the code if the recipient's address was mistyped.
+    // ⚠ Best-effort, like the card: the purchase has already succeeded.
+    try {
+      const buyerEmail = (await getAdminAuth().getUser(uid)).email;
+      if (buyerEmail) {
+        const { subject, html, text } = buildGiftSentEmail({
+          recipientName, recipientEmail, message, code,
+          sendOn: new Date(sendOn) > now ? new Date(sendOn).toDateString() : null,
+          includesCookbook: includeCookbook,
+        });
+        await sendTransactionalEmail({ to: buyerEmail, subject, html, text });
+      }
+    } catch (err) {
+      console.error("gift/purchase: buyer copy failed:", err);
+      reportError(err, { route: "gift/purchase", stage: "buyer-copy", code });
     }
 
     return NextResponse.json({ ok: true, code, sendOn, sent });

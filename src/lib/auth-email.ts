@@ -230,6 +230,105 @@ export function buildGiftCardEmail(opts: {
   };
 }
 
+/**
+ * The buyer's own copy of the card — "here is what we sent".
+ *
+ * ⚠ Deliberately NOT the same email. A buyer forwarded their own gift card
+ * would see "A gift for Sarah" addressed to them, with a Redeem button they
+ * must not press (redeeming your own gift is refused). This is a receipt with
+ * the card's contents quoted inside it.
+ */
+export function buildGiftSentEmail(opts: {
+  recipientName: string;
+  recipientEmail: string;
+  message: string;
+  code: string;
+  sendOn: string | null;
+  includesCookbook: boolean;
+}): BuiltEmail {
+  const to = esc(opts.recipientName.trim());
+  const when = opts.sendOn
+    ? `It will be sent on ${esc(opts.sendOn)}.`
+    : "It has been sent.";
+  const lines = [
+    `Your gift for ${to || "them"} is all set. ${when}`,
+    opts.includesCookbook
+      ? "A copy of your cookbook goes with it — every published recipe and kitchen tip, with who contributed each one kept intact. Your own cookbook is untouched."
+      : "They will start with an empty cookbook of their own.",
+    opts.message
+      ? `Your note: <em style="color:${COLOR.slate};">&ldquo;${esc(opts.message)}&rdquo;</em>`
+      : "",
+    `Sent to <strong>${esc(opts.recipientEmail)}</strong>`,
+    // ⚠ The code is in here because this is the buyer's only durable copy. If
+    // the address was mistyped, this email is how they recover the gift they
+    // have already paid for.
+    `Their code is <strong style="font-family:monospace;letter-spacing:2px;">${esc(opts.code)}</strong> — keep it, in case the card goes astray.`,
+  ].filter(Boolean);
+
+  const { html, text } = shell({
+    heading: "Your gift is on its way",
+    bodyLines: lines,
+    ctaLabel: "See the gift",
+    actionUrl: `https://www.afishinthekitchen.com/g/${opts.code}`,
+    logo: { url: GIFT_LOGO_URL, width: 200, height: 192, round: false },
+  });
+  return { subject: `Your gift for ${to || "them"} is on its way`, html, text };
+}
+
+/**
+ * Nudge a recipient who has not claimed their gift.
+ *
+ * ⚠ Worth sending because the buyer has ALREADY PAID. A gift is a one-off
+ * purchase taken at checkout, so an unclaimed code is money spent and nothing
+ * delivered — the one failure in this feature that costs a customer real money
+ * for nothing.
+ */
+export function buildGiftReminderEmail(opts: {
+  recipientName: string;
+  fromName: string;
+  code: string;
+}): BuiltEmail {
+  const to = esc(opts.recipientName.trim());
+  const from = esc(opts.fromName.trim());
+  const { html, text } = shell({
+    heading: to ? `${to}, your gift is waiting` : "Your gift is waiting",
+    bodyLines: [
+      from
+        ? `${from} gave you a year of ${FROM_NAME} and it has not been claimed yet.`
+        : `You were given a year of ${FROM_NAME} and it has not been claimed yet.`,
+      "It is a private cookbook for your family's recipes — yours to keep, with room to invite five people of your own.",
+      `Your code is <strong style="font-family:monospace;letter-spacing:2px;">${esc(opts.code)}</strong>`,
+      "There is no rush and the code does not expire — but it is sitting here unused.",
+    ],
+    ctaLabel: "Claim your gift",
+    actionUrl: `https://www.afishinthekitchen.com/g/${opts.code}`,
+    logo: { url: GIFT_LOGO_URL, width: 200, height: 192, round: false },
+  });
+  return { subject: to ? `${to}, your gift is still waiting` : "Your gift is still waiting", html, text };
+}
+
+/** Tell the buyer their gift is still sitting unclaimed, so they can chase it. */
+export function buildGiftUnclaimedEmail(opts: {
+  recipientName: string;
+  recipientEmail: string;
+  code: string;
+  days: number;
+}): BuiltEmail {
+  const to = esc(opts.recipientName.trim()) || "your recipient";
+  const { html, text } = shell({
+    heading: "Your gift hasn't been claimed yet",
+    bodyLines: [
+      `The gift you sent ${to} is still unclaimed after ${opts.days} days. We have reminded them, but a nudge from you tends to work better.`,
+      `It went to <strong>${esc(opts.recipientEmail)}</strong> — worth checking that address is right, and their spam folder.`,
+      `The code is <strong style="font-family:monospace;letter-spacing:2px;">${esc(opts.code)}</strong>. It does not expire, and you can send it on yourself.`,
+    ],
+    ctaLabel: "See the gift",
+    actionUrl: `https://www.afishinthekitchen.com/g/${opts.code}`,
+    logo: { url: GIFT_LOGO_URL, width: 200, height: 192, round: false },
+  });
+  return { subject: `Your gift for ${to} is still unclaimed`, html, text };
+}
+
 export function buildResetEmail(actionUrl: string): BuiltEmail {
   const { html, text } = shell({
     heading: "Reset your password",

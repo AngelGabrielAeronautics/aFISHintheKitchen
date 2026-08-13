@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
 import { sendTransactionalEmail } from "@/lib/email";
-import { buildTrialEndingEmail, buildGiftEndingEmail, buildGiftCardEmail } from "@/lib/auth-email";
+import {
+  buildTrialEndingEmail,
+  buildGiftEndingEmail,
+  buildGiftCardEmail,
+  buildGiftReminderEmail,
+  buildGiftUnclaimedEmail,
+} from "@/lib/auth-email";
 // Shared with the admin delete action. The copy that used to live here missed
 // Storage entirely and left sharedRecipes/sharedMenus behind, so a household
 // deleted at day 365 kept every photo in the bucket and its PUBLIC share links
@@ -117,6 +123,62 @@ export async function GET(req: NextRequest) {
       // this never gives up — but it also never blocks the rest of the sweep.
       console.error(`lapse-sweep: gift card send failed for ${giftSnap.id}:`, err);
       reportError(err, { route: "cron/lapse-sweep", stage: "gift-card", code: giftSnap.id });
+    }
+  }
+
+  // Chase gifts nobody has claimed.
+  //
+  // ⚠ This matters more than it looks. A gift is a ONE-OFF purchase taken at
+  // checkout, so an unclaimed code is money the buyer has already spent for
+  // nothing delivered — the only failure in this feature that costs a real
+  // customer real money. Two nudges: the recipient at 7 days, then the buyer at
+  // 21 so they can chase it themselves (wrong address, spam folder).
+  //
+  // ⚠ ONE equality filter, dates compared in code — same reason as everywhere
+  // else in this file. Unclaimed gifts are a naturally small set.
+  let giftReminders = 0;
+  let giftUnclaimedNotices = 0;
+  const unclaimed = await db.collection("gifts").where("status", "==", "unredeemed").get();
+  for (const giftSnap of unclaimed.docs) {
+    const gift = giftSnap.data();
+    if (!gift.sentAt) continue;   // not delivered yet; nothing to chase
+    const daysSince = (now.getTime() - new Date(gift.sentAt).getTime()) / 86_400_000;
+
+    if (daysSince >= 7 && !gift.reminderSentAt) {
+      try {
+        const { subject, html, text } = buildGiftReminderEmail({
+          recipientName: gift.recipientName ?? "",
+          fromName: gift.purchasedByName ?? "",
+          code: giftSnap.id,
+        });
+        await sendTransactionalEmail({ to: gift.recipientEmail, subject, html, text });
+        await giftSnap.ref.update({ reminderSentAt: now.toISOString() });
+        giftReminders++;
+      } catch (err) {
+        console.error(`lapse-sweep: gift reminder failed for ${giftSnap.id}:`, err);
+        reportError(err, { route: "cron/lapse-sweep", stage: "gift-reminder", code: giftSnap.id });
+      }
+      continue;
+    }
+
+    if (daysSince >= 21 && !gift.unclaimedNoticeAt) {
+      try {
+        const buyerEmail = (await getAdminAuth().getUser(gift.purchasedByUid)).email;
+        if (buyerEmail) {
+          const { subject, html, text } = buildGiftUnclaimedEmail({
+            recipientName: gift.recipientName ?? "",
+            recipientEmail: gift.recipientEmail ?? "",
+            code: giftSnap.id,
+            days: Math.floor(daysSince),
+          });
+          await sendTransactionalEmail({ to: buyerEmail, subject, html, text });
+        }
+        await giftSnap.ref.update({ unclaimedNoticeAt: now.toISOString() });
+        giftUnclaimedNotices++;
+      } catch (err) {
+        console.error(`lapse-sweep: unclaimed notice failed for ${giftSnap.id}:`, err);
+        reportError(err, { route: "cron/lapse-sweep", stage: "gift-unclaimed", code: giftSnap.id });
+      }
     }
   }
 
@@ -243,6 +305,8 @@ export async function GET(req: NextRequest) {
     giftWarningsSent,
     giftCardsSent,
     giftImages,
+    giftReminders,
+    giftUnclaimedNotices,
     transitioned,
     flaggedForDelete,
     deleted,

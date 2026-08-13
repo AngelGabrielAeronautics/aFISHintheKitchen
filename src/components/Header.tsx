@@ -93,6 +93,12 @@ export default function Header() {
                   Our Story
                 </Link>
                 <Link
+                  href="/gift"
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors"
+                >
+                  Gift
+                </Link>
+                <Link
                   href="/#download"
                   className="ml-2 px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors"
                 >

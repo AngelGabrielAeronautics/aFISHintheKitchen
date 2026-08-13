@@ -38,6 +38,12 @@ export default function Footer() {
                 Our Story
               </Link>
               <Link
+                href="/gift"
+                className="text-sm text-slate hover:text-terracotta transition-colors"
+              >
+                Give a Cookbook
+              </Link>
+              <Link
                 href="/recipes"
                 className="text-sm text-slate hover:text-terracotta transition-colors"
               >
