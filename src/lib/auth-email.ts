@@ -5,6 +5,8 @@
 // src/lib/invite-email.ts.
 import { FROM_NAME } from "@/lib/email";
 
+/** The site itself. Every email links back to it — see the footer. */
+const SITE_URL = "https://www.afishinthekitchen.com";
 const LOGO_URL = "https://www.afishinthekitchen.com/logo.png";
 /**
  * The gift-branded mark — the fish wearing a bow.
@@ -128,7 +130,7 @@ function shell(opts: {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${COLOR.white};border-radius:16px;box-shadow:0 2px 14px rgba(26,26,26,0.08);overflow:hidden;">
             <tr>
               <td align="center" style="padding:40px 40px 4px 40px;">
-                <img src="${logo.url}" alt="A Fish in the Kitchen" width="${logo.width}" height="${logo.height}" style="display:block;${logo.round === false ? "" : "border-radius:50%;"}border:0;outline:none;text-decoration:none;" />
+                <a href="${SITE_URL}" style="text-decoration:none;border:0;"><img src="${logo.url}" alt="A Fish in the Kitchen" width="${logo.width}" height="${logo.height}" style="display:block;${logo.round === false ? "" : "border-radius:50%;"}border:0;outline:none;text-decoration:none;" /></a>
               </td>
             </tr>
             <tr>
@@ -150,6 +152,9 @@ function shell(opts: {
             </tr>
           </table>
           <p style="margin:24px 0 0 0;font-style:italic;font-size:13px;color:${COLOR.muted};">A Fish in the Kitchen &mdash; the food your family is built on</p>
+          <p style="margin:10px 0 0 0;font-size:14px;">
+            <a href="${SITE_URL}" style="color:${COLOR.green};font-weight:600;text-decoration:underline;">www.afishinthekitchen.com</a>
+          </p>
         </td>
       </tr>
     </table>
@@ -163,7 +168,7 @@ function shell(opts: {
     // ⚠ No extra quotes around a quote row — it already carries its own.
     r.kind === "code" ? `${r.label}: ${r.value}` : stripTags(r.html)
   );
-  const text = [heading, "", ...textLines, "", `${ctaLabel}: ${actionUrl}`, "", "— A Fish in the Kitchen"].join("\n");
+  const text = [heading, "", ...textLines, "", `${ctaLabel}: ${actionUrl}`, "", "— A Fish in the Kitchen", SITE_URL].join("\n");
   return { html, text };
 }
 

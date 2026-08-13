@@ -6,6 +6,10 @@ import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/app-links";
 
 // Absolute, always-reachable brand asset for the email header (email clients
 // can't load localhost / relative paths).
+// ⚠ This file keeps its own chrome rather than using auth-email's shell, so
+// anything added there has to be added here too — the invite is the one email
+// most likely to reach somebody who has never heard of us.
+const SITE_URL = "https://www.afishinthekitchen.com";
 const LOGO_URL = "https://www.afishinthekitchen.com/logo.png";
 // Email-safe stand-in for the app's heading font (Francois One — a bold,
 // condensed sans). Email clients can't load web fonts, so fall back gracefully.
@@ -104,7 +108,7 @@ export function buildInviteEmail({
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:${COLOR.white};border-radius:16px;box-shadow:0 2px 14px rgba(26,26,26,0.08);overflow:hidden;">
             <tr>
               <td align="center" style="padding:36px 40px 0 40px;">
-                <img src="${LOGO_URL}" alt="A Fish in the Kitchen" width="120" height="120" style="display:block;border-radius:50%;border:0;outline:none;text-decoration:none;" />
+                <a href="${SITE_URL}" style="text-decoration:none;border:0;"><img src="${LOGO_URL}" alt="A Fish in the Kitchen" width="120" height="120" style="display:block;border-radius:50%;border:0;outline:none;text-decoration:none;" /></a>
               </td>
             </tr>
             <tr>
@@ -152,6 +156,9 @@ export function buildInviteEmail({
             </tr>
           </table>
           <p style="margin:24px 0 0 0;font-style:italic;font-size:13px;color:${COLOR.muted};">A Fish in the Kitchen &mdash; the food your family is built on</p>
+          <p style="margin:10px 0 0 0;font-size:14px;">
+            <a href="${SITE_URL}" style="color:${COLOR.green};font-weight:600;text-decoration:underline;">www.afishinthekitchen.com</a>
+          </p>
         </td>
       </tr>
     </table>
