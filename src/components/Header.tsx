@@ -118,20 +118,10 @@ export default function Header() {
                 >
                   Get the app
                 </Link>
-                {/* ⚠ Staff only, and it has to live in THIS branch too. The
-                    Super Admin link sat inside the signed-in branch, which the
-                    marketing nav now replaces for everyone — so withdrawing the
-                    web app quietly took the back office out of the header. The
-                    footer padlock still reaches it, but losing this was a
-                    regression, not a decision. */}
-                {isSuperAdmin && (
-                  <Link
-                    href="/superadmin"
-                    className="ml-1 px-3 py-2 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors"
-                  >
-                    Super Admin
-                  </Link>
-                )}
+                {/* ⚠ NO Super Admin link here, deliberately (Dylan, 2026-08-14).
+                    The back office is reached by the padlock in the footer, and
+                    a public marketing site should not advertise a staff console
+                    in its navigation — discreet is the point. */}
               </>
             ) : <>
             {primaryLinks.map((link) => (
