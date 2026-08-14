@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { WEB_APP_ENABLED } from "@/lib/flags";
 
 // ── Native-only launch switch ───────────────────────────────────────────────
 // The product is the iOS/Android app; the in-browser version of the app is not
@@ -7,9 +8,10 @@ import { NextRequest, NextResponse } from "next/server";
 // stays reachable: the /api backend the apps run on, the legal pages, the
 // public share links, invite/auth-email deep-links, and the marketing site.
 //
-// Flip this to `true` on launch day (and swap the landing's "Sign Up" buttons
-// for the App Store badge). Off for now so nothing changes while we build/test.
-const BLOCK_WEB_APP = true;
+// ⚠ The flag now lives in lib/flags.ts so the UI can see it too. It could not
+// before, which is how the site carried on rendering the app — and its whole
+// navigation — to signed-in visitors while this proxy bounced every link.
+const BLOCK_WEB_APP = !WEB_APP_ENABLED;
 
 // Reachable even when the app is blocked (exact matches).
 //

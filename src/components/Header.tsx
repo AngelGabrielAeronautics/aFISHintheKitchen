@@ -7,20 +7,31 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Avatar from "@/components/Avatar";
 import NotificationBell from "@/components/NotificationBell";
+import { WEB_APP_ENABLED } from "@/lib/flags";
 
-const primaryLinks = [
-  { href: "/", label: "Home" },
+// ⚠ EVERY ONE of these is an in-browser app route the proxy blocks. They are
+// kept only for the day the web app returns; while WEB_APP_ENABLED is false the
+// header must not offer them, or it advertises seven links that all bounce
+// back to the home page.
+const APP_PRIMARY = [
   { href: "/recipes", label: "Recipes" },
   { href: "/submit", label: "Add Recipe" },
 ];
 
-const moreLinks = [
+const APP_MORE = [
   { href: "/meal-planner", label: "Meal Planner" },
   { href: "/shopping-list", label: "Shopping List" },
   { href: "/collections", label: "Event Menus" },
   { href: "/tips", label: "Tips & Tricks" },
   { href: "/members", label: "The Family" },
 ];
+
+const primaryLinks = [
+  { href: "/", label: "Home" },
+  ...(WEB_APP_ENABLED ? APP_PRIMARY : []),
+];
+
+const moreLinks = WEB_APP_ENABLED ? APP_MORE : [];
 
 const allLinks = [...primaryLinks, ...moreLinks];
 
@@ -84,7 +95,10 @@ export default function Header() {
 
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {!loading && !user ? (
+            {/* ⚠ The MARKETING nav for everyone while the web app is withdrawn, not
+                just for signed-out visitors. Being signed in used to swap this
+                for an app navigation whose every link the proxy bounced. */}
+            {!loading && (!WEB_APP_ENABLED || !user) ? (
               <>
                 <Link
                   href="/our-story"
@@ -104,6 +118,20 @@ export default function Header() {
                 >
                   Get the app
                 </Link>
+                {/* ⚠ Staff only, and it has to live in THIS branch too. The
+                    Super Admin link sat inside the signed-in branch, which the
+                    marketing nav now replaces for everyone — so withdrawing the
+                    web app quietly took the back office out of the header. The
+                    footer padlock still reaches it, but losing this was a
+                    regression, not a decision. */}
+                {isSuperAdmin && (
+                  <Link
+                    href="/superadmin"
+                    className="ml-1 px-3 py-2 rounded-lg text-sm font-medium text-slate hover:text-charcoal hover:bg-cream-dark/60 transition-colors"
+                  >
+                    Super Admin
+                  </Link>
+                )}
               </>
             ) : <>
             {primaryLinks.map((link) => (
@@ -206,7 +234,10 @@ export default function Header() {
           </nav>
 
           {/* Mobile menu button */}
-          {!loading && !user ? (
+          {/* ⚠ The MARKETING nav for everyone while the web app is withdrawn, not
+                just for signed-out visitors. Being signed in used to swap this
+                for an app navigation whose every link the proxy bounced. */}
+            {!loading && (!WEB_APP_ENABLED || !user) ? (
             <Link href="/#download" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
               Get the app
             </Link>

@@ -12,6 +12,7 @@ import Avatar from "@/components/Avatar";
 import { useHousehold } from "@/context/HouseholdContext";
 import { useAuth } from "@/context/AuthContext";
 import LandingPage from "@/components/LandingPage";
+import { WEB_APP_ENABLED } from "@/lib/flags";
 
 export default function HomePage() {
   const { user, loading: authLoading, isSuperAdmin } = useAuth();
@@ -19,6 +20,12 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
+    // ⚠ Not while the web app is withdrawn. /setup is blocked by the proxy, so
+    // this pushed to a route that redirected straight back here — and the
+    // effect fired again. A signed-in user with no cookbook was stuck in an
+    // INFINITE REDIRECT LOOP, which is exactly what the two account-less
+    // sign-ups would have hit.
+    if (!WEB_APP_ENABLED) return;
     if (!authLoading && !householdLoading && user && !household) {
       // Platform super admins have no cookbook of their own — send them to the
       // backend instead of the "create a cookbook" onboarding.
@@ -34,7 +41,14 @@ export default function HomePage() {
     );
   }
 
-  if (!user) {
+  // ⚠ EVERYONE gets the marketing page while the app is withdrawn, signed in
+  // or not. "/" is on the proxy's allow-list because it is the marketing page —
+  // but it was also the app's dashboard, so being signed in turned the public
+  // website into a half-working copy of the product.
+  //
+  // Super admins are unaffected: the back office is at /superadmin, reached
+  // from the footer padlock.
+  if (!WEB_APP_ENABLED || !user) {
     return <LandingPage />;
   }
 
