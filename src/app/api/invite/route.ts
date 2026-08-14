@@ -1,3 +1,4 @@
+import { FieldValue } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
@@ -96,13 +97,42 @@ export async function POST(req: NextRequest) {
     const inviteRef = db.collection("invitedUsers").doc(inviteEmail);
     const existingSnap = await inviteRef.get();
     let resend = false;
+    /** Re-inviting somebody the owner had previously removed. */
+    let reInviting = false;
     if (existingSnap.exists) {
       const existing = existingSnap.data()!;
       if (existing.householdId && existing.householdId !== householdId) {
         return NextResponse.json({ error: "invited_elsewhere" }, { status: 409 });
       }
       if (existing.status === "registered") {
-        return NextResponse.json({ error: "already_member" }, { status: 409 });
+        // ⚠ "registered" is NOT proof they are still in the cookbook. Removing
+        // a member deletes their householdMembers doc and nothing else — this
+        // record survives, so a stale "registered" made the address
+        // PERMANENTLY un-invitable, refused with "already a member" for
+        // somebody who is not one. Remove a person, change your mind, and
+        // there was no way back from the UI at all.
+        //
+        // ⚠ ONE equality filter, then match in code. Combining householdId and
+        // userId needs a composite index that is not declared, and an
+        // undeclared index THROWS rather than running slowly — inside an invite
+        // that would turn a wrong refusal into a 500.
+        let stillMember = true;
+        try {
+          const uid = (await getAdminAuth().getUserByEmail(inviteEmail)).uid;
+          const mine = await db.collection("householdMembers").where("userId", "==", uid).get();
+          stillMember = mine.docs.some((d) => d.data().householdId === householdId);
+        } catch {
+          // No such account any more (deleted) — they cannot be a member of
+          // anything, so let the invite proceed.
+          stillMember = false;
+        }
+        if (stillMember) {
+          return NextResponse.json({ error: "already_member" }, { status: 409 });
+        }
+        // They were removed. Treat this as a brand-new invitation: clear the
+        // old registration stamp so the record does not claim they joined on a
+        // date that no longer means anything.
+        reInviting = true;
       }
       // Throttle: one email per address per 10 minutes, so a double-tap (or an
       // anxious owner) can't burst SendGrid or the invitee's junk folder.
@@ -150,6 +180,9 @@ export async function POST(req: NextRequest) {
         ...(resend
           ? { resentAt: new Date().toISOString() }
           : { createdAt: new Date().toISOString() }),
+        // merge:true would otherwise leave the previous registeredAt in place,
+        // so a re-invited person would show as having joined before they had.
+        ...(reInviting ? { registeredAt: FieldValue.delete() } : {}),
       },
       { merge: true }
     );
