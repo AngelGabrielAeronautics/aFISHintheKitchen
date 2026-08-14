@@ -2,9 +2,21 @@
 // never empty. The recipes are real ones from the founder family's Kookbook —
 // "from our family's cookbook to yours" — credited to "The Kookbook" and
 // flagged starter:true so they're recognisable (and freely deletable).
-// Image URLs point at the original uploads, which are immutable in practice
-// (photo replacements upload NEW files; nothing deletes old ones).
 // Generated from the live flagship recipes on 2026-07-04.
+//
+// ⚠ THESE IMAGE URLs ARE SHARED BY EVERY COOKBOOK EVER CREATED. They point at
+// the flagship's original uploads, and seeding copies the URL, not the bytes —
+// so one object is on screen in every family's book at once.
+//
+// This header used to say the files were "immutable in practice — nothing
+// deletes old ones". That was true on 2026-07-04 and stopped being true when
+// lib/delete-data shipped Storage deletion. On 2026-08-13 a cleanup of test
+// households deleted 185 of these objects and blanked 122 recipes across all
+// eight live cookbooks; 90-day soft delete is the only reason they came back.
+//
+// So: never delete an object referenced here, and never assume a file is yours
+// to remove just because it is in your household's documents. `delete-data`
+// enforces this now — see `pathsReferencedElsewhere`.
 
 export const STARTER_RECIPES = [
   {

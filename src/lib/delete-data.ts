@@ -1,5 +1,6 @@
 import { getStorage } from "firebase-admin/storage";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { STARTER_RECIPES } from "@/lib/starter-content";
 import type { Firestore } from "firebase-admin/firestore";
 
 // Deleting data, in the two shapes this product actually has.
@@ -99,6 +100,88 @@ function objectPathFromUrl(url: unknown): string | null {
 }
 
 /**
+ * Every object path that a household OTHER than this one still points at.
+ *
+ * ⚠ THIS IS NOT A NICETY. Storage objects are SHARED between cookbooks, and
+ * deleting "a household's" files by walking its own documents therefore deletes
+ * other families' photos. It has already happened once, on 2026-08-13: a
+ * cleanup of eight test households removed 185 objects under `recipe-images/`
+ * and blanked the pictures in all eight LIVE cookbooks, 122 recipes in total.
+ * Recovered only because the bucket has 90-day soft delete.
+ *
+ * Two ways a cookbook ends up pointing at somebody else's object:
+ *
+ * 1. STARTER CONTENT. `lib/starter-content` hard-codes download URLs, so every
+ *    cookbook ever created shares one set of objects. Its own header once said
+ *    the files were "immutable in practice — nothing deletes old ones", which
+ *    was true when it was written and stopped being true when this file
+ *    shipped. That is exactly the deletion that went wrong.
+ * 2. SAVED SHARED RECIPES. Both apps save a shared recipe with the snapshot's
+ *    `image` as-is, so the copy points into the SHARER's storage.
+ *
+ * The gift path is the one that got this right — `copyGiftedImages` duplicates
+ * the bytes precisely so a gift is not "a hostage" to the giver's account. The
+ * same reasoning applies to every case above; this function is the safety net
+ * for the ones that don't copy.
+ *
+ * Reads whole collections rather than querying per path: a URL can sit in a
+ * scalar or inside an `images` array, so there is no single indexed query that
+ * answers it, and hard deletion is rare enough to afford the scan. Erring
+ * toward keeping a file costs pennies of storage; erring the other way destroys
+ * a family's photographs.
+ */
+async function pathsReferencedElsewhere(
+  db: Firestore,
+  householdId: string
+): Promise<Set<string>> {
+  const keep = new Set<string>();
+  const add = (v: unknown) => {
+    const p = objectPathFromUrl(v);
+    if (p) keep.add(p);
+  };
+
+  const [recipes, tips, members, households] = await Promise.all([
+    db.collection("recipes").get(),
+    db.collection("tips").get(),
+    db.collection("members").get(),
+    db.collection("households").get(),
+  ]);
+
+  for (const doc of recipes.docs) {
+    const r = doc.data();
+    if (r.householdId === householdId) continue;
+    add(r.image);
+    add(r.thumbUrl);
+    add(r.video);
+    (Array.isArray(r.images) ? r.images : []).forEach(add);
+  }
+  for (const doc of tips.docs) {
+    const t = doc.data();
+    if (t.householdId === householdId) continue;
+    add(t.video);
+    (Array.isArray(t.images) ? t.images : []).forEach(add);
+  }
+  for (const doc of members.docs) {
+    if (doc.data().householdId === householdId) continue;
+    add(doc.data().photoUrl);
+  }
+  for (const doc of households.docs) {
+    if (doc.id === householdId) continue;
+    add(doc.data()?.customisation?.heroUrl);
+  }
+
+  // Starter content is offered to cookbooks that do not exist yet, so no
+  // document protects it until somebody accepts it. Protect it outright.
+  for (const r of STARTER_RECIPES as Record<string, unknown>[]) {
+    add(r.image);
+    add(r.thumbUrl);
+    (Array.isArray(r.images) ? r.images : []).forEach(add);
+  }
+
+  return keep;
+}
+
+/**
  * Every uploaded file belonging to a household: recipe covers, thumbnails,
  * galleries and videos, tip photos and videos, member avatars, the custom hero.
  *
@@ -126,7 +209,7 @@ function objectPathFromUrl(url: unknown): string | null {
 async function deleteStorageFor(
   db: Firestore,
   householdId: string
-): Promise<{ deleted: number; failed: number }> {
+): Promise<{ deleted: number; failed: number; kept: number }> {
   const name = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     // enhance-photo hardcodes this literal and works in production, so it is the
     // known-good fallback if the env var is absent server-side.
@@ -161,6 +244,19 @@ async function deleteStorageFor(
   for (const doc of members.docs) add(doc.data().photoUrl);
   add(household.data()?.customisation?.heroUrl);
 
+  // ⚠ THE GUARD. Never delete an object another cookbook is still showing.
+  // Without this, deleting one household blanks photographs in others — see
+  // pathsReferencedElsewhere for the incident this comes from.
+  const keep = await pathsReferencedElsewhere(db, householdId);
+  const shared = [...paths].filter((p) => keep.has(p));
+  shared.forEach((p) => paths.delete(p));
+  if (shared.length) {
+    console.warn(
+      `delete-data: keeping ${shared.length} object(s) still used by another ` +
+        `cookbook (e.g. ${shared[0]})`
+    );
+  }
+
   // One failure must not abandon the rest — report the count instead.
   let failed = 0;
   await Promise.all(
@@ -173,7 +269,7 @@ async function deleteStorageFor(
       }
     })
   );
-  return { deleted: paths.size - failed, failed };
+  return { deleted: paths.size - failed, failed, kept: shared.length };
 }
 
 export type DeletionReport = Record<string, number>;
@@ -202,6 +298,9 @@ export async function deleteHouseholdData(
   const media = await deleteStorageFor(db, householdId);
   report["storageFiles"] = media.deleted;
   if (media.failed) report["storageFilesFailed"] = media.failed;
+  // Reported so an operator answering a deletion request can say why a file
+  // survived: it is still in someone else's cookbook, not a failure to erase.
+  if (media.kept) report["storageFilesSharedKept"] = media.kept;
 
   for (const col of HOUSEHOLD_SCOPED_COLLECTIONS) {
     report[col] = await deleteQuery(db, col, "householdId", householdId);
