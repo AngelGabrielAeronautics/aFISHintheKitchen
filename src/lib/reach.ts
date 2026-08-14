@@ -23,6 +23,14 @@ export interface ReachStats {
   /** iOS first-time downloads to date. */
   appStore: number | null;
   appStoreAsOf: string | null;
+  /**
+   * First day Apple's data covers.
+   *
+   * ⚠ NOT the app's launch date. Apple reports forward from the day the report
+   * request was registered, so a total shown without this reads as lifetime
+   * when it may be a few days. The console shows the range, not just a number.
+   */
+  appStoreSince: string | null;
   /** Android installs to date. */
   play: number | null;
   playAsOf: string | null;
@@ -54,6 +62,7 @@ export async function refreshReachStats(): Promise<ReachStats> {
 
   let appStore = previous?.appStore ?? null;
   let appStoreAsOf = previous?.appStoreAsOf ?? null;
+  let appStoreSince = previous?.appStoreSince ?? null;
   if (!hasAppStoreCreds()) {
     notes.push("iOS: ASC_KEY_ID / ASC_PRIVATE_KEY_B64 not set");
   } else {
@@ -62,6 +71,7 @@ export async function refreshReachStats(): Promise<ReachStats> {
       if (d) {
         appStore = d.total;
         appStoreAsOf = d.latestDate;
+        appStoreSince = d.earliestDate;
       } else {
         notes.push("iOS: Apple has not produced a report yet (24–48h after registering)");
       }
@@ -98,6 +108,7 @@ export async function refreshReachStats(): Promise<ReachStats> {
   const stats: ReachStats = {
     appStore,
     appStoreAsOf,
+    appStoreSince,
     play,
     playAsOf,
     updatedAt: Date.now(),

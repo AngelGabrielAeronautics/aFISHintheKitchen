@@ -37,7 +37,7 @@ interface Business {
   };
   giftPrice: string;
   reach: {
-    appStore: number | null; appStoreAsOf: string | null;
+    appStore: number | null; appStoreAsOf: string | null; appStoreSince: string | null;
     play: number | null; playAsOf: string | null;
     updatedAt: number; notes: string[];
   } | null;
@@ -455,9 +455,23 @@ function BusinessPanels({ biz }: { biz: Business }) {
             <Line
               label="iOS downloads"
               value={reach.appStore}
-              note={reach.appStoreAsOf ? `to ${reach.appStoreAsOf}` : undefined}
+              note={
+                reach.appStoreSince && reach.appStoreAsOf
+                  ? `${reach.appStoreSince} → ${reach.appStoreAsOf}`
+                  : reach.appStoreAsOf
+                    ? `to ${reach.appStoreAsOf}`
+                    : undefined
+              }
               strong
             />
+            {/* ⚠ Apple reports forward from the day the request was registered,
+                not from launch. Without this the number reads as lifetime. */}
+            {reach.appStoreSince && (
+              <p className="mt-0.5 font-sans text-[11px] leading-snug text-slate">
+                First-time downloads only — updates and redownloads excluded. Apple reports from{" "}
+                {reach.appStoreSince}, not from launch.
+              </p>
+            )}
             <Line
               label="Android installs"
               value={reach.play}

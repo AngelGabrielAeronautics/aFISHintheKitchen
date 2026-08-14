@@ -87,6 +87,18 @@ export interface AppStoreDownloads {
   total: number;
   /** The most recent day present in the data (YYYY-MM-DD), if any. */
   latestDate: string | null;
+  /**
+   * The EARLIEST day present.
+   *
+   * ⚠ THE TOTAL IS NOT NECESSARILY LIFETIME, and this is the field that says
+   * so. An ONGOING request only reports forward from the day it was registered
+   * (2026-08-13 here), while the app went live on 2026-07-28. A
+   * ONE_TIME_SNAPSHOT request was added to backfill the rest; until Apple
+   * produces it, the total covers only the days below. Showing a partial figure
+   * as "downloads" would understate the app to the person deciding whether it
+   * is working.
+   */
+  earliestDate: string | null;
 }
 
 /**
@@ -104,22 +116,31 @@ export async function fetchAppStoreDownloads(): Promise<AppStoreDownloads | null
     `/v1/apps/${APP_ID}/analyticsReportRequests?limit=10`,
     jwt,
   )) as { data?: { id: string; attributes?: { accessType?: string } }[] };
-  const ongoing =
-    requests.data?.find((r) => r.attributes?.accessType === "ONGOING") ?? requests.data?.[0];
-  if (!ongoing) return null;
+  if (!requests.data?.length) return null;
 
-  const reports = (await api(
-    `/v1/analyticsReportRequests/${ongoing.id}/reports?limit=200`,
-    jwt,
-  )) as { data?: { id: string; attributes?: { name?: string } }[] };
-  const report = reports.data?.find((r) => r.attributes?.name === REPORT_NAME);
-  if (!report) return null; // Apple hasn't produced this report type yet
+  // ⚠ EVERY request, not just the ONGOING one. There are two by design: ONGOING
+  // reports forward from the day it was registered, and ONE_TIME_SNAPSHOT
+  // backfills what came before. Reading only the first would silently drop the
+  // app's entire history — and the code did exactly that until 2026-08-14.
+  // Merging is safe because days are keyed by the row's own Date below.
+  const instanceIds: { id: string; processingDate: string }[] = [];
+  for (const req of requests.data) {
+    const reports = (await api(
+      `/v1/analyticsReportRequests/${req.id}/reports?limit=200`,
+      jwt,
+    )) as { data?: { id: string; attributes?: { name?: string } }[] };
+    const report = reports.data?.find((r) => r.attributes?.name === REPORT_NAME);
+    if (!report) continue; // this request hasn't produced downloads yet
 
-  const instances = (await api(
-    `/v1/analyticsReports/${report.id}/instances?limit=200`,
-    jwt,
-  )) as { data?: { id: string; attributes?: { processingDate?: string } }[] };
-  if (!instances.data?.length) return null;
+    const instances = (await api(
+      `/v1/analyticsReports/${report.id}/instances?limit=200`,
+      jwt,
+    )) as { data?: { id: string; attributes?: { processingDate?: string } }[] };
+    for (const i of instances.data ?? []) {
+      instanceIds.push({ id: i.id, processingDate: i.attributes?.processingDate ?? "" });
+    }
+  }
+  if (!instanceIds.length) return null;
 
   /**
    * ⛔ TWO WAYS THIS OVERCOUNTED ON THE APP IT CAME FROM — 3.7× too high, in
@@ -141,8 +162,8 @@ export async function fetchAppStoreDownloads(): Promise<AppStoreDownloads | null
   let sawDownloadType = false;
 
   // Oldest first, so a later instance's revision of a day overwrites it.
-  const ordered = [...instances.data].sort((a, b) =>
-    (a.attributes?.processingDate ?? "").localeCompare(b.attributes?.processingDate ?? ""),
+  const ordered = [...instanceIds].sort((a, b) =>
+    a.processingDate.localeCompare(b.processingDate),
   );
 
   for (const inst of ordered) {
@@ -186,11 +207,13 @@ export async function fetchAppStoreDownloads(): Promise<AppStoreDownloads | null
 
   let total = 0;
   let latestDate: string | null = null;
+  let earliestDate: string | null = null;
   for (const [date, n] of firstTimeByDate) {
     total += n;
     if (!latestDate || date > latestDate) latestDate = date;
+    if (!earliestDate || date < earliestDate) earliestDate = date;
   }
 
   if (!latestDate && total === 0) return null; // parsed nothing meaningful
-  return { total, latestDate };
+  return { total, latestDate, earliestDate };
 }
