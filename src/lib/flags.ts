@@ -18,9 +18,15 @@
  * website is marketing, the legal pages, the FAQ, the public share links and
  * the back office — nothing you sign into and use as a cookbook.
  *
- * ⚠ Turning this on again does NOT restore a working web app on its own. The
- * page routes still exist (see src/app/recipes, /meal-planner, /tips …) but
- * have not been exercised since the native pivot, and the apps have moved on
- * without them.
+ * ⚠ TURNING THIS ON RESTORES NOTHING. The in-browser app's page routes were
+ * DELETED on 2026-08-14 — /recipes, /submit, /meal-planner, /shopping-list,
+ * /collections, /tips, /members, /settings, /setup, /account and /auth, about
+ * 11,000 lines. They were unreachable behind the proxy and unexercised since
+ * the native pivot, so they could only rot and mislead.
+ *
+ * The flag survives because the proxy still needs to know the shape of the
+ * product, and because the marketing site's own behaviour keys off it. If a web
+ * app is ever wanted again it gets written against today's data model, not
+ * recovered from git.
  */
 export const WEB_APP_ENABLED = false;

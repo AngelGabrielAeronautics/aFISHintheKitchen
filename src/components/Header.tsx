@@ -9,29 +9,12 @@ import Avatar from "@/components/Avatar";
 import NotificationBell from "@/components/NotificationBell";
 import { WEB_APP_ENABLED } from "@/lib/flags";
 
-// ⚠ EVERY ONE of these is an in-browser app route the proxy blocks. They are
-// kept only for the day the web app returns; while WEB_APP_ENABLED is false the
-// header must not offer them, or it advertises seven links that all bounce
-// back to the home page.
-const APP_PRIMARY = [
-  { href: "/recipes", label: "Recipes" },
-  { href: "/submit", label: "Add Recipe" },
-];
-
-const APP_MORE = [
-  { href: "/meal-planner", label: "Meal Planner" },
-  { href: "/shopping-list", label: "Shopping List" },
-  { href: "/collections", label: "Event Menus" },
-  { href: "/tips", label: "Tips & Tricks" },
-  { href: "/members", label: "The Family" },
-];
-
-const primaryLinks = [
-  { href: "/", label: "Home" },
-  ...(WEB_APP_ENABLED ? APP_PRIMARY : []),
-];
-
-const moreLinks = WEB_APP_ENABLED ? APP_MORE : [];
+// ⚠ The in-browser app routes these used to point at were DELETED on
+// 2026-08-14 — /recipes, /submit, /meal-planner, /shopping-list, /collections,
+// /tips and /members no longer exist. Do not reinstate a link here without
+// reinstating the page; see lib/flags.ts.
+const primaryLinks = [{ href: "/", label: "Home" }];
+const moreLinks: { href: string; label: string }[] = [];
 
 const allLinks = [...primaryLinks, ...moreLinks];
 
