@@ -320,9 +320,75 @@ export default function SuperAdminPage() {
               </tbody>
             </table>
           </div>
+
+          <TableKey />
         </>
       )}
     </main>
+  );
+}
+
+/**
+ * What the two status columns mean.
+ *
+ * ⚠ ACCESS AND SUBSCRIPTION BOTH SAY "active" AND THEY ARE NOT THE SAME THING.
+ * That collision is the whole reason this exists — Dylan read the table and
+ * could not tell what either column was telling him. Access is what the family
+ * can DO; subscription is how it is being PAID FOR. A cookbook can be fully
+ * active on a trial that has never taken a penny, and a cancelled subscription
+ * still shows active access until the lapse ladder catches up.
+ */
+function TableKey() {
+  const access: [string, string][] = [
+    ["active", "Full use — they can add and edit."],
+    ["read_only", "Can look, can't change anything. Where the lapse ladder puts a cookbook 7 days after it lapses."],
+    ["suspended", "Locked out. Nothing is deleted."],
+  ];
+  const sub: [string, string][] = [
+    ["trialing", "In the 14-day free trial. Nothing has been charged yet."],
+    ["active", "Paying — a real store subscription, a redeemed gift, or comped."],
+    ["canceled", "Cancelled, but still inside the period they paid for."],
+    ["none", "No subscription record at all."],
+  ];
+  return (
+    <div className="mt-6 grid gap-6 rounded-xl border border-charcoal/10 bg-white p-5 sm:grid-cols-2">
+      <div>
+        <h3 className="font-serif text-sm font-bold text-charcoal">Access — what they can do</h3>
+        <dl className="mt-2 space-y-1.5">
+          {access.map(([k, v]) => (
+            <div key={k} className="flex gap-2">
+              <dt className="w-24 flex-shrink-0 font-mono text-[11px] text-terracotta">{k}</dt>
+              <dd className="font-sans text-xs leading-snug text-slate">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      <div>
+        <h3 className="font-serif text-sm font-bold text-charcoal">
+          Subscription — how it&rsquo;s paid for
+        </h3>
+        <dl className="mt-2 space-y-1.5">
+          {sub.map(([k, v]) => (
+            <div key={k} className="flex gap-2">
+              <dt className="w-24 flex-shrink-0 font-mono text-[11px] text-terracotta">{k}</dt>
+              <dd className="font-sans text-xs leading-snug text-slate">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      <p className="font-sans text-xs leading-relaxed text-slate sm:col-span-2">
+        {/* ⚠ The leading space is inside the expression on purpose — JSX drops
+            whitespace between an element and the text after it, which ran this
+            together as "independently.Access". */}
+        <span className="font-semibold text-charcoal">The two move independently.</span>{" "}
+        Access
+        only changes when the nightly sweep walks a lapsed cookbook down the ladder — full access
+        for 7 days, then read-only, then suspended. So &ldquo;canceled&rdquo; next to
+        &ldquo;active&rdquo; is normal and means they are still inside time they have paid for.
+        The word after the status (&ldquo;· annual&rdquo;) is the plan, shown only once a plan
+        exists.
+      </p>
+    </div>
   );
 }
 
