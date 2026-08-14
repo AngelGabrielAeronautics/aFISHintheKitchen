@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import StoreBadges from "@/components/StoreBadges";
+import { FAQS } from "@/lib/faqs";
 import { PLAN_PRICES, type CurrencyCode } from "@/lib/prices";
 import ScanToDownload from "@/components/ScanToDownload";
 
@@ -48,73 +49,7 @@ const GIFT_PERKS = [
   "After the year, they choose whether to continue",
 ];
 
-const FAQS = [
-  {
-    q: "Is my cookbook private?",
-    a: "Completely. Only you and the family members you invite can see your recipes — it's never public or searchable.",
-  },
-  {
-    q: "How many people can I invite?",
-    a: "Up to 5 family members or friends, free for them. They can add recipes, plan meals, and cook right alongside you.",
-  },
-  {
-    q: "What if my family is bigger than 5?",
-    a: "Your plan covers you plus 5 members. Need more? Tap “Notify me” in the app and we'll let you know as soon as extra seats are available.",
-  },
-  {
-    q: "Do my family members pay?",
-    a: "No. Only you, the cookbook owner, subscribe. Everyone you invite uses the app for free.",
-  },
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes. Cancel whenever you like and you'll keep full access until the end of your billing period.",
-  },
-  {
-    // A real customer asked this before buying (2026-08-09). The honest answer
-    // is the whole ladder in lib/access.ts — full access to period end, a
-    // week's grace, then read-only, locked at 30 days, kept for a year. "Your
-    // recipes are safe" alone is the reassuring half of a true answer, and
-    // they'd meet the rest at the worst possible moment.
-    q: "What happens to my recipes if I cancel?",
-    // "Paused", not "locked" — that is the word on the screen they'd actually
-    // hit, and one vocabulary beats two. It also says what paused MEANS,
-    // because "locked" left people imagining anything from a nag screen to
-    // deletion.
-    a: "Nothing is deleted. You keep full access to the end of the period you've paid for, and for a week after that. Your cookbook then becomes read-only — every recipe, photo and meal plan is still there to read and cook from, you just can't add or change anything.\n\nA month later it's paused: you can still sign in, but the recipes are hidden until you subscribe again. Paused, not deleted — we keep everything for a year, and subscribing puts it all back instantly, exactly as you left it. Anyone you invited sees the same, since it's one shared cookbook.",
-  },
-  {
-    q: "What happens after the free trial?",
-    a: "The 14-day trial is completely free — we won't charge you during it, and we'll email you a reminder before it ends. When it ends, your trial rolls into a paid subscription automatically, so your cookbook keeps working without a break. Not for you? Cancel any time before the trial ends and you won't be charged a cent.",
-  },
-  // ── Gifting ──
-  // ⚠ Every answer here is checked against what the code actually does, not
-  // what the marketing implies. Getting a gifting FAQ wrong is expensive: these
-  // are the questions somebody asks with their card already in their hand.
-  {
-    q: "How does gifting work?",
-    a: "Buy it in the app under More → Gift a year. We email them a card with a code on the day you choose, and you get a copy too. They redeem it in the app and the year lands on their own cookbook.",
-  },
-  {
-    q: "Does a gift renew?",
-    a: "No. You pay once and are never charged again. When their year is up they decide for themselves whether to carry on — and nothing is deleted either way, so their cookbook is still there if they do.",
-  },
-  {
-    q: "Can I send them my recipes too?",
-    a: "Yes, if you own a cookbook. Tick “Include my recipes” and they start with a copy of your whole cookbook — every recipe and kitchen tip, with who contributed each one kept intact. Yours is untouched, and they never get access to it.",
-  },
-  {
-    q: "What if they never claim it?",
-    a: "The code doesn't expire, so it keeps. We remind them after a week, and if it's still sitting there after three we let you know — usually it's a mistyped address or a spam folder, and you can send the code on yourself.",
-  },
-  {
-    q: "Can I join more than one cookbook?",
-    a: "Yes — you can be a free member of up to 3 other families' cookbooks, on top of your own. Use the same email address you already sign in with when you accept the invitation: that is what keeps every cookbook under one login. A different address creates a second, separate account, and the two cannot see each other.",
-  },
-  {
-    q: "How do I switch between cookbooks?",
-    a: "Tap More, then Switch cookbook — it appears just under your name as soon as you belong to more than one. Your recipes, meal plan and shopping list all follow whichever cookbook you are in.",
-  },
-];
+// FAQs live in lib/faqs.ts — shared with /faq and diffed against both apps.
 
 type Feature = {
   title: string;
@@ -759,7 +694,7 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={0.1} className="mt-10 overflow-hidden rounded-2xl bg-white ring-1 ring-cream-dark/30">
             <div className="divide-y divide-cream-dark/40">
-              {FAQS.map((faq, i) => (
+              {FAQS.filter((f) => f.landing).map((faq, i) => (
                 <div key={faq.q}>
                   <button
                     type="button"
@@ -790,6 +725,18 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+          </Reveal>
+          {/* The landing page carries only the questions a PROSPECT needs. The
+              rest — switching cookbooks, what happens to recipes, unclaimed
+              gifts — matter once you are using it, and thirteen accordion rows
+              read as a wall rather than an answer. */}
+          <Reveal delay={0.15} className="mt-6 text-center">
+            <a
+              href="/faq"
+              className="font-sans text-sm font-semibold text-terracotta underline underline-offset-4"
+            >
+              See all questions
+            </a>
           </Reveal>
         </div>
       </section>
