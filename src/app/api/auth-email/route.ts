@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
@@ -13,13 +14,52 @@ export const runtime = "nodejs";
 //
 //   kind: "verify" → requires a signed-in caller; sends to their own address.
 //   kind: "reset"  → unauthenticated; enumeration-safe (always reports success)
-//                    and throttled per-email to blunt abuse / mail-bombing.
+//                    and throttled BOTH per-email and per-caller. It cannot
+//                    require auth — the whole point is that the user is locked
+//                    out — so it is the one endpoint here a bot can reach, and
+//                    it is treated accordingly.
 
 const RESET_THROTTLE_MS = 60_000; // at most one reset email per address per minute
+
+/**
+ * Per-CALLER cap, on top of the per-address one.
+ *
+ * ⚠ WHY BOTH. The per-address throttle stops one inbox being flooded; it does
+ * nothing to stop one caller walking a list of addresses. On 2026-08-14 an
+ * automated probe swept every endpoint in this API — everything else answered
+ * 401 because it requires auth, and this route, which cannot require auth, was
+ * the only door that opened. It sent two real password-reset emails.
+ *
+ * Nobody's account was ever at risk: the link only works for whoever controls
+ * the inbox. What is at risk is a real person being pestered, our sending
+ * reputation, and the SendGrid quota.
+ */
+const RESET_IP_LIMIT = 5;
+const RESET_IP_WINDOW_MS = 60 * 60_000; // 5 reset requests per caller per hour
 
 function throttleKey(email: string): string {
   // Firestore doc ids can't contain "/"; emails don't, but encode defensively.
   return encodeURIComponent(email);
+}
+
+/**
+ * Best-effort caller identity. Vercel sets x-forwarded-for; the left-most entry
+ * is the client. Unknown callers all share one bucket, which is deliberately
+ * strict rather than permissive.
+ */
+function callerIp(req: NextRequest): string {
+  const fwd = req.headers.get("x-forwarded-for") ?? "";
+  return (fwd.split(",")[0] || req.headers.get("x-real-ip") || "unknown").trim();
+}
+
+/**
+ * ⚠ HASHED, never stored raw. An IP is personal data and this collection is
+ * long-lived; the hash is enough to count against and useless afterwards. The
+ * RAW address goes to the server log instead, where it ages out — that is what
+ * lets us answer "who did this?" without keeping a list of people's IPs.
+ */
+function ipKey(ip: string): string {
+  return "ip:" + createHash("sha256").update(ip).digest("hex").slice(0, 32);
 }
 
 // Repoint a Firebase-generated action link at our branded /auth/action handler.
@@ -100,9 +140,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_email" }, { status: 400 });
     }
 
+    const db = getAdminDb();
+    const ip = callerIp(req);
+    const ua = (req.headers.get("user-agent") ?? "").slice(0, 120);
+
+    // ⚠ LOGGED ON EVERY RESET REQUEST, before any throttle can swallow it.
+    // When two of these arrived unexplained, the route recorded nothing about
+    // the caller and the only honest answer was "I don't know". Now there is
+    // always a line to look at.
+    console.warn(`auth-email reset requested ip=${ip} ua=${JSON.stringify(ua)}`);
+
+    // Per-CALLER cap first — it is the one that stops a sweep across addresses.
+    // Fails OPEN on error: a locked-out user must still be able to get in.
+    try {
+      const ipRef = db.collection("authEmailThrottle").doc(ipKey(ip));
+      const snap = await ipRef.get();
+      const d = snap.data() as { count?: number; windowStart?: number } | undefined;
+      const now = Date.now();
+      const fresh = !d?.windowStart || now - d.windowStart > RESET_IP_WINDOW_MS;
+      const count = fresh ? 0 : (d?.count ?? 0);
+      if (count >= RESET_IP_LIMIT) {
+        console.warn(`auth-email reset RATE-LIMITED ip=${ip} (${count} in the last hour)`);
+        // Same shape as success — never reveal the limit or whether the
+        // address exists.
+        return NextResponse.json({ ok: true });
+      }
+      await ipRef.set({ count: count + 1, windowStart: fresh ? now : d!.windowStart });
+    } catch (err) {
+      console.error("auth-email ip throttle failed (continuing):", err);
+    }
+
     // Per-email throttle (Admin SDK write bypasses rules; clients never touch
     // this collection). Best-effort: a failure here must not block the email.
-    const db = getAdminDb();
     const throttleRef = db.collection("authEmailThrottle").doc(throttleKey(email));
     try {
       const snap = await throttleRef.get();
