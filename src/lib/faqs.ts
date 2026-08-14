@@ -84,7 +84,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: "Can I join more than one cookbook?",
-    a: "Yes — you can be a free member of up to 3 other families' cookbooks, on top of your own. Use the same email address you already sign in with when you accept the invitation: that is what keeps every cookbook under one login. A different address creates a second, separate account, and the two cannot see each other.",
+    a: "Yes — you can be a free member of up to 3 other families' cookbooks, on top of your own. Use the same email address you already sign in with when you accept the invitation: that is what keeps every cookbook under one login. A different address creates a second, separate account, and the two cannot see each other. Once you are in more than one, tap More, then Switch cookbook — it appears just under your name — to move between them.",
   },
   {
     q: "How do I switch between cookbooks?",
