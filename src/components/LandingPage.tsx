@@ -108,7 +108,11 @@ const FAQS = [
   },
   {
     q: "Can I join more than one cookbook?",
-    a: "Yes — you can be a free member of up to 3 other families' cookbooks, on top of your own.",
+    a: "Yes — you can be a free member of up to 3 other families' cookbooks, on top of your own. Use the same email address you already sign in with when you accept the invitation: that is what keeps every cookbook under one login. A different address creates a second, separate account, and the two cannot see each other.",
+  },
+  {
+    q: "How do I switch between cookbooks?",
+    a: "Tap More, then Switch cookbook — it appears just under your name as soon as you belong to more than one. Your recipes, meal plan and shopping list all follow whichever cookbook you are in.",
   },
 ];
 
