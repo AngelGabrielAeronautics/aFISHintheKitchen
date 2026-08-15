@@ -165,15 +165,34 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
-    // ── Shopping lists (private to the user, synced across their devices) ──
+    // ── Shopping lists (per user, synced across their devices — and, when the
+    // owner says so, standing-shared with other members of the household) ──
     // Doc id = {uid}_{householdId}. Created lazily on first save, so allow signed-in
-    // reads of a missing doc (reveals nothing); gate existing docs on ownership.
+    // reads of a missing doc (reveals nothing); gate existing docs on ownership
+    // OR on being named in the owner's `sharedWith`.
     match /shoppingLists/{id} {
+      // The uids the OWNER has standing-shared this list with. get() with a
+      // default because docs written before sharing existed have no field.
+      function isSharedReader() {
+        return request.auth.uid in resource.data.get('sharedWith', []);
+      }
       allow read: if isSignedIn()
-        && (resource == null || (resource.data.userId == request.auth.uid && canRead(resource.data.householdId)));
+        && (resource == null
+            || ((resource.data.userId == request.auth.uid || isSharedReader())
+                && canRead(resource.data.householdId)));
       allow create: if request.resource.data.userId == request.auth.uid
         && canWrite(request.resource.data.householdId);
-      allow update, delete: if resource.data.userId == request.auth.uid
+      // A shared member may edit the CONTENT — entries, ticks, typed items —
+      // but never the ownership: userId and householdId are frozen for
+      // everyone, and only the OWNER may change sharedWith. Being shared with
+      // someone must not let them share the list onward or take it over.
+      allow update: if (resource.data.userId == request.auth.uid || isSharedReader())
+        && canWrite(resource.data.householdId)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.householdId == resource.data.householdId
+        && (resource.data.userId == request.auth.uid
+            || request.resource.data.get('sharedWith', []) == resource.data.get('sharedWith', []));
+      allow delete: if resource.data.userId == request.auth.uid
         && canWrite(resource.data.householdId);
     }
 
