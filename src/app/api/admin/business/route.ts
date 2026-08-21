@@ -18,6 +18,7 @@ import { getReachStats } from "@/lib/reach";
 import { readHeartbeats } from "@/lib/heartbeat";
 import { summariseAiUsage } from "@/lib/ai-usage";
 import { PLAN_PRICES } from "@/lib/prices";
+import { classifyFunding } from "@/lib/funding";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,12 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const db = getAdminDb();
-  const [subsSnap, giftsSnap, reach, jobs, ai] = await Promise.all([
+  const [householdsSnap, subsSnap, giftsSnap, reach, jobs, ai] = await Promise.all([
+    // ⚠ Money is counted per COOKBOOK, not per subscription document, because
+    // the table underneath the panel is a list of cookbooks. Counting subs here
+    // and households there is what let the panel say "Comped 2" while no row
+    // could be identified as one of them.
+    db.collection("households").get(),
     db.collection("subscriptions").get(),
     db.collection("gifts").get(),
     getReachStats(),
@@ -38,41 +44,42 @@ export async function GET(req: NextRequest) {
   ]);
 
   // ── Money ────────────────────────────────────────────────────────────────
-  // Counted by PROVIDER as well as status, because the three are genuinely
-  // different things: "appstore"/"play" is somebody paying, "gift" is a year
-  // already paid for by someone else, and "none" is the signup trial.
+  // One cookbook, one bucket — classifyFunding decides, and the table's rows
+  // carry the very same label, so "Comped 2" can be clicked and the two rows
+  // it means will be the two rows shown. Nothing is derived by subtracting one
+  // overlapping count from another; that is how "Paying" used to be computed
+  // and it double-subtracted anything both comped and gifted.
+  const subsByOwner = new Map<string, FirebaseFirestore.DocumentData>();
+  subsSnap.docs.forEach((d) => subsByOwner.set(d.id, d.data()));
+
   const money = {
-    active: 0,
-    trialing: 0,
-    lapsed: 0,
-    canceled: 0,
-    comped: 0,
-    gifted: 0,
+    /** Keyed by Funding — the panel reads these in FUNDING_ORDER. */
+    byFunding: {} as Record<string, number>,
+    /** Plans of the PAYING cookbooks only. A comped year has no plan, and
+     *  counting it as "unknown" made the footer read "2 annual · 2 unknown"
+     *  about four cookbooks the reader could not identify. */
     byPlan: {} as Record<string, number>,
     byProvider: {} as Record<string, number>,
     /** Trials ending within 7 days — the ones worth a nudge. */
     trialsEndingSoon: 0,
   };
   const soon = Date.now() + 7 * 86_400_000;
-  subsSnap.docs.forEach((d) => {
-    const s = d.data();
-    const status = String(s.status ?? "none");
-    const provider = String(s.provider ?? "none");
-    money.byProvider[provider] = (money.byProvider[provider] ?? 0) + 1;
-    if (s.comped === true) money.comped++;
-    if (provider === "gift" && status === "active") money.gifted++;
-    if (status === "active") {
-      money.active++;
-      const plan = s.plan ? String(s.plan) : "unknown";
+  householdsSnap.docs.forEach((d) => {
+    const h = d.data();
+    const sub = subsByOwner.get(String(h.ownerId ?? ""));
+    const funding = classifyFunding(sub, d.id);
+    money.byFunding[funding] = (money.byFunding[funding] ?? 0) + 1;
+
+    if (funding === "paying") {
+      const plan = sub?.plan ? String(sub.plan) : "no plan recorded";
       money.byPlan[plan] = (money.byPlan[plan] ?? 0) + 1;
-    } else if (status === "trialing") {
-      money.trialing++;
-      const ends = Date.parse(String(s.trialEndsAt ?? ""));
-      if (Number.isFinite(ends) && ends <= soon) money.trialsEndingSoon++;
-    } else if (status === "canceled") {
-      money.canceled++;
+      const provider = String(sub?.provider ?? "none");
+      money.byProvider[provider] = (money.byProvider[provider] ?? 0) + 1;
     }
-    if (s.lapsedAt) money.lapsed++;
+    if (funding === "trialing") {
+      const ends = Date.parse(String(sub?.trialEndsAt ?? ""));
+      if (Number.isFinite(ends) && ends <= soon) money.trialsEndingSoon++;
+    }
   });
 
   // ── Gifts ────────────────────────────────────────────────────────────────

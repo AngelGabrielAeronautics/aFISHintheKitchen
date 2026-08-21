@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getFirebaseAuth } from "@/lib/firebase";
 import {
@@ -9,16 +9,28 @@ import {
   GoogleAuthProvider,
   signOut,
 } from "firebase/auth";
+import {
+  FUNDING_LABELS,
+  FUNDING_MEANING,
+  FUNDING_ORDER,
+  type Funding,
+} from "@/lib/funding";
 
 interface HouseholdRow {
   id: string;
   name: string;
   ownerId: string;
+  ownerEmail: string | null;
   memberCount: number;
   accessState: string;
   subscriptionStatus: string;
+  /** The one label that tells a comped year from a gifted one from a real
+   *  store subscription — all three carry status "active". */
+  funding: Funding;
+  provider: string | null;
   plan: string | null;
   trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
   lapsedAt: string | null;
   createdAt: string | null;
   seatUpgradeRequestedAt: string | null;
@@ -26,8 +38,7 @@ interface HouseholdRow {
 
 interface Business {
   money: {
-    active: number; trialing: number; lapsed: number; canceled: number;
-    comped: number; gifted: number;
+    byFunding: Partial<Record<Funding, number>>;
     byPlan: Record<string, number>; byProvider: Record<string, number>;
     trialsEndingSoon: number;
   };
@@ -56,6 +67,7 @@ interface Overview {
     seatRequests: number;
     byAccessState: Record<string, number>;
     bySubscription: Record<string, number>;
+    byFunding: Record<string, number>;
   };
   households: HouseholdRow[];
 }
@@ -87,6 +99,14 @@ export default function SuperAdminPage() {
     action: string;
     days?: number;
   } | null>(null);
+  /**
+   * Which Money line the table is showing, or null for all of them.
+   *
+   * ⚠ This is the answer to "it says Comped 2 and I cannot tell WHICH two".
+   * The panel's counts and this filter run off the same `funding` label, so
+   * the count on the line and the number of rows below it are the same fact.
+   */
+  const [fundingFilter, setFundingFilter] = useState<Funding | null>(null);
 
   const load = useCallback(async () => {
     const token = await getFirebaseAuth().currentUser?.getIdToken();
@@ -112,6 +132,15 @@ export default function SuperAdminPage() {
     if (loading || !user || !isSuperAdmin) return;
     load();
   }, [loading, user, isSuperAdmin, load]);
+
+  // The rows the table draws. Filtered client-side on purpose: the whole list
+  // is already loaded, and a filter that needs a round trip stops being a way
+  // of reading the panel above it.
+  const visibleHouseholds = data
+    ? fundingFilter
+      ? data.households.filter((h) => h.funding === fundingFilter)
+      : data.households
+    : [];
 
   /**
    * What each action does, in the words of its consequence. "Cancel" and
@@ -233,7 +262,13 @@ export default function SuperAdminPage() {
             <Metric label="Seat requests" value={data.metrics.seatRequests ?? 0} />
           </div>
 
-          {biz && <BusinessPanels biz={biz} />}
+          {biz && (
+            <BusinessPanels
+              biz={biz}
+              filter={fundingFilter}
+              onFilter={(f) => setFundingFilter((current) => (current === f ? null : f))}
+            />
+          )}
 
           {data.households.some((h) => h.seatUpgradeRequestedAt) && (
             <div className="mb-8 rounded-xl border border-terracotta-light/40 bg-terracotta-light/10 p-5">
@@ -270,6 +305,29 @@ export default function SuperAdminPage() {
             </div>
           )}
 
+          {fundingFilter && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="font-sans text-sm text-slate">
+                Showing the{" "}
+                <span className="font-semibold text-charcoal">
+                  {visibleHouseholds.length}
+                </span>{" "}
+                {visibleHouseholds.length === 1 ? "cookbook" : "cookbooks"} counted under{" "}
+                <span className="font-semibold text-charcoal">
+                  {FUNDING_LABELS[fundingFilter]}
+                </span>
+                .
+              </span>
+              <button
+                type="button"
+                onClick={() => setFundingFilter(null)}
+                className="cursor-pointer rounded-md bg-cream-dark/30 px-2 py-1 font-sans text-xs font-medium text-charcoal transition-colors hover:bg-cream-dark/50"
+              >
+                Show all {data.households.length}
+              </button>
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-xl border border-gold-light bg-white">
             <table className="w-full text-left font-sans text-sm">
               <thead className="border-b border-gold-light bg-cream/40 text-xs uppercase text-slate/60">
@@ -277,21 +335,29 @@ export default function SuperAdminPage() {
                   <th className="px-4 py-3">Cookbook</th>
                   <th className="px-4 py-3">Members</th>
                   <th className="px-4 py-3">Access</th>
-                  <th className="px-4 py-3">Subscription</th>
+                  <th className="px-4 py-3">Paid for by</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {data.households.map((h) => (
+                {visibleHouseholds.map((h) => (
                   <tr key={h.id} className="border-b border-gold-light/50 last:border-0">
-                    <td className="px-4 py-3 font-medium text-charcoal">{h.name || h.id}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-charcoal">{h.name || h.id}</div>
+                      {/* Who to actually email when something here needs a human.
+                          Falls back to the uid rather than going blank — a row
+                          with no way to identify its owner is the one you most
+                          need to identify. */}
+                      <div className="mt-0.5 truncate font-sans text-xs text-slate/70">
+                        {h.ownerEmail ?? `no email on file · ${h.ownerId || "unknown owner"}`}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-slate">{h.memberCount}</td>
                     <td className={`px-4 py-3 font-medium ${stateColors[h.accessState] ?? "text-slate"}`}>
                       {h.accessState}
                     </td>
-                    <td className="px-4 py-3 text-slate">
-                      {h.subscriptionStatus}
-                      {h.plan ? ` · ${h.plan}` : ""}
+                    <td className="px-4 py-3">
+                      <FundingCell row={h} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
@@ -328,6 +394,67 @@ export default function SuperAdminPage() {
   );
 }
 
+/** The colour each funding label wears, in the panel and in the table. Money
+ *  in is charcoal, money owed nothing is neutral, trouble is red. */
+const fundingColors: Record<Funding, string> = {
+  paying: "text-sage-dark",
+  gifted: "text-terracotta",
+  comped: "text-gold",
+  trialing: "text-slate",
+  lapsed: "text-red-600",
+  canceled: "text-slate",
+  uncovered: "text-red-600",
+  none: "text-slate/70",
+};
+
+/**
+ * One cookbook's funding, said in words rather than in database state.
+ *
+ * ⚠ THE SECOND LINE IS THE POINT. "Comped" alone still leaves you asking why
+ * this book is free; "granted free — never billed" answers it in the row,
+ * without a trip to the key underneath the table.
+ */
+function FundingCell({ row }: { row: HouseholdRow }) {
+  const detail = (() => {
+    switch (row.funding) {
+      case "paying":
+        return [row.plan, storeName(row.provider)].filter(Boolean).join(" · ") || "plan not recorded";
+      case "gifted":
+        return row.currentPeriodEnd ? `runs to ${formatDate(row.currentPeriodEnd)}` : "does not renew";
+      case "comped":
+        return "granted free — never billed";
+      case "trialing":
+        return row.trialEndsAt ? `ends ${formatDate(row.trialEndsAt)}` : "no end date recorded";
+      case "lapsed":
+        return row.lapsedAt ? `since ${formatDate(row.lapsedAt)}` : "date not recorded";
+      case "canceled":
+        return row.currentPeriodEnd ? `paid to ${formatDate(row.currentPeriodEnd)}` : "inside the paid period";
+      case "uncovered":
+        return "their subscription pays for another cookbook";
+      default:
+        return "never had one";
+    }
+  })();
+
+  return (
+    <>
+      <div className={`font-medium ${fundingColors[row.funding]}`}>
+        {FUNDING_LABELS[row.funding]}
+      </div>
+      <div className="mt-0.5 font-sans text-xs text-slate/70">{detail}</div>
+    </>
+  );
+}
+
+/** The store a payment came through, in the words the stores use themselves. */
+function storeName(provider: string | null): string {
+  if (provider === "appstore") return "App Store";
+  if (provider === "play") return "Google Play";
+  if (provider === "stripe") return "Stripe";
+  if (provider === "paddle") return "Paddle";
+  return "";
+}
+
 /**
  * What the two status columns mean.
  *
@@ -344,12 +471,11 @@ function TableKey() {
     ["read_only", "Can look, can't change anything. Where the lapse ladder puts a cookbook 7 days after it lapses."],
     ["suspended", "Locked out. Nothing is deleted."],
   ];
-  const sub: [string, string][] = [
-    ["trialing", "In the 14-day free trial. Nothing has been charged yet."],
-    ["active", "Paying — a real store subscription, a redeemed gift, or comped."],
-    ["canceled", "Cancelled, but still inside the period they paid for."],
-    ["none", "No subscription record at all."],
-  ];
+  // ⚠ Built from the SAME source the panel and the rows use. The old version
+  // was a hand-written list of raw statuses that lumped paying, gifted and
+  // comped together under "active" — the exact confusion the column now
+  // resolves, restated underneath it.
+  const sub: [string, string][] = FUNDING_ORDER.map((f) => [FUNDING_LABELS[f], FUNDING_MEANING[f]]);
   return (
     <div className="mt-6 grid gap-6 rounded-xl border border-charcoal/10 bg-white p-5 sm:grid-cols-2">
       <div>
@@ -365,12 +491,17 @@ function TableKey() {
       </div>
       <div>
         <h3 className="font-serif text-sm font-bold text-charcoal">
-          Subscription — how it&rsquo;s paid for
+          Paid for by — where the money comes from
         </h3>
         <dl className="mt-2 space-y-1.5">
           {sub.map(([k, v]) => (
             <div key={k} className="flex gap-2">
-              <dt className="w-24 flex-shrink-0 font-mono text-[11px] text-terracotta">{k}</dt>
+              {/* Wider and in sans, unlike the access codes beside it: these are
+                  English labels now, not database values, and at w-24 in mono
+                  "On a gifted year" wrapped to three lines. */}
+              <dt className="w-32 flex-shrink-0 font-sans text-[11px] font-semibold text-terracotta">
+                {k}
+              </dt>
               <dd className="font-sans text-xs leading-snug text-slate">{v}</dd>
             </div>
           ))}
@@ -383,10 +514,10 @@ function TableKey() {
         <span className="font-semibold text-charcoal">The two move independently.</span>{" "}
         Access
         only changes when the nightly sweep walks a lapsed cookbook down the ladder — full access
-        for 7 days, then read-only, then suspended. So &ldquo;canceled&rdquo; next to
+        for 7 days, then read-only, then suspended. So &ldquo;Cancelled&rdquo; next to
         &ldquo;active&rdquo; is normal and means they are still inside time they have paid for.
-        The word after the status (&ldquo;· annual&rdquo;) is the plan, shown only once a plan
-        exists.
+        Every cookbook carries exactly one of these labels, and the Money panel counts the same
+        labels — click a line there to see the cookbooks behind the number.
       </p>
     </div>
   );
@@ -408,7 +539,15 @@ function formatDate(iso: string | null): string {
  * different KINDS of number — Apple is near-daily, Play is a monthly file
  * rewritten daily — so they carry separate dates and are never added up.
  */
-function BusinessPanels({ biz }: { biz: Business }) {
+function BusinessPanels({
+  biz,
+  filter,
+  onFilter,
+}: {
+  biz: Business;
+  filter: Funding | null;
+  onFilter: (f: Funding) => void;
+}) {
   const { money, gifts, reach, jobs, ai } = biz;
   const sweep = jobs["lapse-sweep"];
   const sweepAge = sweep ? (Date.now() - Date.parse(sweep.at)) / 3_600_000 : null;
@@ -417,18 +556,36 @@ function BusinessPanels({ biz }: { biz: Business }) {
 
   return (
     <div className="mb-8 grid gap-4 lg:grid-cols-3">
-      {/* ── Money ── */}
+      {/* ── Money ──
+          ⚠ EVERY LINE IS A BUTTON that filters the table below to exactly the
+          cookbooks it counted. The panel used to state a number with no way to
+          reach the rows behind it — "Comped 2" against a table where four rows
+          said "active". Empty buckets are hidden rather than shown as 0: a
+          line you cannot click should not look clickable. */}
       <Panel title="Money">
-        <Line label="Paying" value={money.active - money.gifted - money.comped} strong />
-        <Line label="On a gifted year" value={money.gifted} />
-        <Line label="Comped" value={money.comped} />
-        <Line label="In trial" value={money.trialing} />
-        {money.trialsEndingSoon > 0 && (
-          <Line label="…ending within 7 days" value={money.trialsEndingSoon} warn />
-        )}
-        <Line label="Lapsed" value={money.lapsed} />
+        {FUNDING_ORDER.filter((f) => (money.byFunding[f] ?? 0) > 0).map((f) => (
+          <Fragment key={f}>
+            <Line
+              label={FUNDING_LABELS[f]}
+              value={money.byFunding[f] ?? 0}
+              strong={f === "paying"}
+              warn={f === "lapsed" || f === "uncovered"}
+              onClick={() => onFilter(f)}
+              active={filter === f}
+            />
+            {/* Sits directly under "In trial" because it is a subset of it, and
+                it is the line that actually needs doing something about. */}
+            {f === "trialing" && money.trialsEndingSoon > 0 && (
+              <Line label="…ending within 7 days" value={money.trialsEndingSoon} warn />
+            )}
+          </Fragment>
+        ))}
         <p className="mt-3 border-t border-charcoal/10 pt-2 font-sans text-xs text-slate">
-          {Object.entries(money.byPlan).map(([p, n]) => `${n} ${p}`).join(" · ") || "no plans yet"}
+          {/* Plans of the PAYING cookbooks only — a comped year has no plan, and
+              counting those as "unknown" made this line read "2 annual · 2
+              unknown" about books nobody could identify. */}
+          {Object.entries(money.byPlan).map(([p, n]) => `${n} ${p}`).join(" · ") ||
+            "nobody on a paid plan yet"}
         </p>
       </Panel>
 
@@ -590,22 +747,32 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-/** A figure with its provenance. `null` renders as "—", never as 0. */
+/**
+ * A figure with its provenance. `null` renders as "—", never as 0.
+ *
+ * With `onClick` it becomes a real <button> spanning the row, so the count and
+ * the thing it counts are one target — the Reach figures stay plain divs,
+ * because there is nothing to drill into behind an install count.
+ */
 function Line({
   label,
   value,
   note,
   strong,
   warn,
+  onClick,
+  active,
 }: {
   label: string;
   value: number | null;
   note?: string;
   strong?: boolean;
   warn?: boolean;
+  onClick?: () => void;
+  active?: boolean;
 }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-0.5">
+  const body = (
+    <>
       <span className={`font-sans text-sm ${warn ? "text-red-600" : "text-slate"}`}>{label}</span>
       <span className="flex items-baseline gap-1.5">
         {note && <span className="font-sans text-[11px] text-slate/70">{note}</span>}
@@ -617,7 +784,25 @@ function Line({
           {value === null ? "—" : value}
         </span>
       </span>
-    </div>
+    </>
+  );
+
+  if (!onClick) {
+    return <div className="flex items-baseline justify-between gap-3 py-0.5">{body}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={`Show the ${label.toLowerCase()} cookbooks in the table below`}
+      className={`-mx-1.5 flex w-[calc(100%+0.75rem)] cursor-pointer items-baseline justify-between gap-3 rounded-md px-1.5 py-0.5 text-left transition-colors ${
+        active ? "bg-cream-dark/50" : "hover:bg-cream-dark/30"
+      }`}
+    >
+      {body}
+    </button>
   );
 }
 
