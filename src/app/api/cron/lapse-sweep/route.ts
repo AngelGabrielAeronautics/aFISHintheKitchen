@@ -6,6 +6,7 @@ import {
   buildTrialEndingEmail,
   buildTrialEndedEmail,
   buildGiftEndingEmail,
+  buildGiftEndedEmail,
   buildGiftCardEmail,
   buildGiftReminderEmail,
   buildGiftUnclaimedEmail,
@@ -266,6 +267,7 @@ export async function GET(req: NextRequest) {
   let flaggedForDelete = 0;
   let deleted = 0;
   let trialEndedEmailsSent = 0;
+  let giftEndedEmailsSent = 0;
 
   for (const subSnap of unpaid.docs) {
     const sub = subSnap.data();
@@ -293,6 +295,35 @@ export async function GET(req: NextRequest) {
       } catch (err) {
         console.error(`lapse-sweep: trial-ended email failed for ${subSnap.id}:`, err);
         reportError(err, { route: "cron/lapse-sweep", stage: "trial-ended", subId: subSnap.id });
+      }
+    }
+
+    // Same notice for an expired GIFTED year — the same silence-after-warning
+    // gap, with the same retry-tomorrow and 14-day-window shape as above.
+    if (
+      sub.provider === "gift" &&
+      !sub.giftEndedEmailSentAt &&
+      now.getTime() - new Date(sub.lapsedAt).getTime() < 14 * 86_400_000
+    ) {
+      try {
+        const email = (await getAdminAuth().getUser(subSnap.id)).email;
+        if (email) {
+          // Name the giver, as the pre-warning does — "your gift" alone is
+          // ambiguous a year on.
+          let fromName = "";
+          if (sub.giftCode) {
+            const giftSnap = await db.collection("gifts").doc(sub.giftCode).get();
+            fromName = (giftSnap.data()?.purchasedByName as string | undefined) ?? "";
+          }
+          const { subject, html, text } = buildGiftEndedEmail(fromName);
+          await sendTransactionalEmail({ to: email, subject, html, text });
+          giftEndedEmailsSent++;
+        }
+        // Stamped even when the account has no email — nothing to retry then.
+        await subSnap.ref.update({ giftEndedEmailSentAt: now.toISOString() });
+      } catch (err) {
+        console.error(`lapse-sweep: gift-ended email failed for ${subSnap.id}:`, err);
+        reportError(err, { route: "cron/lapse-sweep", stage: "gift-ended", subId: subSnap.id });
       }
     }
 
@@ -330,6 +361,7 @@ export async function GET(req: NextRequest) {
     trialsExpired,
     trialWarningsSent,
     trialEndedEmailsSent,
+    giftEndedEmailsSent,
     giftsExpired,
     giftWarningsSent,
     giftCardsSent,

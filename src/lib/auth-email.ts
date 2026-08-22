@@ -241,6 +241,26 @@ export function buildGiftEndingEmail(daysLeft: number, fromName: string): BuiltE
   return { subject: `Your ${FROM_NAME} gift ends ${when}`, html, text };
 }
 
+// Sent once by the lapse sweep the day a gifted year actually runs out —
+// the same gap the trial-ended email closes: the pre-warning above can be
+// missed, and without this the next thing they hear is a read-only cookbook.
+// Names the giver for the same reason the warning does.
+export function buildGiftEndedEmail(fromName: string): BuiltEmail {
+  const from = fromName.trim();
+  const { html, text } = shell({
+    heading: "Your gifted year has ended",
+    bodyLines: [
+      from
+        ? `The year of ${FROM_NAME} that ${from} gave you ended today. Everything you've added is still there — every recipe, photo and note is safe, and nothing has been deleted.`
+        : `Your gifted year of ${FROM_NAME} ended today. Everything you've added is still there — every recipe, photo and note is safe, and nothing has been deleted.`,
+      "You have full access for the next 7 days. After that your cookbook becomes read-only, so subscribe in the app whenever you're ready to keep adding to it.",
+    ],
+    ctaLabel: "Keep your cookbook going",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Your gifted year of ${FROM_NAME} has ended`, html, text };
+}
+
 /**
  * Escape for interpolation into an email body.
  *
