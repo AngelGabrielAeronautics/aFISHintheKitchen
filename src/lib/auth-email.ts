@@ -201,6 +201,23 @@ export function buildTrialEndingEmail(daysLeft: number): BuiltEmail {
   return { subject: `Your ${FROM_NAME} trial ends ${when}`, html, text };
 }
 
+// Sent once by the lapse sweep the day a signup trial actually expires.
+// The "ending soon" warning above fires days earlier and can be missed or
+// spam-foldered; without this, the next thing the owner hears from us is a
+// read-only cookbook a week later. Honest about the ladder, no false urgency.
+export function buildTrialEndedEmail(): BuiltEmail {
+  const { html, text } = shell({
+    heading: "Your free trial has ended",
+    bodyLines: [
+      `Your ${FROM_NAME} free trial ended today. Everything is still there — every recipe, photo and note is safe, and nothing has been deleted.`,
+      "You have full access for the next 7 days. After that your cookbook becomes read-only, so subscribe in the app whenever you're ready to keep adding to it.",
+    ],
+    ctaLabel: "Keep your cookbook going",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Your ${FROM_NAME} trial has ended`, html, text };
+}
+
 // Sent once by the lapse sweep before a GIFTED year runs out.
 //
 // ⚠ Not the trial email with a different number. Somebody a year into a gift

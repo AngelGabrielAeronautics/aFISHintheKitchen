@@ -59,7 +59,19 @@ export async function POST(req: NextRequest) {
       const trialEndsAt = new Date(Date.now() + days * 86_400_000).toISOString();
       await hhRef.set({ accessState: "active", stateChangedAt: now }, { merge: true });
       await subRef.set(
-        { status: "trialing", trialEndsAt, hasUsedTrial: true, householdId, lapsedAt: FieldValue.delete(), updatedAt: now },
+        {
+          status: "trialing",
+          trialEndsAt,
+          hasUsedTrial: true,
+          householdId,
+          lapsedAt: FieldValue.delete(),
+          // A fresh trial deserves a fresh warning — without this the sweep
+          // thinks the "ending soon" email was already sent and the extended
+          // trial expires unannounced. Same for the ended notice.
+          trialWarningSentAt: FieldValue.delete(),
+          trialEndedEmailSentAt: FieldValue.delete(),
+          updatedAt: now,
+        },
         { merge: true }
       );
       break;

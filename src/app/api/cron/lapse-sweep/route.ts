@@ -4,6 +4,7 @@ import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
 import { sendTransactionalEmail } from "@/lib/email";
 import {
   buildTrialEndingEmail,
+  buildTrialEndedEmail,
   buildGiftEndingEmail,
   buildGiftCardEmail,
   buildGiftReminderEmail,
@@ -264,10 +265,36 @@ export async function GET(req: NextRequest) {
   let transitioned = 0;
   let flaggedForDelete = 0;
   let deleted = 0;
+  let trialEndedEmailsSent = 0;
 
   for (const subSnap of unpaid.docs) {
     const sub = subSnap.data();
     if (!sub.lapsedAt || !sub.householdId) continue;
+
+    // Tell an expired signup trial that it expired. Lives here rather than in
+    // the expiry loop above so a failed send is retried tomorrow (the sub is
+    // no longer "trialing", so the loop above never sees it again). The
+    // 14-day window stops a deploy of this code from mailing ancient lapses.
+    if (
+      sub.provider === "none" &&
+      sub.hasUsedTrial &&
+      !sub.trialEndedEmailSentAt &&
+      now.getTime() - new Date(sub.lapsedAt).getTime() < 14 * 86_400_000
+    ) {
+      try {
+        const email = (await getAdminAuth().getUser(subSnap.id)).email;
+        if (email) {
+          const { subject, html, text } = buildTrialEndedEmail();
+          await sendTransactionalEmail({ to: email, subject, html, text });
+          trialEndedEmailsSent++;
+        }
+        // Stamped even when the account has no email — nothing to retry then.
+        await subSnap.ref.update({ trialEndedEmailSentAt: now.toISOString() });
+      } catch (err) {
+        console.error(`lapse-sweep: trial-ended email failed for ${subSnap.id}:`, err);
+        reportError(err, { route: "cron/lapse-sweep", stage: "trial-ended", subId: subSnap.id });
+      }
+    }
 
     const { accessState, shouldDelete } = computeAccessStateFromLapse(sub.lapsedAt, now);
     const hhRef = db.collection("households").doc(sub.householdId);
@@ -302,6 +329,7 @@ export async function GET(req: NextRequest) {
     scanned: unpaid.size,
     trialsExpired,
     trialWarningsSent,
+    trialEndedEmailsSent,
     giftsExpired,
     giftWarningsSent,
     giftCardsSent,
