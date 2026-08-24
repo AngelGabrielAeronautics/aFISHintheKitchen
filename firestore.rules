@@ -214,6 +214,16 @@ service cloud.firestore {
       allow update, delete: if canWrite(resource.data.householdId);
     }
 
+    // ── Hero presets (the photos a new owner picks from) ──
+    // Global, like learnItems: every signed-in user reads the same list, and
+    // only /api/admin/hero-presets writes (Admin SDK, which bypasses rules).
+    // Making this DATA rather than an enum compiled into the apps is what
+    // lets a new hero appear without an app release.
+    match /heroPresets/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // ── Learn (global content from A Fish in the Kitchen — docs/LEARN.md) ──
     // NOT household-scoped: every signed-in user reads the same published
     // library. Authoring happens only via /api/admin/learn (Admin SDK, which
