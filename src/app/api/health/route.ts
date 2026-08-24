@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
+import { sendWeeklyRecipePushIfDue } from "@/lib/learn-weekly";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -180,8 +181,20 @@ export async function GET(req: NextRequest) {
     alert = "alert-failed";
   }
 
+  // The Monday "Learn this recipe this week" push rides this cron because
+  // both Hobby cron slots are taken and 07:00 UTC is a humane push hour.
+  // Self-gating (Mondays only, once per week) and wrapped: a push failure
+  // must never mark the service unhealthy.
+  let weeklyPush: unknown = null;
+  try {
+    weeklyPush = await sendWeeklyRecipePushIfDue();
+  } catch (err) {
+    console.error("health: weekly recipe push failed", err);
+    weeklyPush = { error: String(err).slice(0, 200) };
+  }
+
   return NextResponse.json(
-    { ok, alert, checks, checkedAt: new Date().toISOString() },
+    { ok, alert, weeklyPush, checks, checkedAt: new Date().toISOString() },
     { status: ok ? 200 : 503 }
   );
 }
