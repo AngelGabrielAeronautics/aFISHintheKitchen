@@ -27,6 +27,50 @@ interface LearnItemInput {
    *  Monday–Sunday week containing that date each year, and sits out the
    *  normal rotation. E.g. "12-25" for a Christmas ham. */
   pinnedDate?: string | null;
+  /** Videos/weeklies: the curated recipe card "Save to my cookbook" copies.
+   *  Authored in OUR words (never pasted from the creator), video credited. */
+  recipe?: LearnRecipeInput | null;
+}
+
+interface LearnRecipeInput {
+  title?: string;
+  description?: string;
+  category?: string;
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  difficulty?: string;
+  ingredients?: string[];
+  instructions?: string[];
+  contributedBy?: string;
+  tags?: string[];
+  originalSource?: string;
+}
+
+function sanitizeRecipe(input: LearnRecipeInput): { ok: true; recipe: Record<string, unknown> } | { ok: false; error: string } {
+  const title = String(input.title ?? "").trim();
+  const ingredients = Array.isArray(input.ingredients) ? input.ingredients.map(String).filter(Boolean) : [];
+  const instructions = Array.isArray(input.instructions) ? input.instructions.map(String).filter(Boolean) : [];
+  if (!title || ingredients.length === 0 || instructions.length === 0) {
+    return { ok: false, error: "recipe_needs_title_ingredients_instructions" };
+  }
+  return {
+    ok: true,
+    recipe: {
+      title: title.slice(0, 200),
+      description: String(input.description ?? "").trim().slice(0, 2000),
+      category: String(input.category ?? "other"),
+      prepTime: Number.isFinite(input.prepTime) ? Number(input.prepTime) : 0,
+      cookTime: Number.isFinite(input.cookTime) ? Number(input.cookTime) : 0,
+      servings: Number.isFinite(input.servings) ? Number(input.servings) : 4,
+      difficulty: ["Easy", "Medium", "Hard"].includes(String(input.difficulty)) ? String(input.difficulty) : "Medium",
+      ingredients,
+      instructions,
+      contributedBy: String(input.contributedBy ?? "A Fish in the Kitchen").slice(0, 100),
+      tags: Array.isArray(input.tags) ? input.tags.map(String).slice(0, 10) : [],
+      originalSource: String(input.originalSource ?? "").slice(0, 300) || null,
+    },
+  };
 }
 
 // Accepts a bare 11-char id or any of the usual YouTube URL shapes, and
@@ -60,6 +104,13 @@ function sanitize(input: LearnItemInput): { ok: true; fields: Record<string, unk
     pinnedDate = s;
   }
 
+  let recipe: Record<string, unknown> | null = null;
+  if ((type === "video" || type === "weekly") && input.recipe) {
+    const parsed = sanitizeRecipe(input.recipe);
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+    recipe = parsed.recipe;
+  }
+
   return {
     ok: true,
     fields: {
@@ -71,6 +122,7 @@ function sanitize(input: LearnItemInput): { ok: true; fields: Record<string, unk
       seriesOrder: type === "video" && Number.isFinite(input.seriesOrder) ? Number(input.seriesOrder) : null,
       sortOrder: Number.isFinite(input.sortOrder) ? Number(input.sortOrder) : 0,
       pinnedDate,
+      recipe,
     },
   };
 }
@@ -114,7 +166,12 @@ export async function POST(req: NextRequest) {
       if (!body.id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
       const parsed = sanitize(body.item ?? {});
       if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
-      await db.collection("learnItems").doc(body.id).update({ ...parsed.fields, updatedAt: now });
+      const fields = { ...parsed.fields, updatedAt: now } as Record<string, unknown>;
+      // The console's edit form doesn't carry the attached recipe (it's
+      // authored via script for now) — an update that omits the field must
+      // PRESERVE the stored recipe, not null it out.
+      if (body.item?.recipe === undefined) delete fields.recipe;
+      await db.collection("learnItems").doc(body.id).update(fields);
       return NextResponse.json({ ok: true });
     }
 
