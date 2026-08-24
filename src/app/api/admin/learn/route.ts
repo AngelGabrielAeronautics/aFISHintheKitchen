@@ -23,6 +23,10 @@ interface LearnItemInput {
   seriesId?: string | null;
   seriesOrder?: number | null;
   sortOrder?: number;
+  /** Weekly only, "MM-DD": seasonal pin — the item owns the hero for the
+   *  Monday–Sunday week containing that date each year, and sits out the
+   *  normal rotation. E.g. "12-25" for a Christmas ham. */
+  pinnedDate?: string | null;
 }
 
 // Accepts a bare 11-char id or any of the usual YouTube URL shapes, and
@@ -49,6 +53,13 @@ function sanitize(input: LearnItemInput): { ok: true; fields: Record<string, unk
     if (!youtubeId) return { ok: false, error: "invalid_youtube" };
   }
 
+  let pinnedDate: string | null = null;
+  if (type === "weekly" && input.pinnedDate) {
+    const s = String(input.pinnedDate).trim();
+    if (!/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(s)) return { ok: false, error: "invalid_pinned_date" };
+    pinnedDate = s;
+  }
+
   return {
     ok: true,
     fields: {
@@ -59,6 +70,7 @@ function sanitize(input: LearnItemInput): { ok: true; fields: Record<string, unk
       seriesId: type === "video" ? (input.seriesId ? String(input.seriesId) : null) : null,
       seriesOrder: type === "video" && Number.isFinite(input.seriesOrder) ? Number(input.seriesOrder) : null,
       sortOrder: Number.isFinite(input.sortOrder) ? Number(input.sortOrder) : 0,
+      pinnedDate,
     },
   };
 }

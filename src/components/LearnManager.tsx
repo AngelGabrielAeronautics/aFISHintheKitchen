@@ -16,6 +16,7 @@ interface LearnItem {
   seriesId: string | null;
   seriesOrder: number | null;
   sortOrder: number;
+  pinnedDate: string | null;
   publishedAt: string | null;
   notifiedAt: string | null;
   updatedAt: string;
@@ -29,8 +30,9 @@ interface Draft {
   seriesId: string;
   seriesOrder: string;
   sortOrder: string;
+  pinnedDate: string;
 }
-const BLANK: Draft = { type: "tip", title: "", body: "", youtubeId: "", seriesId: "", seriesOrder: "", sortOrder: "0" };
+const BLANK: Draft = { type: "tip", title: "", body: "", youtubeId: "", seriesId: "", seriesOrder: "", sortOrder: "0", pinnedDate: "" };
 
 const TYPE_LABEL: Record<LearnItem["type"], string> = {
   tip: "Tip",
@@ -102,6 +104,7 @@ export default function LearnManager() {
       seriesId: item.seriesId ?? "",
       seriesOrder: item.seriesOrder != null ? String(item.seriesOrder) : "",
       sortOrder: String(item.sortOrder ?? 0),
+      pinnedDate: item.pinnedDate ?? "",
     });
     setEditing(item.id);
   }
@@ -115,6 +118,7 @@ export default function LearnManager() {
       seriesId: draft.seriesId || null,
       seriesOrder: draft.seriesOrder === "" ? null : Number(draft.seriesOrder),
       sortOrder: Number(draft.sortOrder) || 0,
+      pinnedDate: draft.pinnedDate.trim() || null,
     };
     const ok = await post(
       editing === "new" ? { action: "create", item } : { action: "update", id: editing, item },
@@ -200,6 +204,21 @@ export default function LearnManager() {
                   placeholder="https://youtu.be/…"
                 />
               </label>
+              {draft.type === "weekly" && (
+                <label className="block font-sans text-xs text-slate">
+                  Pin to the week of (MM-DD, optional)
+                  <input
+                    className={`${input} mt-1`}
+                    value={draft.pinnedDate}
+                    onChange={(e) => setDraft({ ...draft, pinnedDate: e.target.value })}
+                    placeholder="12-25 for Christmas"
+                  />
+                  <span className="mt-1 block text-[11px] text-slate/60">
+                    A pinned recipe shows only in the week containing that date each year, and sits
+                    out the normal rotation.
+                  </span>
+                </label>
+              )}
               {draft.type === "video" && (
               <>
               <label className="block font-sans text-xs text-slate">
@@ -260,6 +279,7 @@ export default function LearnManager() {
                   <span className="shrink-0 rounded-full bg-charcoal/5 px-2 py-0.5 font-sans text-[10px] uppercase tracking-wide text-slate">
                     {TYPE_LABEL[item.type]}
                     {item.seriesId ? ` · lesson ${item.seriesOrder ?? "?"}` : ""}
+                    {item.pinnedDate ? ` · pinned ${item.pinnedDate}` : ""}
                   </span>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 font-sans text-[10px] uppercase tracking-wide ${
