@@ -16,6 +16,7 @@ import {
   type Funding,
 } from "@/lib/funding";
 import LearnManager from "@/components/LearnManager";
+import HeroPresets from "@/components/HeroPresets";
 
 interface HouseholdRow {
   id: string;
@@ -272,6 +273,8 @@ export default function SuperAdminPage() {
           )}
 
           <LearnManager />
+
+          <HeroPresets />
 
           {data.households.some((h) => h.seatUpgradeRequestedAt) && (
             <div className="mb-8 rounded-xl border border-terracotta-light/40 bg-terracotta-light/10 p-5">
