@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { getFirebaseAuth } from "@/lib/firebase";
 
 // Superadmin authoring for the global Learn library (docs/LEARN.md). Content
@@ -17,6 +17,9 @@ interface LearnItem {
   seriesOrder: number | null;
   sortOrder: number;
   pinnedDate: string | null;
+  /** The curated card "Save to my cookbook" copies. Presence is what the
+   *  "recipe card" badge reports — a weekly isn't finished without one. */
+  recipe?: { title?: string } | null;
   publishedAt: string | null;
   notifiedAt: string | null;
   updatedAt: string;
@@ -33,13 +36,6 @@ interface Draft {
   pinnedDate: string;
 }
 const BLANK: Draft = { type: "tip", title: "", body: "", youtubeId: "", seriesId: "", seriesOrder: "", sortOrder: "0", pinnedDate: "" };
-
-const TYPE_LABEL: Record<LearnItem["type"], string> = {
-  tip: "Tip",
-  video: "Video",
-  series: "Masterclass series",
-  weekly: "Weekly recipe",
-};
 
 export default function LearnManager() {
   const [items, setItems] = useState<LearnItem[] | null>(null);
@@ -132,6 +128,29 @@ export default function LearnManager() {
     "w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2 font-sans text-sm text-charcoal focus:outline-none focus:ring-1 focus:ring-terracotta";
   const btn =
     "rounded-lg px-3 py-1.5 font-sans text-xs font-medium transition-colors disabled:opacity-40";
+
+  // Grouped exactly as the app's Learn page is, so what you see here is what
+  // a user sees there — one flat list of everything made the four sections
+  // impossible to tell apart, and a missing recipe card impossible to spot.
+  const all = items ?? [];
+  const weeklies = all.filter((i) => i.type === "weekly");
+  const tips = all.filter((i) => i.type === "tip");
+  const series = all.filter((i) => i.type === "series");
+  const standalone = all.filter((i) => i.type === "video" && !i.seriesId);
+  const lessonsOf = (seriesId: string) =>
+    all
+      .filter((i) => i.type === "video" && i.seriesId === seriesId)
+      .sort((a, b) => (a.seriesOrder ?? 0) - (b.seriesOrder ?? 0));
+
+  const rowProps = {
+    btn,
+    busy,
+    onEdit: startEdit,
+    onTogglePublish: (item: LearnItem) =>
+      post({ action: item.status === "published" ? "unpublish" : "publish", id: item.id }, `pub:${item.id}`),
+    onNotify: setNotifyConfirm,
+    onDelete: setDeleteConfirm,
+  };
 
   return (
     <section className="mb-8 rounded-xl border border-charcoal/10 bg-white p-5">
@@ -270,62 +289,60 @@ export default function LearnManager() {
       )}
 
       {items && items.length > 0 && (
-        <ul className="divide-y divide-gold-light/50">
-          {items.map((item) => (
-            <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-sans text-sm font-medium text-charcoal">{item.title}</span>
-                  <span className="shrink-0 rounded-full bg-charcoal/5 px-2 py-0.5 font-sans text-[10px] uppercase tracking-wide text-slate">
-                    {TYPE_LABEL[item.type]}
-                    {item.seriesId ? ` · lesson ${item.seriesOrder ?? "?"}` : ""}
-                    {item.pinnedDate ? ` · pinned ${item.pinnedDate}` : ""}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 font-sans text-[10px] uppercase tracking-wide ${
-                      item.status === "published" ? "bg-terracotta/10 text-terracotta" : "bg-gold-light/40 text-charcoal/60"
-                    }`}
-                  >
-                    {item.status}
-                  </span>
+        <div className="space-y-6">
+          <Section
+            title="Learn this recipe this week"
+            hint="The weekly pool. Unpinned ones rotate a week each, in this order; a pinned one owns its date's week every year."
+            count={weeklies.length}
+          >
+            {weeklies.map((item) => (
+              <Row key={item.id} item={item} {...rowProps} />
+            ))}
+          </Section>
+
+          <Section
+            title="Tips from our kitchen"
+            hint="Our own kitchen wisdom. The app shows three, then “Show all”."
+            count={tips.length}
+            collapseAfter={5}
+          >
+            {tips.map((item) => (
+              <Row key={item.id} item={item} {...rowProps} />
+            ))}
+          </Section>
+
+          <Section
+            title="Masterclasses"
+            hint="Series with their classes beneath. Deleting a series frees its videos rather than deleting them."
+            count={series.length}
+          >
+            {series.map((s) => (
+              <div key={s.id}>
+                <Row item={s} {...rowProps} />
+                <div className="ml-4 border-l-2 border-gold-light/60 pl-3">
+                  {lessonsOf(s.id).map((v) => (
+                    <Row key={v.id} item={v} {...rowProps} />
+                  ))}
+                  {lessonsOf(s.id).length === 0 && (
+                    <p className="py-2 font-sans text-xs text-slate/60">
+                      No classes yet — add a video and set its series to “{s.title}”.
+                    </p>
+                  )}
                 </div>
-                {item.notifiedAt && (
-                  <div className="font-sans text-[11px] text-slate/60">
-                    push sent {new Date(item.notifiedAt).toLocaleDateString()}
-                  </div>
-                )}
               </div>
-              <div className="flex shrink-0 gap-1.5">
-                <button className={`${btn} bg-charcoal/5 text-charcoal hover:bg-charcoal/10`} onClick={() => startEdit(item)}>
-                  Edit
-                </button>
-                <button
-                  className={`${btn} bg-charcoal/5 text-charcoal hover:bg-charcoal/10`}
-                  disabled={busy === `pub:${item.id}`}
-                  onClick={() => post({ action: item.status === "published" ? "unpublish" : "publish", id: item.id }, `pub:${item.id}`)}
-                >
-                  {item.status === "published" ? "Unpublish" : "Publish"}
-                </button>
-                {item.status === "published" && item.type !== "series" && (
-                  <button
-                    className={`${btn} bg-gold-light/40 text-charcoal hover:bg-gold-light/60`}
-                    disabled={busy === `notify:${item.id}`}
-                    onClick={() => setNotifyConfirm(item)}
-                  >
-                    {item.notifiedAt ? "Notify again" : "Notify"}
-                  </button>
-                )}
-                <button
-                  className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}
-                  disabled={busy === `del:${item.id}`}
-                  onClick={() => setDeleteConfirm(item)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </Section>
+
+          <Section
+            title="Watch & learn"
+            hint="Standalone videos — everything not part of a series."
+            count={standalone.length}
+          >
+            {standalone.map((item) => (
+              <Row key={item.id} item={item} {...rowProps} />
+            ))}
+          </Section>
+        </div>
       )}
 
       {notifyConfirm && (
@@ -359,6 +376,132 @@ export default function LearnManager() {
         />
       )}
     </section>
+  );
+}
+
+/** One section of the library, mirroring a section of the app's Learn page. */
+function Section({
+  title,
+  hint,
+  count,
+  collapseAfter,
+  children,
+}: {
+  title: string;
+  hint: string;
+  count: number;
+  collapseAfter?: number;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const rows = React.Children.toArray(children);
+  // Long sections (the tips) collapse the way the app's do, so every section
+  // header stays visible without a scroll marathon.
+  const collapsed = collapseAfter !== undefined && !expanded && rows.length > collapseAfter;
+  const shown = collapsed ? rows.slice(0, collapseAfter) : rows;
+
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline gap-2 border-b border-gold-light/60 pb-1">
+        <h3 className="font-serif text-base font-semibold text-charcoal">{title}</h3>
+        <span className="font-sans text-xs text-slate/70">{count}</span>
+      </div>
+      <p className="mb-2 font-sans text-[11px] leading-relaxed text-slate/70">{hint}</p>
+      {count === 0 ? (
+        <p className="py-2 font-sans text-xs text-slate/60">Nothing here yet.</p>
+      ) : (
+        <div className="divide-y divide-gold-light/40">{shown}</div>
+      )}
+      {collapseAfter !== undefined && rows.length > collapseAfter && (
+        <button
+          className="mt-1 font-sans text-xs font-medium text-terracotta hover:underline"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {collapsed ? `Show all ${rows.length}` : "Show fewer"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** One item row: title, the badges that matter, and its actions. */
+function Row({
+  item,
+  btn,
+  busy,
+  onEdit,
+  onTogglePublish,
+  onNotify,
+  onDelete,
+}: {
+  item: LearnItem;
+  btn: string;
+  busy: string | null;
+  onEdit: (item: LearnItem) => void;
+  onTogglePublish: (item: LearnItem) => void;
+  onNotify: (item: LearnItem) => void;
+  onDelete: (item: LearnItem) => void;
+}) {
+  const isVideoish = item.type === "video" || item.type === "weekly";
+  const badge = "shrink-0 rounded-full px-2 py-0.5 font-sans text-[10px] uppercase tracking-wide";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 py-2">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {item.seriesOrder != null && item.seriesId && (
+            <span className="font-sans text-xs text-slate/60">{item.seriesOrder}.</span>
+          )}
+          <span className="truncate font-sans text-sm font-medium text-charcoal">{item.title}</span>
+          {item.status !== "published" && (
+            <span className={`${badge} bg-gold-light/50 text-charcoal/70`}>draft</span>
+          )}
+          {item.pinnedDate && (
+            <span className={`${badge} bg-terracotta/10 text-terracotta`}>pinned {item.pinnedDate}</span>
+          )}
+          {/* The curation checklist: a weekly or video without a recipe card
+              can't be saved into anyone's cookbook. */}
+          {isVideoish && !item.recipe && (
+            <span className={`${badge} bg-charcoal/5 text-slate/70`}>no recipe card</span>
+          )}
+          {isVideoish && item.recipe && (
+            <span className={`${badge} bg-terracotta/10 text-terracotta`}>recipe ✓</span>
+          )}
+        </div>
+        {item.notifiedAt && (
+          <div className="font-sans text-[11px] text-slate/60">
+            push sent {new Date(item.notifiedAt).toLocaleDateString()}
+          </div>
+        )}
+      </div>
+      <div className="flex shrink-0 gap-1.5">
+        <button className={`${btn} bg-charcoal/5 text-charcoal hover:bg-charcoal/10`} onClick={() => onEdit(item)}>
+          Edit
+        </button>
+        <button
+          className={`${btn} bg-charcoal/5 text-charcoal hover:bg-charcoal/10`}
+          disabled={busy === `pub:${item.id}`}
+          onClick={() => onTogglePublish(item)}
+        >
+          {item.status === "published" ? "Unpublish" : "Publish"}
+        </button>
+        {item.status === "published" && item.type !== "series" && (
+          <button
+            className={`${btn} bg-gold-light/40 text-charcoal hover:bg-gold-light/60`}
+            disabled={busy === `notify:${item.id}`}
+            onClick={() => onNotify(item)}
+          >
+            {item.notifiedAt ? "Notify again" : "Notify"}
+          </button>
+        )}
+        <button
+          className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}
+          disabled={busy === `del:${item.id}`}
+          onClick={() => onDelete(item)}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
   );
 }
 
