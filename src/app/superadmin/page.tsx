@@ -15,6 +15,7 @@ import {
   FUNDING_ORDER,
   type Funding,
 } from "@/lib/funding";
+import LearnManager from "@/components/LearnManager";
 
 interface HouseholdRow {
   id: string;
@@ -269,6 +270,8 @@ export default function SuperAdminPage() {
               onFilter={(f) => setFundingFilter((current) => (current === f ? null : f))}
             />
           )}
+
+          <LearnManager />
 
           {data.households.some((h) => h.seatUpgradeRequestedAt) && (
             <div className="mb-8 rounded-xl border border-terracotta-light/40 bg-terracotta-light/10 p-5">

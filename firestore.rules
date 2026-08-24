@@ -210,6 +210,17 @@ service cloud.firestore {
       allow update, delete: if canWrite(resource.data.householdId);
     }
 
+    // ── Learn (global content from A Fish in the Kitchen — docs/LEARN.md) ──
+    // NOT household-scoped: every signed-in user reads the same published
+    // library. Authoring happens only via /api/admin/learn (Admin SDK, which
+    // bypasses these rules), so no client may ever write here.
+    // ⚠ App queries must filter status == "published" and sort CLIENT-SIDE —
+    // an orderBy on top of the filter needs a composite index nobody declared.
+    match /learnItems/{id} {
+      allow read: if isSignedIn() && resource.data.status == "published";
+      allow write: if false;
+    }
+
     // ── Notifications ──
     match /notifications/{id} {
       allow read: if canRead(resource.data.householdId);
