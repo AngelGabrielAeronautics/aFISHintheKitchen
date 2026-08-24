@@ -54,11 +54,18 @@ tips/videos/series/ordering are instant.
 
 ## Push
 
-`/api/admin/learn` action `notify` broadcasts to ALL device tokens ("Learn
-something new" + the item title, link `/learn`). Manually triggered per item
-from the console — deliberately NOT a cron: Vercel Hobby allows only two cron
-entries and both are taken (lapse-sweep + one other); a third is silently not
-scheduled. Cadence guidance: one push a week, not one per item.
+Two paths, both broadcasting to ALL device tokens:
+
+1. **The Monday push** (`src/lib/learn-weekly.ts`): "Learn this recipe this
+   week: <dish>", sent automatically each Monday by the 07:00 UTC
+   `/api/health` cron (8am in Jersey — a humane push hour; both Hobby cron
+   slots are taken, so it rides health the way reach rides the lapse sweep).
+   Self-gating: Mondays only, once per week via a `config/learnWeekly` stamp.
+   ⚠ Its pick logic MIRRORS the apps' `weeklyPick` (pins first, then the
+   rotation) — change both or change neither.
+2. **Manual Notify** — `/api/admin/learn` action `notify` per item from the
+   console, for announcing new content drops. Cadence guidance: about one a
+   week; the Monday push already covers the weekly recipe.
 
 ## Phases
 
