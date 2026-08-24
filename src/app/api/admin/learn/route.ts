@@ -8,7 +8,12 @@ export const runtime = "nodejs";
 // learnItems directly from Firestore (published only); this route is the ONLY
 // write path, so content never waits on an app release.
 
-const TYPES = new Set(["tip", "video", "series"]);
+// "weekly" = the Learn-this-recipe-this-week pool: the apps rotate through
+// published weekly items in sortOrder, one per week (weeks counted from the
+// fixed epoch Monday 2026-08-24), cycling when they run out. 52 in the pool
+// means a year without repeats; any smaller pool still works, it just cycles
+// sooner.
+const TYPES = new Set(["tip", "video", "series", "weekly"]);
 
 interface LearnItemInput {
   type?: string;
@@ -39,7 +44,7 @@ function sanitize(input: LearnItemInput): { ok: true; fields: Record<string, unk
   if (!title) return { ok: false, error: "missing_title" };
 
   let youtubeId: string | null = null;
-  if (type === "video") {
+  if (type === "video" || type === "weekly") {
     youtubeId = extractYoutubeId(String(input.youtubeId ?? ""));
     if (!youtubeId) return { ok: false, error: "invalid_youtube" };
   }

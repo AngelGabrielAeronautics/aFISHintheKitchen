@@ -8,7 +8,7 @@ import { getFirebaseAuth } from "@/lib/firebase";
 
 interface LearnItem {
   id: string;
-  type: "tip" | "video" | "series";
+  type: "tip" | "video" | "series" | "weekly";
   status: "draft" | "published";
   title: string;
   body: string;
@@ -36,6 +36,7 @@ const TYPE_LABEL: Record<LearnItem["type"], string> = {
   tip: "Tip",
   video: "Video",
   series: "Masterclass series",
+  weekly: "Weekly recipe",
 };
 
 export default function LearnManager() {
@@ -158,6 +159,7 @@ export default function LearnManager() {
                 <option value="tip">Tip (from our kitchen)</option>
                 <option value="video">Video (YouTube)</option>
                 <option value="series">Masterclass series</option>
+                <option value="weekly">Weekly recipe (Learn this week pool)</option>
               </select>
             </label>
             <label className="block font-sans text-xs text-slate">
@@ -180,14 +182,14 @@ export default function LearnManager() {
             />
           </label>
           <label className="mb-3 block font-sans text-xs text-slate">
-            {draft.type === "tip" ? "The tip" : draft.type === "video" ? "Blurb (why this video)" : "What the series covers"}
+            {draft.type === "tip" ? "The tip" : draft.type === "series" ? "What the series covers" : "Blurb (why this video)"}
             <textarea
               className={`${input} mt-1 min-h-24`}
               value={draft.body}
               onChange={(e) => setDraft({ ...draft, body: e.target.value })}
             />
           </label>
-          {draft.type === "video" && (
+          {(draft.type === "video" || draft.type === "weekly") && (
             <div className="mb-3 grid gap-3 sm:grid-cols-3">
               <label className="block font-sans text-xs text-slate sm:col-span-1">
                 YouTube link or ID
@@ -198,6 +200,8 @@ export default function LearnManager() {
                   placeholder="https://youtu.be/…"
                 />
               </label>
+              {draft.type === "video" && (
+              <>
               <label className="block font-sans text-xs text-slate">
                 Part of series
                 <select
@@ -223,6 +227,8 @@ export default function LearnManager() {
                   placeholder="1"
                 />
               </label>
+              </>
+              )}
             </div>
           )}
           <div className="flex gap-2">
