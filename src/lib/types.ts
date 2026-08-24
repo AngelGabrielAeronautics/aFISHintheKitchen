@@ -357,6 +357,8 @@ export interface Household {
   // The pinned Recipe of the Week: computed once per week by the first client
   // to notice a new week, then read by everyone — pool edits can't move it.
   recipeOfWeek?: { weekId: string; recipeId: string };
+  /** Recipe-of-the-week no-repeat history: ids already featured this cycle. */
+  rotwShown?: string[];
   /** @deprecated superseded by the owner's Subscription + accessState */
   plan?: "free" | "premium";
   accessState?: HouseholdAccessState; // undefined treated as "active" (legacy docs)

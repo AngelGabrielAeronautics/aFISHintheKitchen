@@ -132,15 +132,29 @@ function HomeContent() {
     const pool = withImages.length > 0 ? withImages : allRecipes;
     // Stable pseudo-random order so the rotation isn't alphabetical/chronological.
     const ordered = [...pool].sort((a, b) => hashString(a.id) - hashString(b.id));
-    const week = getWeekNumber(new Date());
-    const pick = ordered[((week % ordered.length) + ordered.length) % ordered.length];
+    // ⚠ NOT `week % length`. That was the old pick, and over a GROWING
+    // cookbook it isn't a rotation at all: week and pool size increment
+    // together, so the index can sit still and the same recipe fronts the
+    // page for weeks (Chakalaka, found by Dylan 2026-08-24). Instead the
+    // household keeps rotwShown — everyone who's had their week this cycle —
+    // and the pick is the first hash-ordered recipe that hasn't. Nothing
+    // repeats until all of them have had a turn. Kept in sync with iOS
+    // (RecipeOfWeek.pick) — change both or neither.
+    const shown = new Set(household?.rotwShown ?? []);
+    let candidates = ordered.filter((r) => !shown.has(r.id));
+    const cycleDone = candidates.length === 0;
+    if (cycleDone) candidates = ordered;
+    const pick = candidates[0];
     // Pin it for the rest of the family (rules allow members to write only
-    // this field). Best-effort: a failed write just means we compute again.
+    // these fields). Best-effort: a failed write just means we compute again.
     if (householdId && pick.id) {
-      updateHousehold(householdId, { recipeOfWeek: { weekId, recipeId: pick.id } }).catch(() => {});
+      updateHousehold(householdId, {
+        recipeOfWeek: { weekId, recipeId: pick.id },
+        rotwShown: cycleDone ? [pick.id] : [...(household?.rotwShown ?? []), pick.id],
+      }).catch(() => {});
     }
     return pick;
-  }, [allRecipes, household?.recipeOfWeek, householdId]);
+  }, [allRecipes, household?.recipeOfWeek, household?.rotwShown, householdId]);
 
   function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();
