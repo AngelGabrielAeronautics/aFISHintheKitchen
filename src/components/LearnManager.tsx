@@ -442,7 +442,6 @@ function Row({
   onNotify: (item: LearnItem) => void;
   onDelete: (item: LearnItem) => void;
 }) {
-  const isVideoish = item.type === "video" || item.type === "weekly";
   const badge = "shrink-0 rounded-full px-2 py-0.5 font-sans text-[10px] uppercase tracking-wide";
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 py-2">
@@ -458,14 +457,17 @@ function Row({
           {item.pinnedDate && (
             <span className={`${badge} bg-terracotta/10 text-terracotta`}>pinned {item.pinnedDate}</span>
           )}
-          {/* The curation checklist: a weekly or video without a recipe card
-              can't be saved into anyone's cookbook. */}
-          {isVideoish && !item.recipe && (
-            <span className={`${badge} bg-charcoal/5 text-slate/70`}>no recipe card</span>
+          {/* ⚠ The nag is for WEEKLIES ONLY. A weekly is "learn this recipe
+              this week" — without a card there's nothing to learn, so a
+              missing one is a real to-do. Plenty of videos are technique
+              (knife skills, what not to buy) where a recipe card would be
+              nonsense, and a checklist that cries wolf on those is a
+              checklist you stop reading. Videos just show the ✓ when they
+              have one. */}
+          {item.type === "weekly" && !item.recipe && (
+            <span className={`${badge} bg-red-50 text-red-700`}>no recipe card</span>
           )}
-          {isVideoish && item.recipe && (
-            <span className={`${badge} bg-terracotta/10 text-terracotta`}>recipe ✓</span>
-          )}
+          {item.recipe && <span className={`${badge} bg-terracotta/10 text-terracotta`}>recipe ✓</span>}
         </div>
         {item.notifiedAt && (
           <div className="font-sans text-[11px] text-slate/60">
