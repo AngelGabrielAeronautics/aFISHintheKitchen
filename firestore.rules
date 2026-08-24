@@ -224,6 +224,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The character avatars a member picks from instead of uploading a photo.
+    // Same shape as heroPresets and for the same reason: DATA, not an enum
+    // compiled into the apps, so a new avatar needs no store release.
+    // Admin API writes only.
+    match /avatarPresets/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // ── Learn (global content from A Fish in the Kitchen — docs/LEARN.md) ──
     // NOT household-scoped: every signed-in user reads the same published
     // library. Authoring happens only via /api/admin/learn (Admin SDK, which
