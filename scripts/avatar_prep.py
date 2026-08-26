@@ -38,9 +38,22 @@ SS = 4            # mask supersampling, for a clean anti-aliased edge
 # is historical. These are the disc colours dark enough to carry the cream
 # figure; the light three are decorative rather than high-contrast.
 PALETTE = {
-    "navy": "1A2E1A", "terracottaDark": "2D4A2E", "terracotta": "3D5A3E",
-    "sageDark": "4A5C3E", "sage": "6B7D5E", "gold": "8B7B4A",
+    # From Theme.swift. Only these three are usable as a disc — see below.
+    "navy": "1A2E1A", "sage": "6B7D5E", "gold": "8B7B4A",
+    # ⚠ Present so a mistake is obvious, NOT for use: each sits within 28 of the
+    # ring colour, so the app's stroke disappears against them.
+    "terracottaDark": "2D4A2E", "terracotta": "3D5A3E", "sageDark": "4A5C3E",
+    # ⚠ Clear the ring but are too light to carry the cream figure — tried on
+    # the first nine and they came back washed out.
     "sageLight": "9BAF8E", "terracottaLight": "A8C4A0", "goldLight": "C4B88A",
+    # A warm range beyond Theme.swift, added because the brand palette cannot
+    # separate nine avatars at 28px without washing the figure out. Every one
+    # clears the ring by 60+ AND beats sage/gold on figure contrast (4.5:1 to
+    # 8.8:1 against the cream, vs 3.8:1 for gold). Muted to sit beside the
+    # greens rather than shout over them.
+    "clay": "9C5B44", "dustyRed": "9E4F4F", "brick": "7A4634", "wine": "6B3340",
+    "berry": "7E3F4F", "rose": "A2596B", "mauve": "8A6479", "orchid": "7A5A86",
+    "plum": "6E4A63",
 }
 
 
