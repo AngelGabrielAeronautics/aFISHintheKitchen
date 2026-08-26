@@ -66,6 +66,13 @@ PALETTE = {
     "blushRose": "EFB8C4", "peachSoft": "F7C9AE", "butter": "F1DFA4",
     "sageSoft": "C8D8BC", "mint": "B9D9CB", "aqua": "AEDAD9",
     "sky": "C2D6E8", "periwinkle": "C9CCEC", "lilac": "DCC6E8",
+    # ⚠ The tenth is where the wheel runs out: at this lightness every fresh
+    # hue lands within 25 RGB of one of the nine above. apricot is nearest
+    # peachSoft (9 apart) and is used anyway, because the FIGURE carries that
+    # pair — grey hair and glasses against brown hair and a spatula. Measured
+    # at 28px they are 40+ apart, further than several same-hue pairs.
+    # For an eleventh, vary LIGHTNESS rather than hunting a new hue.
+    "apricot": "F5CFA8",
 }
 
 
