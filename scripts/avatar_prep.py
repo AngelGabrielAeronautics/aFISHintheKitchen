@@ -73,6 +73,17 @@ PALETTE = {
     # at 28px they are 40+ apart, further than several same-hue pairs.
     # For an eleventh, vary LIGHTNESS rather than hunting a new hue.
     "apricot": "F5CFA8",
+    # ⚠ A SECOND LIGHTNESS BAND, for the male set. The wheel was already full
+    # at ten hues, so the twenty are separated by lightness instead: each of
+    # these is the same hue as its light twin above, roughly 15% deeper. Every
+    # one still clears all four tests, and sits 45+ from its own twin so the
+    # two bands never read as the same disc.
+    # ⚠ lilacMid and sandMid started at #C6A5DA and #E8BB84 and were deepened —
+    # at 42 and 43 from their twins they were inside the 45 floor.
+    "honey": "E3C97A", "apricotMid": "EFAE86", "roseMid": "E294A6",
+    "sageMid": "A8C295", "mintMid": "93C4AE", "aquaMid": "86BFBE",
+    "skyMid": "9DBEDC", "periMid": "A9AEE0", "lilacMid": "B892CF",
+    "sandMid": "DFAC6E",
 }
 
 
@@ -132,6 +143,60 @@ def disc_box(im: Image.Image) -> tuple[int, int, int, int]:
     return xs[0], ys[0], xs[-1], ys[-1]
 
 
+def fit_circle(im: Image.Image):
+    """Centre and radius of the disc, fitted from its edge.
+
+    ⚠ Exists because a generator sometimes returns the disc RUNNING OFF the
+    canvas (Male 4 spanned x15..700 of a 701px frame; Male 7 x25..432 of 433).
+    The bounding box is then a clipped disc, so cropping to it and applying a
+    circular mask exposes the page as a white arc inside the ring.
+
+    Boundary points ON the canvas edge are excluded — they are where the image
+    was cut, not where the disc ends — and the circle is fitted to what is
+    left, so the true centre and radius are recovered from the visible arc.
+    Kasa least squares: x²+y² = 2ax + 2by + c.
+    """
+    px = im.load()
+    w, h = im.size
+    solid = lambda x, y: sum(px[x, y][:3]) < WHITE_SUM
+    pts = []
+    for y in range(0, h, 2):
+        row = [x for x in range(w) if solid(x, y)]
+        if not row:
+            continue
+        for x in (row[0], row[-1]):
+            if 0 < x < w - 1 and 0 < y < h - 1:      # not a cut edge
+                pts.append((x, y))
+    if len(pts) < 32:
+        return None
+    n = len(pts)
+    sx = sum(p[0] for p in pts); sy = sum(p[1] for p in pts)
+    sxx = sum(p[0] * p[0] for p in pts); syy = sum(p[1] * p[1] for p in pts)
+    sxy = sum(p[0] * p[1] for p in pts)
+    sz = sum(p[0] ** 2 + p[1] ** 2 for p in pts)
+    sxz = sum(p[0] * (p[0] ** 2 + p[1] ** 2) for p in pts)
+    syz = sum(p[1] * (p[0] ** 2 + p[1] ** 2) for p in pts)
+    m = [[2 * sxx, 2 * sxy, sx], [2 * sxy, 2 * syy, sy], [2 * sx, 2 * sy, n]]
+    v = [sxz, syz, sz]
+    det = (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+           - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+           + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
+    if abs(det) < 1e-6:
+        return None
+    def solve(col):
+        mm = [row[:] for row in m]
+        for i in range(3):
+            mm[i][col] = v[i]
+        return (mm[0][0] * (mm[1][1] * mm[2][2] - mm[1][2] * mm[2][1])
+                - mm[0][1] * (mm[1][0] * mm[2][2] - mm[1][2] * mm[2][0])
+                + mm[0][2] * (mm[1][0] * mm[2][1] - mm[1][1] * mm[2][0])) / det
+    a, b, c = solve(0), solve(1), solve(2)
+    r2 = c + a * a + b * b
+    if r2 <= 0:
+        return None
+    return a, b, r2 ** 0.5
+
+
 def prepare(src: Path, out_dir: Path, size: int, disc: str | None = None) -> Path:
     im = Image.open(src).convert("RGB")
     l, t, r, b = disc_box(im)
@@ -144,7 +209,20 @@ def prepare(src: Path, out_dir: Path, size: int, disc: str | None = None) -> Pat
     # terracotta ring. Caught by sampling the output's edge midpoints, which
     # came back (253,252,251). The squash needed is around 1% and invisible;
     # the sliver is not.
-    square = im.crop((l, t, r + 1, b + 1)).resize((size, size), Image.LANCZOS)
+    touches_edge = l == 0 or t == 0 or r == im.width - 1 or b == im.height - 1
+    fit = fit_circle(im) if touches_edge else None
+    if fit:
+        # Rebuild the full circle, padding whatever the canvas cut off with the
+        # disc's own colour so the mask has something to keep.
+        cx, cy, rad = fit
+        px = im.load()
+        fill = px[int(min(max(cx, 1), im.width - 2)), int(min(max(cy - rad * 0.85, 1), im.height - 2))][:3]
+        side = int(round(rad * 2))
+        canvas = Image.new("RGB", (side, side), fill)
+        canvas.paste(im, (int(round(rad - cx)), int(round(rad - cy))))
+        square = canvas.resize((size, size), Image.LANCZOS)
+    else:
+        square = im.crop((l, t, r + 1, b + 1)).resize((size, size), Image.LANCZOS)
 
     # Corners transparent, so a square render shows the disc rather than a white box.
     mask = Image.new("L", (size * SS, size * SS), 0)
