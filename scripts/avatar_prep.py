@@ -54,6 +54,18 @@ PALETTE = {
     "clay": "9C5B44", "dustyRed": "9E4F4F", "brick": "7A4634", "wine": "6B3340",
     "berry": "7E3F4F", "rose": "A2596B", "mauve": "8A6479", "orchid": "7A5A86",
     "plum": "6E4A63",
+    # ⚠⚠ PASTELS, and the reason they replaced the deep set: on a real device
+    # the characters vanished into their discs. The check that missed it was
+    # measuring the disc against the figure's CREAM FILL (4.6:1 on clay, fine)
+    # when what actually draws a character is its dark OUTLINE — #4F2A22, which
+    # against clay is 2.37:1. A dark disc swallows the linework. Every pastel
+    # below puts that outline at 7.3:1 to 9.4:1.
+    # They also have to stay clear of the cream fill itself: blush (#F2C9C4)
+    # and almond (#EAD4BE) both pass the outline test and were still dropped,
+    # because at 42 and 39 RGB from the fill the face merges into the disc.
+    "blushRose": "EFB8C4", "peachSoft": "F7C9AE", "butter": "F1DFA4",
+    "sageSoft": "C8D8BC", "mint": "B9D9CB", "aqua": "AEDAD9",
+    "sky": "C2D6E8", "periwinkle": "C9CCEC", "lilac": "DCC6E8",
 }
 
 

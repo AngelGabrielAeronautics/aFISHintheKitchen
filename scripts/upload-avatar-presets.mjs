@@ -2,6 +2,7 @@
 //
 //   node scripts/upload-avatar-presets.mjs "/path/to/ready"      # dry run
 //   node scripts/upload-avatar-presets.mjs "/path/to/ready" --go
+//   node scripts/upload-avatar-presets.mjs "/path/to/ready" --go --replace
 //
 // Labels come from MANIFEST.json in that folder (written by
 // scripts/avatar_prep.py); without one, the filename is used.
@@ -15,7 +16,9 @@
 // ⚠ Adds only. It never deletes: a preset's Storage object is referenced by
 // every member who picked it, so removing one blanks their profile picture.
 // ⚠ Skips a label that already exists, so re-running after a partial failure
-// is safe.
+// is safe. --replace instead re-points an existing label at a NEW Storage
+// object, keeping its doc id, label and sortOrder so the picker order holds.
+// The old object is deliberately left behind for the same reason as above.
 //
 // Requires FIREBASE_SERVICE_ACCOUNT_B64 in .env.local.
 
@@ -40,6 +43,7 @@ function envVar(name) {
 
 const dir = process.argv[2];
 const go = process.argv.includes("--go");
+const replace = process.argv.includes("--replace");
 if (!dir) { console.error("usage: node scripts/upload-avatar-presets.mjs <dir> [--go]"); process.exit(1); }
 
 const manifestPath = join(dir, "MANIFEST.json");
@@ -57,7 +61,8 @@ if (!getApps().length) initializeApp({ credential: cert(sa), storageBucket: BUCK
 const db = getFirestore();
 
 const existing = await db.collection("avatarPresets").get();
-const haveLabels = new Set(existing.docs.map((d) => String(d.data().label)));
+const byLabel = new Map(existing.docs.map((d) => [String(d.data().label), d]));
+const haveLabels = new Set(byLabel.keys());
 let maxOrder = existing.docs.reduce((m, d) => Math.max(m, Number(d.data().sortOrder ?? 0)), 0);
 console.log(`avatarPresets already holds ${existing.size}: ${[...haveLabels].join(", ") || "(none)"}\n`);
 
@@ -65,8 +70,9 @@ const bucket = getStorage().bucket(BUCKET);
 let added = 0;
 for (const file of files) {
   const label = labelFor(file);
-  if (haveLabels.has(label)) { console.log(`  skip   ${label}  (already a preset)`); continue; }
-  if (!go) { console.log(`  would add  ${label.padEnd(20)} <- ${file}`); continue; }
+  const found = byLabel.get(label);
+  if (found && !replace) { console.log(`  skip    ${label}  (already a preset)`); continue; }
+  if (!go) { console.log(`  would ${found ? "replace" : "add    "}  ${label.padEnd(18)} <- ${file}`); continue; }
 
   const buffer = readFileSync(join(dir, file));
   const storagePath = `avatar-presets/${Date.now()}-${randomUUID().slice(0, 8)}.png`;
@@ -80,12 +86,19 @@ for (const file of files) {
   const url =
     `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/` +
     `${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
-  maxOrder += 10;
-  await db.collection("avatarPresets").add({
-    label: label.slice(0, 60), url, storagePath,
-    sortOrder: maxOrder, createdAt: new Date().toISOString(),
-  });
-  console.log(`  added  ${label.padEnd(20)} order ${maxOrder}`);
+  if (found) {
+    // ⚠ Only the picture moves. Keeping the doc id, label and sortOrder means
+    // the picker order does not reshuffle under anyone mid-edit.
+    await found.ref.update({ url, storagePath });
+    console.log(`  replaced ${label.padEnd(18)} order ${found.data().sortOrder}`);
+  } else {
+    maxOrder += 10;
+    await db.collection("avatarPresets").add({
+      label: label.slice(0, 60), url, storagePath,
+      sortOrder: maxOrder, createdAt: new Date().toISOString(),
+    });
+    console.log(`  added    ${label.padEnd(18)} order ${maxOrder}`);
+  }
   added++;
 }
-console.log(go ? `\n${added} added.` : `\nDry run — nothing written. Re-run with --go.`);
+console.log(go ? `\n${added} written.` : `\nDry run — nothing written. Re-run with --go.`);
