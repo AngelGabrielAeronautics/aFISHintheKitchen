@@ -21,14 +21,72 @@ A plain `!= white` test does NOT work — these files carry a near-white
 compression artifact along the bottom row (239,241,238) that reads as content
 and stretches the box to the image edge.
 """
+from __future__ import annotations
+
 import argparse
 import sys
 from pathlib import Path
+
+from collections import Counter
 
 from PIL import Image, ImageDraw
 
 WHITE_SUM = 690   # below this, a pixel is artwork rather than page
 SS = 4            # mask supersampling, for a clean anti-aliased edge
+
+# The brand palette (Theme.swift). ⚠ `terracotta` there is a GREEN — the name
+# is historical. These are the disc colours dark enough to carry the cream
+# figure; the light three are decorative rather than high-contrast.
+PALETTE = {
+    "navy": "1A2E1A", "terracottaDark": "2D4A2E", "terracotta": "3D5A3E",
+    "sageDark": "4A5C3E", "sage": "6B7D5E", "gold": "8B7B4A",
+    "sageLight": "9BAF8E", "terracottaLight": "A8C4A0", "goldLight": "C4B88A",
+}
+
+
+def _rgb(h: str) -> tuple[int, int, int]:
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def recolour_disc(im: Image.Image, target: str, tol: int = 62) -> Image.Image:
+    """Repaint the flat disc fill, leaving the figure and its outline alone.
+
+    ⚠ Not a flood fill and not an exact-colour swap: the fill carries faint
+    shading, and every boundary against the figure is anti-aliased. Both would
+    leave a green fringe. Instead each pixel is moved toward the target in
+    PROPORTION to how close it is to the fill colour, so a half-blended edge
+    pixel gets half the shift and the outline (far from the fill) gets none.
+    """
+    tgt = _rgb(target)
+    im = im.convert("RGB")          # called before the alpha mask goes on
+    px = im.load()
+    w, h = im.size
+    # The fill colour is whatever dominates a thin annulus just inside the rim,
+    # which is disc and nothing else whatever the figure is doing.
+    ring = Counter()
+    cx = cy = w / 2
+    for y in range(0, h, 2):
+        for x in range(0, w, 2):
+            d = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+            if 0.80 * w / 2 < d < 0.93 * w / 2:
+                ring[px[x, y][:3]] += 1
+    base = ring.most_common(1)[0][0]
+
+    out = im.copy()
+    op = out.load()
+    for y in range(h):
+        for x in range(w):
+            p = px[x, y]
+            dist = sum((a - b) ** 2 for a, b in zip(p[:3], base)) ** 0.5
+            if dist >= tol:
+                continue
+            k = 1.0 - dist / tol
+            op[x, y] = tuple(
+                max(0, min(255, round(c + (t - bc) * k)))
+                for c, t, bc in zip(p, tgt, base)
+            )
+    return out
 
 
 def disc_box(im: Image.Image) -> tuple[int, int, int, int]:
@@ -42,7 +100,7 @@ def disc_box(im: Image.Image) -> tuple[int, int, int, int]:
     return xs[0], ys[0], xs[-1], ys[-1]
 
 
-def prepare(src: Path, out_dir: Path, size: int) -> Path:
+def prepare(src: Path, out_dir: Path, size: int, disc: str | None = None) -> Path:
     im = Image.open(src).convert("RGB")
     l, t, r, b = disc_box(im)
 
@@ -59,6 +117,8 @@ def prepare(src: Path, out_dir: Path, size: int) -> Path:
     # Corners transparent, so a square render shows the disc rather than a white box.
     mask = Image.new("L", (size * SS, size * SS), 0)
     ImageDraw.Draw(mask).ellipse((0, 0, size * SS - 1, size * SS - 1), fill=255)
+    if disc:
+        square = recolour_disc(square, PALETTE.get(disc, disc))
     square.putalpha(mask.resize((size, size), Image.LANCZOS))
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -73,10 +133,12 @@ def main() -> int:
     ap.add_argument("images", nargs="+", type=Path)
     ap.add_argument("--out", type=Path, default=None, help="default: a 'ready' folder beside the first image")
     ap.add_argument("--size", type=int, default=512)
+    ap.add_argument("--disc", default=None,
+                    help="Repaint the disc: a palette name (%s) or a hex value." % ", ".join(PALETTE))
     a = ap.parse_args()
     out = a.out or a.images[0].parent / "ready"
     for p in a.images:
-        prepare(p, out, a.size)
+        prepare(p, out, a.size, a.disc)
     return 0
 
 
