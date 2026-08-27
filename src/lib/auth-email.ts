@@ -218,6 +218,32 @@ export function buildTrialEndedEmail(): BuiltEmail {
   return { subject: `Your ${FROM_NAME} trial has ended`, html, text };
 }
 
+// Sent when a super-admin comps a subscription — we have given this household
+// the app for nothing.
+//
+// ⚠ Not the gift email. A gift comes from another CUSTOMER and runs for a year,
+// so that one names the giver and counts down. This comes from US and has no
+// end date, so it must not imply either: no "your gift from…", no "expires on…".
+// Somebody who reads a deadline into it will spend the year waiting to be
+// charged.
+//
+// ⚠ It also must not read as an apology. Comping is usually generosity, not
+// compensation, and "sorry for the trouble" invents a problem they may not have
+// had.
+export function buildCompedEmail(): BuiltEmail {
+  const { html, text } = shell({
+    heading: "Your cookbook is on us",
+    bodyLines: [
+      `We've unlocked ${FROM_NAME} for you, free of charge — there's no subscription to pay and nothing to renew.`,
+      "Everything is open: add as many recipes as you like, bring the family in, and cook hands-free at the stove. Your cookbook stays yours either way.",
+      "If you have any questions, just reply to this email — it comes straight to us.",
+    ],
+    ctaLabel: "Open your cookbook",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Your ${FROM_NAME} cookbook is on us`, html, text };
+}
+
 // Sent once by the lapse sweep before a GIFTED year runs out.
 //
 // ⚠ Not the trial email with a different number. Somebody a year into a gift

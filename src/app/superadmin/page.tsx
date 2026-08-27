@@ -87,6 +87,8 @@ export default function SuperAdminPage() {
   const [biz, setBiz] = useState<Business | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  /** Result of the last action worth reporting — currently the comp email. */
+  const [notice, setNotice] = useState("");
   /**
    * The action waiting on confirmation.
    *
@@ -191,11 +193,21 @@ export default function SuperAdminPage() {
     setBusy(`${householdId}:${action}`);
     try {
       const token = await getFirebaseAuth().currentUser?.getIdToken();
-      await fetch("/api/admin/actions", {
+      const res = await fetch("/api/admin/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ householdId, action, days }),
       });
+      // Comping now emails the owner. Say who was told — a silent send failure
+      // should be visible here rather than assumed to have worked.
+      const out = (await res.json().catch(() => null)) as { emailed?: string | null } | null;
+      if (action === "comp") {
+        setNotice(
+          out?.emailed
+            ? `Comped, and emailed ${out.emailed}.`
+            : "Comped. No email sent — already comped, no address on the account, or the send failed (check the logs)."
+        );
+      }
       await load();
     } finally {
       setBusy(null);
@@ -253,6 +265,14 @@ export default function SuperAdminPage() {
       <p className="mb-6 font-sans text-sm text-slate">Platform-wide oversight of every cookbook.</p>
 
       {error && <p className="mb-4 font-sans text-sm text-red-600">{error}</p>}
+      {notice && (
+        <p className="mb-4 rounded-lg bg-sage/15 px-3 py-2 font-sans text-sm text-sage-dark">
+          {notice}{" "}
+          <button className="underline" onClick={() => setNotice("")}>
+            dismiss
+          </button>
+        </p>
+      )}
       {!data && !error && <p className="font-sans text-sm text-slate">Loading…</p>}
 
       {data && (
