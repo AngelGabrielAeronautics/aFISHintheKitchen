@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
-import { buildCompedEmail } from "@/lib/auth-email";
+import { buildCompedEmail, buildTrialExtendedEmail } from "@/lib/auth-email";
 import { verifySuperAdmin } from "@/lib/admin-auth";
 import { deleteHouseholdData } from "@/lib/delete-data";
 import { TRIAL_DAYS } from "@/lib/access";
@@ -114,6 +114,20 @@ export async function POST(req: NextRequest) {
         },
         { merge: true }
       );
+      // Tell them the deadline moved. ⚠ Sent EVERY time, unlike the comp mail:
+      // a second extension is genuinely more time, and the new date is the
+      // point of the message. Best-effort for the same reason as comp — the
+      // access matters more than the note about it.
+      try {
+        const email = (await getAdminAuth().getUser(ownerId)).email;
+        if (email && !NEVER_EMAIL.has(email.toLowerCase())) {
+          const { subject, html, text } = buildTrialExtendedEmail(trialEndsAt);
+          await sendTransactionalEmail({ to: email, subject, html, text });
+          emailed = email;
+        }
+      } catch (err) {
+        console.error("extend_trial email failed", err);
+      }
       break;
     }
 

@@ -218,6 +218,34 @@ export function buildTrialEndedEmail(): BuiltEmail {
   return { subject: `Your ${FROM_NAME} trial has ended`, html, text };
 }
 
+// Sent when a super-admin extends someone's trial.
+//
+// ⚠ Unlike the comp email this SHOULD send every time. Comping twice is the
+// same gift stated twice; extending twice is genuinely more time, and the new
+// date is the whole point of the message.
+//
+// ⚠ It must not read as "your trial has ended" — the lapse sweep already sends
+// that, and the two landing together would be baffling. This one only ever
+// says the deadline moved outwards.
+export function buildTrialExtendedEmail(endsAt: string): BuiltEmail {
+  const when = new Date(endsAt).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const { html, text } = shell({
+    heading: "We've extended your trial",
+    bodyLines: [
+      `We've added more time to your ${FROM_NAME} trial — it now runs until ${when}, with everything unlocked.`,
+      "Keep adding recipes, bring the family in, and cook hands-free at the stove. Nothing is deleted when a trial ends, so your cookbook stays yours either way.",
+      "If you have any questions, just reply to this email — it comes straight to us.",
+    ],
+    ctaLabel: "Open your cookbook",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Your ${FROM_NAME} trial now runs until ${when}`, html, text };
+}
+
 // Sent when a super-admin comps a subscription — we have given this household
 // the app for nothing.
 //

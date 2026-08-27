@@ -201,11 +201,11 @@ export default function SuperAdminPage() {
       // Comping now emails the owner. Say who was told — a silent send failure
       // should be visible here rather than assumed to have worked.
       const out = (await res.json().catch(() => null)) as { emailed?: string | null } | null;
-      if (action === "comp") {
+      if (action === "comp" || action === "extend_trial") {
         setNotice(
           out?.emailed
-            ? `Comped, and emailed ${out.emailed}.`
-            : "Comped. No email sent — already comped, no address on the account, or the send failed (check the logs)."
+            ? `Done, and emailed ${out.emailed}.`
+            : "Done. No email sent — already comped, no address on the account, or the send failed (check the logs)."
         );
       }
       await load();
