@@ -40,18 +40,46 @@ export async function GET(req: NextRequest) {
   const db = getAdminDb();
   const now = new Date();
 
-  // Expire signup trials that never converted. Only provider "none" (the
-  // placeholder written by create-household): store-backed trials are advanced
-  // by their own verified events, never by the clock here. Expiry marks the
-  // sub canceled with lapsedAt = trialEndsAt, and the unpaid loop below walks
-  // the household down the same ladder as any other lapse.
+  // Expire trials WE granted and nobody else will ever close. Two kinds:
+  // the signup trial (provider "none", written by create-household) and an
+  // admin extend_trial. Expiry marks the sub canceled with lapsedAt =
+  // trialEndsAt, and the unpaid loop below walks the household down the same
+  // ladder as any other lapse.
+  //
+  // ⚠⚠ THE TEST IS "WHO CLOSES THIS TRIAL", NOT "WHICH STORE IS NAMED".
+  // A store-backed trial is advanced by its own verified events, never by the
+  // clock here — cancelling one on a late notification would start the lapse
+  // ladder under a customer who has just paid. But this guard used to read
+  // `provider !== "none"` and skip, and extend_trial left `provider` alone,
+  // so an admin-granted trial on any household that had EVER touched a store
+  // was immortal: it never expired, never emailed, never lapsed, and sat in
+  // the console as "In trial" with an end date weeks in the past. That is what
+  // happened to one real cookbook between 27 Aug and 29 Aug 2026.
+  // extend_trial now writes provider "none" itself; `trialGrantedAt` is the
+  // belt-and-braces marker so a doc written before that fix still expires.
+  //
+  // ⚠ Store trials past their end date are NOT touched, but they ARE counted
+  // into `staleStoreTrials` — silence there means Apple or Google never told
+  // us how a trial finished, and the Money panel is undercounting churn.
+  const STALE_STORE_TRIAL_DAYS = 3;
   let trialsExpired = 0;
   let trialWarningsSent = 0;
+  let staleStoreTrials = 0;
   const trialing = await db.collection("subscriptions").where("status", "==", "trialing").get();
   for (const subSnap of trialing.docs) {
     const sub = subSnap.data();
-    if (sub.provider !== "none") continue;
     if (!sub.trialEndsAt) continue;
+    const ours = sub.provider === "none" || Boolean(sub.trialGrantedAt);
+    if (!ours) {
+      const overdueDays = (now.getTime() - new Date(sub.trialEndsAt).getTime()) / 86_400_000;
+      if (overdueDays > STALE_STORE_TRIAL_DAYS) {
+        staleStoreTrials++;
+        console.warn(
+          `lapse-sweep: store trial ${subSnap.id} (${sub.provider}) ended ${Math.floor(overdueDays)} days ago and is still "trialing" — no store event ever closed it`
+        );
+      }
+      continue;
+    }
     const endsAt = new Date(sub.trialEndsAt);
 
     if (endsAt > now) {
@@ -360,6 +388,7 @@ export async function GET(req: NextRequest) {
     scanned: unpaid.size,
     trialsExpired,
     trialWarningsSent,
+    staleStoreTrials,
     trialEndedEmailsSent,
     giftEndedEmailsSent,
     giftsExpired,

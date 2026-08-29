@@ -130,7 +130,9 @@ export async function POST(req: NextRequest) {
 
       const link = brandActionLink(await adminAuth.generateEmailVerificationLink(email, actionCodeSettings));
       const { subject, html, text } = buildVerifyEmail(link);
-      await sendTransactionalEmail({ to: email, subject, html, text });
+      // allowSuppressed: a reset/verification link is mail the person ASKED for and
+      // cannot sign in without — App Review must still be able to recover demo@.
+      await sendTransactionalEmail({ to: email, subject, html, text, allowSuppressed: true });
       return NextResponse.json({ ok: true });
     }
 
@@ -188,7 +190,9 @@ export async function POST(req: NextRequest) {
     try {
       const link = brandActionLink(await adminAuth.generatePasswordResetLink(email, actionCodeSettings));
       const { subject, html, text } = buildResetEmail(link);
-      await sendTransactionalEmail({ to: email, subject, html, text });
+      // allowSuppressed: a reset/verification link is mail the person ASKED for and
+      // cannot sign in without — App Review must still be able to recover demo@.
+      await sendTransactionalEmail({ to: email, subject, html, text, allowSuppressed: true });
     } catch (err) {
       // user-not-found is expected for unknown addresses — swallow it so we
       // never leak which emails have accounts. Log other failures.

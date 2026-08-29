@@ -130,6 +130,7 @@ async function alertOnChange(failing: Check[]): Promise<"alerted" | "recovered" 
   if (nowFailing) {
     const lines = failing.map((f) => `• ${f.name}${f.detail ? ` — ${f.detail}` : ""}`);
     await sendTransactionalEmail({
+      allowSuppressed: true, // ops alert to our own inbox — never suppress
       to,
       subject: `A Fish in the Kitchen — ${failing.length} check${failing.length === 1 ? "" : "s"} failing`,
       text: `These checks are failing:\n\n${lines.join("\n")}\n\nhttps://www.afishinthekitchen.com/api/health`,
@@ -141,6 +142,7 @@ async function alertOnChange(failing: Check[]): Promise<"alerted" | "recovered" 
   }
 
   await sendTransactionalEmail({
+      allowSuppressed: true, // ops alert to our own inbox — never suppress
     to,
     subject: "A Fish in the Kitchen — back to healthy",
     text: "Every check is passing again.",

@@ -12,6 +12,7 @@
 // Use this for transactional mail only — never marketing/bulk, where honouring
 // unsubscribe is a legal requirement.
 import sgMail from "@sendgrid/mail";
+import { isNeverEmail } from "./never-email";
 
 export const FROM_NAME = "A Fish in the Kitchen";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL ?? "noreply@afishinthekitchen.com";
@@ -23,9 +24,30 @@ export interface TransactionalEmail {
   html: string;
   text: string;
   replyTo?: string;
+  /**
+   * Send even to a NEVER_EMAIL address.
+   *
+   * ⚠ ONLY for mail the recipient asked for and cannot proceed without — a
+   * password reset, an email verification — and for our own ops alerts. Never
+   * for anything we decided to send them: trial notices, gift chasers,
+   * announcements. App Review must still be able to reset the demo account's
+   * password; it must not receive "your trial is ending".
+   *
+   * The polarity is deliberate. Forgetting this flag means one functional email
+   * does not arrive, which is visible and fixable. The opposite default means
+   * mailing the people deciding whether we ship, which is neither.
+   */
+  allowSuppressed?: boolean;
 }
 
 export async function sendTransactionalEmail(msg: TransactionalEmail): Promise<void> {
+  // ⚠ THE GUARD LIVES HERE, not in the callers. There are fourteen call sites
+  // across invites, gifts, auth, the console and the nightly sweep; the two
+  // console buttons checked the list and the cron never did. See lib/never-email.
+  if (!msg.allowSuppressed && isNeverEmail(msg.to)) {
+    console.warn(`email: suppressed "${msg.subject}" to ${msg.to} (NEVER_EMAIL)`);
+    return;
+  }
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) throw new Error("SENDGRID_API_KEY is not set");
   sgMail.setApiKey(apiKey);

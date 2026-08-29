@@ -6,18 +6,12 @@ import { buildCompedEmail, buildTrialExtendedEmail } from "@/lib/auth-email";
 import { verifySuperAdmin } from "@/lib/admin-auth";
 import { deleteHouseholdData } from "@/lib/delete-data";
 import { TRIAL_DAYS } from "@/lib/access";
+// ⚠ Checked HERE as well as inside sendTransactionalEmail, because the console
+// reports back WHICH address it wrote to — a suppressed send must not be
+// reported to the operator as an email that went out.
+import { isNeverEmail } from "@/lib/never-email";
 
 export const runtime = "nodejs";
-
-// ⚠ Never write to these. `demo@` is the account App Review signs into and the
-// privaterelay address is the reviewer who bought a sandbox year during the 1.5
-// review — mailing either puts our post at the feet of the people deciding
-// whether we ship. The third is a test login. Mirrors scripts/send-announcement.mjs.
-const NEVER_EMAIL = new Set([
-  "demo@afishinthekitchen.com",
-  "rmdjz9nbwm@privaterelay.appleid.com",
-  "dylan@coppard.co.za",
-]);
 
 // Super-admin subscription/household actions. Refunds are intentionally NOT here —
 // those happen in the payment provider's dashboard (added at the billing milestone).
@@ -81,7 +75,7 @@ export async function POST(req: NextRequest) {
         // hand, an ungranted subscription leaves someone locked out.
         try {
           const email = (await getAdminAuth().getUser(ownerId)).email;
-          if (email && !NEVER_EMAIL.has(email.toLowerCase())) {
+          if (email && !isNeverEmail(email)) {
             const { subject, html, text } = buildCompedEmail();
             await sendTransactionalEmail({ to: email, subject, html, text });
             await subRef.set({ compedEmailSentAt: now }, { merge: true });
@@ -104,6 +98,20 @@ export async function POST(req: NextRequest) {
           trialEndsAt,
           hasUsedTrial: true,
           householdId,
+          // ⚠⚠ THE GRANT MUST SAY WHOSE TRIAL IT IS. The lapse sweep only
+          // expires trials nobody else will close, and it decides that from
+          // `provider`. This action used to leave `provider` alone, so
+          // extending the trial of anyone who had ever touched a store left a
+          // trial no store would ever close and the sweep would never touch —
+          // permanent free access, invisible because the console still said
+          // "In trial". No store event is coming for a trial WE granted, so
+          // "none" is simply the truth; a later real purchase overwrites it
+          // via applyBillingEvent. `plan` goes with it — a granted trial is on
+          // no plan. providerSubscriptionId is deliberately KEPT: Apple's and
+          // Play's notification handlers look the doc up by it.
+          provider: "none",
+          plan: null,
+          trialGrantedAt: now,
           lapsedAt: FieldValue.delete(),
           // A fresh trial deserves a fresh warning — without this the sweep
           // thinks the "ending soon" email was already sent and the extended
@@ -120,7 +128,7 @@ export async function POST(req: NextRequest) {
       // access matters more than the note about it.
       try {
         const email = (await getAdminAuth().getUser(ownerId)).email;
-        if (email && !NEVER_EMAIL.has(email.toLowerCase())) {
+        if (email && !isNeverEmail(email)) {
           const { subject, html, text } = buildTrialExtendedEmail(trialEndsAt);
           await sendTransactionalEmail({ to: email, subject, html, text });
           emailed = email;

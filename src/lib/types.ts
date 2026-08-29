@@ -406,6 +406,10 @@ export interface Subscription {
   status: SubscriptionStatus;
   plan: "monthly" | "annual" | null;
   trialEndsAt?: string;
+  // Set when WE granted the trial from /superadmin rather than a store. The
+  // lapse sweep expires a trial only if nobody else will close it, and this is
+  // how it knows — see the guard in cron/lapse-sweep.
+  trialGrantedAt?: string;
   currentPeriodEnd?: string;
   hasUsedTrial: boolean; // enforces one trial ever
   extraSeats: number; // paid add-on beyond the base 5
