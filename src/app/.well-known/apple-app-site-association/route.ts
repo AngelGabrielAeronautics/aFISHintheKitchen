@@ -29,6 +29,11 @@ const AASA = {
               "comment":
                 "Gift links open the app when installed. Without this the recipient lands on the web page, which tells them to install an app they already have and then type the code by hand — the same funnel break the invite links had.",
             },
+            {
+              "/": "/join/*",
+              "comment":
+                "Join-code links open the app when installed and redeem the code for whoever is signed in — no email matching. The web page is for the phone without the app.",
+            },
         ],
       },
     ],

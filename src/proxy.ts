@@ -34,7 +34,7 @@ const ALLOWED_EXACT = new Set([
 // ⚠ "/g/" is the gift-card landing. It MUST stay reachable: the recipient is a
 // stranger clicking a link in an email, and bouncing them to the marketing home
 // page loses the code — the one thing the email existed to deliver.
-const ALLOWED_PREFIXES = ["/r/", "/m/", "/g/", "/auth/action", "/.well-known/", "/admin", "/superadmin",
+const ALLOWED_PREFIXES = ["/r/", "/m/", "/g/", "/join/", "/auth/action", "/.well-known/", "/admin", "/superadmin",
   // Both apps link here from More → Help. Gating it would send people
   // asking for help to the marketing page instead.
   "/faq"];

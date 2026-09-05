@@ -288,6 +288,16 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
     }
 
+    // ── Join codes ──
+    // `joinCodes/{CODE}` — the owner's invitation that needs no email address
+    // (lib/join-codes.ts). Like a gift code it is a BEARER TOKEN: whoever holds
+    // it can join, so no client may read or enumerate them. The owner lists
+    // theirs through /api/invite/code (server-side); redemption is /api/join.
+    match /joinCodes/{code} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
     // ── Gift codes ──
     match /gifts/{code} {
       // ⚠ NO CLIENT READS AT ALL, and that is the whole point. The doc id IS

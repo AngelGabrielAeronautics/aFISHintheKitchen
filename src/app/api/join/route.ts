@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { MAX_SEATS, MAX_GUEST_BOOKS } from "@/lib/access";
 import { INVITES, syncLegacyMirror, type InviteDoc } from "@/lib/invites";
+import { JOIN_CODES, loadJoinCode, isOpen } from "@/lib/join-codes";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,10 @@ export const runtime = "nodejs";
 // Optional body `{ householdId }` narrows the accept to one book (the web
 // /invited page knows which link was tapped); the apps send nothing and take
 // them all.
+//
+// Body `{ code }` is the OTHER way in: a join code the owner handed over (see
+// lib/join-codes.ts). No email matching at all — whoever redeems it, signed in
+// as whoever they are, joins that one book, subject to the same caps.
 export async function POST(req: NextRequest) {
   try {
     const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
@@ -37,14 +42,20 @@ export async function POST(req: NextRequest) {
     if (!emailLower) return NextResponse.json({ error: "no_email" }, { status: 400 });
 
     let only: string | undefined;
+    let code: string | undefined;
     try {
-      const body = (await req.json()) as { householdId?: string } | null;
+      const body = (await req.json()) as { householdId?: string; code?: string } | null;
       only = body?.householdId?.trim() || undefined;
+      code = body?.code?.trim() || undefined;
     } catch {
       // No body is the normal case.
     }
 
     const db = getAdminDb();
+
+    if (code) {
+      return redeemCode(db, code, { uid, emailLower, tokenName });
+    }
     const pendingSnap = await db
       .collection(INVITES)
       .where("email", "==", emailLower)
@@ -176,4 +187,103 @@ export async function POST(req: NextRequest) {
     console.error("join error:", err);
     return NextResponse.json({ error: "join_failed" }, { status: 500 });
   }
+}
+
+
+type Joiner = { uid: string; emailLower: string; tokenName?: string };
+
+/** Add `uid` to `householdId` as a member, with a profile card, in one batch. */
+async function addMember(
+  db: ReturnType<typeof getAdminDb>,
+  householdId: string,
+  who: Joiner,
+  displayName: string,
+  extraWrites?: (batch: FirebaseFirestore.WriteBatch) => void,
+) {
+  const now = new Date().toISOString();
+  const profileCount = (
+    await db.collection("members").where("householdId", "==", householdId).count().get()
+  ).data().count;
+  const batch = db.batch();
+  batch.set(db.collection("householdMembers").doc(), {
+    userId: who.uid,
+    householdId,
+    displayName,
+    role: "member",
+    joinedAt: now,
+  });
+  batch.set(db.collection("members").doc(), {
+    householdId,
+    userId: who.uid,
+    order: profileCount,
+    name: displayName,
+    title: "",
+    bio: "",
+    goodAt: [],
+    loves: [],
+    hates: [],
+    favouriteFromBook: "",
+    favouriteNotInBook: "",
+  });
+  batch.update(db.collection("households").doc(householdId), { memberIds: FieldValue.arrayUnion(who.uid) });
+  extraWrites?.(batch);
+  await batch.commit();
+}
+
+/**
+ * The join-code path. Same caps as an email invite, judged for this one book;
+ * the code is spent on success and untouched on refusal so the person can try
+ * again once a seat frees up.
+ */
+async function redeemCode(db: ReturnType<typeof getAdminDb>, raw: string, who: Joiner) {
+  const jc = await loadJoinCode(db, raw);
+  if (!jc) return NextResponse.json({ error: "code_not_found" }, { status: 404 });
+  if (jc.status === "used") return NextResponse.json({ error: "code_used" }, { status: 409 });
+  if (!isOpen(jc)) return NextResponse.json({ error: "code_expired" }, { status: 410 });
+
+  const hhSnap = await db.collection("households").doc(jc.householdId).get();
+  if (!hhSnap.exists) return NextResponse.json({ error: "household_not_found" }, { status: 404 });
+  const hh = hhSnap.data()!;
+  if ((hh.accessState ?? "active") !== "active") {
+    return NextResponse.json({ error: "household_inactive" }, { status: 403 });
+  }
+  if (hh.ownerId === who.uid) return NextResponse.json({ error: "own_cookbook" }, { status: 409 });
+
+  const mineSnap = await db.collection("householdMembers").where("userId", "==", who.uid).get();
+  if (mineSnap.docs.some((d) => d.data().householdId === jc.householdId)) {
+    return NextResponse.json({ ok: true, joined: [], alreadyMember: true, alreadyMemberOf: [jc.householdId], householdId: jc.householdId });
+  }
+  const guestBooks = mineSnap.docs.filter((d) => d.data().role === "member").length;
+  if (guestBooks >= MAX_GUEST_BOOKS) {
+    return NextResponse.json({ error: "guest_book_limit", limit: MAX_GUEST_BOOKS }, { status: 409 });
+  }
+
+  const [activeMembers, subSnap] = await Promise.all([
+    db.collection("householdMembers").where("householdId", "==", jc.householdId).where("role", "==", "member").get(),
+    db.collection("subscriptions").doc(hh.ownerId).get(),
+  ]);
+  const extraSeats: number = subSnap.exists ? (subSnap.data()?.extraSeats ?? 0) : 0;
+  if (activeMembers.size >= MAX_SEATS + extraSeats) {
+    return NextResponse.json({ error: "seat_limit", limit: MAX_SEATS + extraSeats }, { status: 409 });
+  }
+
+  // The name the owner wrote on the code beats the account's display name —
+  // identity in a cookbook is the NAME, and "Michael" is what his brother
+  // will look for, not whatever Apple put on the account.
+  const displayName = jc.forName || who.tokenName || who.emailLower;
+  const now = new Date().toISOString();
+  await addMember(db, jc.householdId, who, displayName, (batch) => {
+    batch.update(db.collection(JOIN_CODES).doc(jc.code), {
+      status: "used",
+      usedAt: now,
+      usedBy: who.uid,
+      usedByName: displayName,
+    });
+  });
+  try {
+    await getAdminAuth().updateUser(who.uid, { emailVerified: true });
+  } catch {
+    // Non-fatal.
+  }
+  return NextResponse.json({ ok: true, joined: [jc.householdId], alreadyMember: false, householdId: jc.householdId, householdName: hh.customisation?.brandName ?? hh.name ?? "" });
 }
