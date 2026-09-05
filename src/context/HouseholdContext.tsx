@@ -49,7 +49,7 @@ export default function HouseholdProvider({ children }: { children: React.ReactN
 
     async function load() {
       try {
-        const memberships = await getUserHouseholds(user!.uid);
+        const memberships = (await getUserHouseholds(user!.uid)) ?? [];
         if (cancelled) return;
 
         setAllMemberships(memberships);

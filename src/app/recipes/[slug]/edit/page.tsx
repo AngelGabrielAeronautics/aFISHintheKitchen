@@ -1078,7 +1078,10 @@ export default function EditRecipePage() {
           </button>
         </form>
 
-        {/* Delete recipe */}
+        {/* Delete recipe — only the creator can delete a post-migration recipe.
+            Legacy recipes (no createdByUid) remain deletable by any signed-in
+            user; Firestore rules mirror this. */}
+        {recipe && (!recipe.createdByUid || recipe.createdByUid === user?.uid) && (
         <div className="mt-8 border-t border-cream-dark/30 pt-6">
           <button
             onClick={() => setShowDeleteModal(true)}
@@ -1090,6 +1093,7 @@ export default function EditRecipePage() {
             Delete Recipe
           </button>
         </div>
+        )}
 
         {showDeleteModal && recipe && (
           <DeleteModal
