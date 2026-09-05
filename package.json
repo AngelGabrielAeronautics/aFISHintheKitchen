@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "firebase emulators:exec --only firestore,storage --project afk-test \"vitest run --config vitest.rules.config.ts\""
+    "test:rules": "firebase emulators:exec --only firestore,storage --project afk-test \"vitest run --config vitest.rules.config.ts\"",
+    "backfill:creator-uids": "tsx scripts/backfill-recipe-creator-uids.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
@@ -35,6 +36,7 @@
     "firebase-tools": "^15.15.0",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^4.1.4"
   }
