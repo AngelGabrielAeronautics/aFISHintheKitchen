@@ -10,126 +10,33 @@ import Avatar from "@/components/Avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useHousehold } from "@/context/HouseholdContext";
 import type { Recipe } from "@/lib/types";
-
-// --- Types ---
-
-type DayKey =
-  | "monday"
-  | "tuesday"
-  | "wednesday"
-  | "thursday"
-  | "friday"
-  | "saturday"
-  | "sunday";
-
-interface MealAssignment {
-  recipeId: string;
-  title: string;
-  slug: string;
-  image?: string;
-}
-
-interface MealPlan {
-  weekId: string;
-  userId: string;
-  userName: string;
-  meals: Partial<Record<DayKey, MealAssignment[]>>;
-}
-
-const DAYS: { key: DayKey; label: string; short: string }[] = [
-  { key: "monday", label: "Monday", short: "Mon" },
-  { key: "tuesday", label: "Tuesday", short: "Tue" },
-  { key: "wednesday", label: "Wednesday", short: "Wed" },
-  { key: "thursday", label: "Thursday", short: "Thu" },
-  { key: "friday", label: "Friday", short: "Fri" },
-  { key: "saturday", label: "Saturday", short: "Sat" },
-  { key: "sunday", label: "Sunday", short: "Sun" },
-];
-
-// --- Week helpers ---
-
-function getWeekId(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  const weekNum =
-    1 +
-    Math.round(
-      ((d.getTime() - week1.getTime()) / 86400000 -
-        3 +
-        ((week1.getDay() + 6) % 7)) /
-        7
-    );
-  return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
-}
-
-function getMondayOfWeek(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d;
-}
-
-function formatDateRange(monday: Date): string {
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  return `${fmt(monday)} - ${fmt(sunday)}`;
-}
-
-function getTodayDayKey(): DayKey | null {
-  const jsDay = new Date().getDay(); // 0=Sun
-  const map: Record<number, DayKey> = {
-    1: "monday",
-    2: "tuesday",
-    3: "wednesday",
-    4: "thursday",
-    5: "friday",
-    6: "saturday",
-    0: "sunday",
-  };
-  return map[jsDay] ?? null;
-}
+import {
+  DAYS,
+  formatDateRange,
+  getMondayOfWeek,
+  getTodayDayKey,
+  getWeekId,
+  normalizeMeals,
+  planDocId,
+  type DayKey,
+  type MealAssignment,
+  type MealPlan,
+} from "@/lib/meal-planner";
 
 // --- Firestore helpers ---
-
-function planDocId(uid: string, weekId: string) {
-  return `${uid}_${weekId}`;
-}
 
 async function loadMealPlan(uid: string, userName: string, weekId: string): Promise<MealPlan> {
   // Try new per-user doc first
   const snap = await getDoc(doc(getDb(), "mealPlans", planDocId(uid, weekId)));
   if (snap.exists()) {
     const data = snap.data() as MealPlan;
-    // Migrate old single-object meals to arrays
-    const meals: MealPlan["meals"] = {};
-    for (const [day, val] of Object.entries(data.meals)) {
-      if (Array.isArray(val)) {
-        meals[day as DayKey] = val;
-      } else if (val && typeof val === "object" && "recipeId" in val) {
-        meals[day as DayKey] = [val as MealAssignment];
-      }
-    }
-    return { ...data, meals };
+    return { ...data, meals: normalizeMeals(data.meals) };
   }
   // Fallback: try old shared doc (weekId only, no uid prefix)
   const oldSnap = await getDoc(doc(getDb(), "mealPlans", weekId));
   if (oldSnap.exists()) {
     const old = oldSnap.data();
-    const meals: MealPlan["meals"] = {};
-    for (const [day, val] of Object.entries(old.meals ?? {})) {
-      if (Array.isArray(val)) {
-        meals[day as DayKey] = val;
-      } else if (val && typeof val === "object" && "recipeId" in val) {
-        meals[day as DayKey] = [val as MealAssignment];
-      }
-    }
-    return { weekId, userId: uid, userName, meals };
+    return { weekId, userId: uid, userName, meals: normalizeMeals(old.meals) };
   }
   return { weekId, userId: uid, userName, meals: {} };
 }
@@ -143,16 +50,7 @@ async function loadFamilyPlans(weekId: string): Promise<MealPlan[]> {
   const snap = await getDocs(q);
   return snap.docs.map((d) => {
     const data = d.data() as MealPlan;
-    // Migrate old single-object meals to arrays
-    const meals: MealPlan["meals"] = {};
-    for (const [day, val] of Object.entries(data.meals ?? {})) {
-      if (Array.isArray(val)) {
-        meals[day as DayKey] = val;
-      } else if (val && typeof val === "object" && "recipeId" in val) {
-        meals[day as DayKey] = [val as MealAssignment];
-      }
-    }
-    return { ...data, meals };
+    return { ...data, meals: normalizeMeals(data.meals) };
   });
 }
 
@@ -334,6 +232,9 @@ export default function MealPlannerPage() {
     if (!user?.uid) return;
     const userName = user.displayName || user.email || "Unknown";
     let cancelled = false;
+    // Signal loading before the fetch fires so the UI can show a spinner
+    // while awaiting the network. The extra render is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingPlan(true);
     Promise.all([
       loadMealPlan(user.uid, userName, weekId),
