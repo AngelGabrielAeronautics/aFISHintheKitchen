@@ -42,6 +42,7 @@ const HOUSEHOLD_SCOPED_COLLECTIONS = [
   "notifications",
   "householdMembers",
   "invitedUsers",
+  "invites",
   "sharedRecipes",
   "sharedMenus",
   "deviceTokens",

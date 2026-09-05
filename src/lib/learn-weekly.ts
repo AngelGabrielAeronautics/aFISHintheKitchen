@@ -1,4 +1,5 @@
 import { getAdminDb, getAdminMessaging } from "@/lib/firebase-admin";
+import { deleteTokenEverywhere } from "@/lib/device-tokens";
 
 // The Monday push for "Learn this recipe this week" (docs/LEARN.md).
 //
@@ -106,7 +107,7 @@ export async function sendWeeklyRecipePushIfDue(): Promise<Record<string, unknow
       stale.push(tokens[i]);
     }
   });
-  await Promise.all(stale.map((t) => db.collection("deviceTokens").doc(t).delete().catch(() => {})));
+  await Promise.all(stale.map((t) => deleteTokenEverywhere(db, t)));
 
   await stampRef.set(
     { lastPushMonday: thisMonday, pickId: pick.id, pickTitle: pick.title, sent: res.successCount, at: now.toISOString() },

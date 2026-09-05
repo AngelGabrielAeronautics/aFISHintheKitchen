@@ -271,6 +271,23 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
     }
 
+    // ── Invitations, keyed by (address, cookbook) ──
+    // `invites/{email}_{householdId}` replaced the address-keyed `invitedUsers`
+    // above (2026-09-05) so one person can be invited to more than one book.
+    // The old collection is a server-maintained MIRROR for the 1.10 apps and
+    // keeps its rules until those are gone. Same contract as before: the
+    // invitee reads their own (queries constrained to `email == theirs`), the
+    // inviting owner reads and revokes theirs, all writes are server-side.
+    match /invites/{inviteId} {
+      allow read: if isSignedIn()
+        && (resource.data.email == email()
+            || isSuperAdmin()
+            || isOwner(resource.data.householdId));
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
+    }
+
     // ── Gift codes ──
     match /gifts/{code} {
       // ⚠ NO CLIENT READS AT ALL, and that is the whole point. The doc id IS

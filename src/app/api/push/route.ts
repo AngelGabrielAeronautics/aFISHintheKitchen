@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { deleteTokenEverywhere } from "@/lib/device-tokens";
 import { getAdminAuth, getAdminDb, getAdminMessaging } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
@@ -55,7 +56,16 @@ export async function POST(req: NextRequest) {
 
     // Candidate device tokens for this household.
     const snap = await db.collection("deviceTokens").where("householdId", "==", householdId).get();
-    let targets = snap.docs.map((d) => d.data() as { token: string; uid: string; displayName: string });
+    // ⚠ Only CURRENT members. A registration outlives a membership (leaving a
+    // book removes the join row, not the device doc), so without this a
+    // leaver kept getting the cookbook's pushes.
+    const memberIds = new Set<string>(
+      (await db.collection("householdMembers").where("householdId", "==", householdId).get()).docs
+        .map((d) => d.data().userId as string)
+    );
+    let targets = snap.docs
+      .map((d) => d.data() as { token: string; uid: string; displayName: string })
+      .filter((t) => memberIds.has(t.uid));
 
     if (type === "event-assignment" && body.assignedMember) {
       // Resolve the assignee to their account uid(s) via authoritative membership
@@ -99,7 +109,7 @@ export async function POST(req: NextRequest) {
         stale.push(tokens[i]);
       }
     });
-    await Promise.all(stale.map((t) => db.collection("deviceTokens").doc(t).delete().catch(() => {})));
+    await Promise.all(stale.map((t) => deleteTokenEverywhere(db, t)));
 
     return NextResponse.json({ ok: true, sent: res.successCount, failed: res.failureCount });
   } catch (err) {

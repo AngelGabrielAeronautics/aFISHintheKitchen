@@ -218,7 +218,8 @@ export default function AdminUsersPage() {
 
   async function handleRemove(email: string) {
     try {
-      await removeInvitedUser(email);
+      if (!householdId) return;
+      await removeInvitedUser(email, householdId);
       setConfirmDelete(null);
       await fetchData();
     } catch {

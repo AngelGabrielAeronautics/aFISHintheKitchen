@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { DEVICE_TOKENS, deviceTokenId, registrationsFor } from "@/lib/device-tokens";
 
 export const runtime = "nodejs";
 
@@ -37,13 +38,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "not_a_member" }, { status: 403 });
     }
 
-    await db.collection("deviceTokens").doc(fcmToken).set({
+    // One registration per (device, book): the same token is filed under every
+    // cookbook this user opens, so none of their books loses the device when
+    // they switch to another. See lib/device-tokens.ts.
+    await db.collection(DEVICE_TOKENS).doc(deviceTokenId(fcmToken, householdId)).set({
       token: fcmToken,
       uid,
       householdId,
       displayName: body.displayName?.trim() ?? "",
       updatedAt: new Date().toISOString(),
     });
+
+    // Housekeeping on the device's OTHER registrations: retire the legacy
+    // token-keyed doc (a 1.10 registration this one supersedes) and any
+    // registration for a book this user has since left — otherwise a leaver
+    // keeps receiving that cookbook's pushes.
+    const mine = await db.collection("householdMembers").where("userId", "==", uid).get();
+    const myBooks = new Set(mine.docs.map((d) => d.data().householdId as string));
+    const others = await registrationsFor(db, fcmToken);
+    await Promise.all(
+      others
+        .filter((d) => d.data().uid === uid)
+        .filter((d) => d.id === fcmToken || !myBooks.has(d.data().householdId))
+        .map((d) => d.ref.delete().catch(() => {}))
+    );
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -66,15 +84,22 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "invalid_token" }, { status: 401 });
     }
 
-    const body = (await req.json()) as { token?: string };
+    const body = (await req.json()) as { token?: string; householdId?: string };
     const fcmToken = body.token?.trim();
     if (!fcmToken) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
 
+    // With a householdId: forget this device for that one book (leaving it).
+    // Without: sign-out — forget it everywhere. Only the device's own
+    // registrations can be removed.
     const db = getAdminDb();
-    const ref = db.collection("deviceTokens").doc(fcmToken);
-    const snap = await ref.get();
-    // Only the device's own registration can be removed.
-    if (snap.exists && snap.data()?.uid === uid) await ref.delete();
+    const only = body.householdId?.trim();
+    const docs = await registrationsFor(db, fcmToken);
+    await Promise.all(
+      docs
+        .filter((d) => d.data().uid === uid)
+        .filter((d) => !only || d.data().householdId === only)
+        .map((d) => d.ref.delete().catch(() => {}))
+    );
 
     return NextResponse.json({ ok: true });
   } catch (err) {

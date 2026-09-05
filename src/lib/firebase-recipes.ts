@@ -315,30 +315,40 @@ export interface InvitedUser {
   registeredAt?: string;
 }
 
+// Invites live in `invites/{email}_{householdId}` — one per (address, book),
+// so the same person can be invited to more than one cookbook. `invitedUsers`
+// (keyed by address alone) is a server-maintained mirror for the 1.10 apps.
 export async function getInvitedUsers(householdId: string | null): Promise<InvitedUser[]> {
   if (!householdId) return [];
-  const q = query(
-    collection(getDb(), "invitedUsers"),
-    where("householdId", "==", householdId),
-    orderBy("createdAt", "desc")
-  );
+  const q = query(collection(getDb(), "invites"), where("householdId", "==", householdId));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ ...d.data(), email: d.id } as InvitedUser));
+  return snapshot.docs
+    .map((d) => d.data() as InvitedUser)
+    .sort((a, b) => (Date.parse(b.createdAt ?? "") || 0) - (Date.parse(a.createdAt ?? "") || 0));
 }
 
 // NOTE: Invites are CREATED server-side via /api/invite (Admin SDK) — the
-// Firestore rules forbid clients from writing invitedUsers directly, so there
-// is intentionally no client-side addInvitedUser. Removal stays client-side
-// (the rules still allow an owner to delete their own invites).
-export async function removeInvitedUser(email: string): Promise<void> {
-  const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
-  await deleteDoc(docRef);
+// Firestore rules forbid clients from writing invites directly, so there is
+// intentionally no client-side addInvitedUser. Removal stays client-side (the
+// rules allow an owner to delete their own invites). The legacy mirror is
+// removed too when it points at this cookbook, so a 1.10 app sees the revoke.
+export async function removeInvitedUser(email: string, householdId: string): Promise<void> {
+  const key = email.toLowerCase().trim();
+  await deleteDoc(doc(getDb(), "invites", `${key}_${householdId}`));
+  const legacy = doc(getDb(), "invitedUsers", key);
+  const snap = await getDoc(legacy).catch(() => null);
+  if (snap?.exists() && snap.data()?.householdId === householdId) await deleteDoc(legacy).catch(() => {});
 }
 
+/** Does this address hold a pending invitation to any cookbook? */
 export async function isEmailAllowed(email: string): Promise<boolean> {
-  const docRef = doc(getDb(), "invitedUsers", email.toLowerCase().trim());
-  const snapshot = await getDoc(docRef);
-  return snapshot.exists();
+  const q = query(
+    collection(getDb(), "invites"),
+    where("email", "==", email.toLowerCase().trim()),
+    where("status", "==", "pending")
+  );
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
 }
 
 export async function isAdmin(email: string): Promise<boolean> {

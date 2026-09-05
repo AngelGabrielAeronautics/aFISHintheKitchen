@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { deleteTokenEverywhere } from "@/lib/device-tokens";
 import { getAdminDb, getAdminMessaging } from "@/lib/firebase-admin";
 import { verifySuperAdmin } from "@/lib/admin-auth";
 
@@ -226,7 +227,7 @@ export async function POST(req: NextRequest) {
           stale.push(tokens[i]);
         }
       });
-      await Promise.all(stale.map((t) => db.collection("deviceTokens").doc(t).delete().catch(() => {})));
+      await Promise.all(stale.map((t) => deleteTokenEverywhere(db, t)));
 
       await snap.ref.update({ notifiedAt: now, updatedAt: now });
       return NextResponse.json({ ok: true, sent: res.successCount, failed: res.failureCount });

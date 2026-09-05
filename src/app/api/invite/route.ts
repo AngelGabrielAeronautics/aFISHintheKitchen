@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
 import { buildInviteEmail } from "@/lib/invite-email";
+import { INVITES, inviteId, syncLegacyMirror } from "@/lib/invites";
 import { MAX_SEATS } from "@/lib/access";
 import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
 // Server-mediated invite creation. This is the authoritative enforcement point:
-// the Firestore rules forbid clients from writing `invitedUsers` directly, so
+// the Firestore rules forbid clients from writing `invites` directly, so
 // owner-auth, the duplicate guard, and the seat cap are all enforced here via
 // the Admin SDK (which bypasses the rules). The client form keeps the same
 // checks only as UX hints. Mirrors the /api/join cap logic. See the
@@ -84,26 +85,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "self_invite" }, { status: 409 });
     }
 
-    // 3. Duplicate guard (authoritative). invitedUsers is keyed by email, so a
-    //    pre-existing doc means the address is already invited — possibly to a
-    //    different cookbook, which we must not clobber.
+    // 3. Duplicate guard (authoritative). Invites are keyed by (address, book),
+    //    so a pre-existing doc can only mean THIS cookbook already invited them.
+    //    An invitation from another cookbook is not our business any more — the
+    //    old address-keyed record refused it as `invited_elsewhere`, which made
+    //    anybody who had ever been invited anywhere un-invitable for life.
     //
-    //    A pending invite to THIS household is not an error — it's a resend.
+    //    A pending invite to this household is not an error — it's a resend.
     //    Invite emails get junked and lost (that is the normal failure mode of
     //    email, and exactly what happened to the first customer's family), and
     //    before this the owner's only recourse was finding the hidden
     //    revoke-then-reinvite dance. Re-submitting the same address now just
     //    sends the email again.
-    const inviteRef = db.collection("invitedUsers").doc(inviteEmail);
+    const inviteRef = db.collection(INVITES).doc(inviteId(inviteEmail, householdId));
     const existingSnap = await inviteRef.get();
     let resend = false;
     /** Re-inviting somebody the owner had previously removed. */
     let reInviting = false;
     if (existingSnap.exists) {
       const existing = existingSnap.data()!;
-      if (existing.householdId && existing.householdId !== householdId) {
-        return NextResponse.json({ error: "invited_elsewhere" }, { status: 409 });
-      }
       if (existing.status === "registered") {
         // ⚠ "registered" is NOT proof they are still in the cookbook. Removing
         // a member deletes their householdMembers doc and nothing else — this
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
           .where("householdId", "==", householdId)
           .where("role", "==", "member")
           .get(),
-        db.collection("invitedUsers")
+        db.collection(INVITES)
           .where("householdId", "==", householdId)
           .where("status", "==", "pending")
           .get(),
@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
     //    stay honest — and stamp resentAt for the throttle.
     await inviteRef.set(
       {
+        email: inviteEmail,
         name: inviteName,
         invitedBy: inviterName,
         householdId,
@@ -186,6 +187,8 @@ export async function POST(req: NextRequest) {
       },
       { merge: true }
     );
+    // Keep the address-keyed doc the 1.10 apps still read in step.
+    await syncLegacyMirror(db, inviteEmail);
 
     // 6. Send the invite email. The allow-list entry already succeeded, so a
     //    send failure is non-fatal — report it so the owner can share the link.
