@@ -44,7 +44,7 @@ export default async function SharedRecipePage({ params }: { params: Promise<{ t
           <p className="mt-3 font-sans text-slate">
             It may have been removed by the family that shared it.
           </p>
-          <Link href="/" className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white">
+          <Link href="/" className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-warm-white">
             Visit A Fish in the Kitchen
           </Link>
         </div>
@@ -60,7 +60,7 @@ export default async function SharedRecipePage({ params }: { params: Promise<{ t
     <main className="min-h-screen bg-cream">
       {/* Who shared it — the human wrapper is the pitch */}
       <div className="bg-terracotta px-6 py-3 text-center">
-        <p className="font-sans text-sm text-white">
+        <p className="font-sans text-sm text-warm-white">
           <span className="font-semibold">{share.sharedByName}</span> shared a recipe with you from{" "}
           <span className="font-semibold">{share.bookName}</span>
         </p>
@@ -119,7 +119,7 @@ export default async function SharedRecipePage({ params }: { params: Promise<{ t
                   </li>
                 ) : (
                   <li key={i} className="flex gap-3 font-sans text-base text-charcoal">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-white">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-warm-white">
                       {++n}
                     </span>
                     <span className="pt-0.5">{step}</span>

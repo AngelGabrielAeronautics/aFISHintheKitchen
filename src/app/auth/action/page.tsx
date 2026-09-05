@@ -121,7 +121,7 @@ function ActionInner() {
               placeholder="New password"
               autoComplete="new-password"
               required
-              className="w-full rounded-lg border border-gold-light bg-cream px-4 py-3 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+              className="w-full rounded-lg border border-hairline bg-cream px-4 py-3 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
             />
             <input
               type="password"
@@ -130,12 +130,12 @@ function ActionInner() {
               placeholder="Confirm new password"
               autoComplete="new-password"
               required
-              className="w-full rounded-lg border border-gold-light bg-cream px-4 py-3 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
+              className="w-full rounded-lg border border-hairline bg-cream px-4 py-3 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20"
             />
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white hover:bg-terracotta-dark transition-colors disabled:opacity-60"
+              className="w-full rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-warm-white hover:bg-terracotta-dark transition-colors disabled:opacity-60"
             >
               {submitting ? "Updating…" : "Update password"}
             </button>
@@ -145,7 +145,7 @@ function ActionInner() {
         {status === "ok" && (
           <Link
             href={continueUrl}
-            className="mt-6 inline-block rounded-lg bg-terracotta px-8 py-3 font-sans text-sm font-semibold text-white hover:bg-terracotta-dark transition-colors"
+            className="mt-6 inline-block rounded-lg bg-terracotta px-8 py-3 font-sans text-sm font-semibold text-warm-white hover:bg-terracotta-dark transition-colors"
           >
             Continue
           </Link>
@@ -154,7 +154,7 @@ function ActionInner() {
         {status === "error" && (
           <Link
             href="/auth"
-            className="mt-6 inline-block rounded-lg bg-terracotta px-8 py-3 font-sans text-sm font-semibold text-white hover:bg-terracotta-dark transition-colors"
+            className="mt-6 inline-block rounded-lg bg-terracotta px-8 py-3 font-sans text-sm font-semibold text-warm-white hover:bg-terracotta-dark transition-colors"
           >
             Back to sign in
           </Link>

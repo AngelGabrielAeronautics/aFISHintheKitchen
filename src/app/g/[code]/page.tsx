@@ -75,7 +75,7 @@ export default async function GiftPage({ params }: { params: Promise<{ code: str
           </p>
           <Link
             href="/"
-            className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white"
+            className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-warm-white"
           >
             Visit A Fish in the Kitchen
           </Link>

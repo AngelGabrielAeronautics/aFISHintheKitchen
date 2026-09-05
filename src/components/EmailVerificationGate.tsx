@@ -38,7 +38,7 @@ export default function EmailVerificationGate() {
   }
 
   return (
-    <div className="w-full bg-gold-light/90 px-4 py-2.5 text-center font-sans text-sm text-charcoal">
+    <div className="w-full bg-hairline/90 px-4 py-2.5 text-center font-sans text-sm text-charcoal">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1">
         <span>
           {sent ? (

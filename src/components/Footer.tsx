@@ -5,7 +5,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-cream-dark border-t border-gold-light/40">
+    <footer className="bg-cream-dark border-t border-hairline/40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-8">
           {/* Branding */}
@@ -62,7 +62,7 @@ export default function Footer() {
               viewBox="0 0 120 16"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="w-28 h-4 text-gold-light"
+              className="w-28 h-4 text-hairline"
               aria-hidden="true"
             >
               <path
@@ -76,7 +76,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom row */}
-        <div className="mt-8 pt-6 border-t border-gold-light/40 flex flex-col items-center gap-3">
+        <div className="mt-8 pt-6 border-t border-hairline/40 flex flex-col items-center gap-3">
           <div className="flex items-center gap-5">
             <Link href="/privacy" className="text-xs text-slate hover:text-terracotta transition-colors">
               Privacy Policy

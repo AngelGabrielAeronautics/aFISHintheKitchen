@@ -141,7 +141,7 @@ export default function AvatarPresets() {
         the image alone, so members already using it keep theirs.
       </p>
 
-      {error && <p className="mb-3 font-sans text-xs text-red-600">{error}</p>}
+      {error && <p className="mb-3 font-sans text-xs text-warning">{error}</p>}
       {!data && !error && <p className="font-sans text-xs text-slate/70">Loading…</p>}
 
       {data && (
@@ -204,7 +204,7 @@ export default function AvatarPresets() {
                     →
                   </button>
                   <button
-                    className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}
+                    className={`${btn} bg-danger/10 text-danger hover:bg-danger/20`}
                     disabled={busy === `del:${p.id}`}
                     onClick={() => setConfirmDelete(p)}
                     aria-label={`Remove ${p.label}`}
@@ -229,7 +229,7 @@ export default function AvatarPresets() {
               </p>
               <div className="flex gap-2">
                 <button
-                  className="rounded-lg bg-charcoal px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-charcoal/85 disabled:opacity-40"
+                  className="rounded-lg bg-charcoal px-3 py-1.5 font-sans text-xs font-medium text-warm-white hover:bg-charcoal/85 disabled:opacity-40"
                   disabled={busy === `del:${confirmDelete.id}`}
                   onClick={() => remove(confirmDelete)}
                 >
@@ -268,7 +268,7 @@ export default function AvatarPresets() {
                 />
               </label>
               <button
-                className="rounded-lg bg-terracotta px-4 py-2 font-sans text-xs font-medium text-white hover:bg-terracotta-dark disabled:opacity-40"
+                className="rounded-lg bg-terracotta px-4 py-2 font-sans text-xs font-medium text-warm-white hover:bg-terracotta-dark disabled:opacity-40"
                 disabled={!file || !newLabel.trim() || busy === "upload"}
                 onClick={upload}
               >

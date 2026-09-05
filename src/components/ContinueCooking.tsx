@@ -200,7 +200,7 @@ export default function ContinueCooking() {
               {expired > 0 && alarming && !audioUnlocked && (
                 <button
                   onClick={handleAlarmTap}
-                  className="mb-2 w-full rounded-xl bg-red-600 px-4 py-3 text-center font-sans text-sm font-bold text-white animate-pulse cursor-pointer"
+                  className="mb-2 w-full rounded-xl bg-danger px-4 py-3 text-center font-sans text-sm font-bold text-warm-white animate-pulse cursor-pointer"
                 >
                   Tap to hear alarm!
                 </button>
@@ -209,8 +209,8 @@ export default function ContinueCooking() {
               <div
                 className={`flex items-center gap-3 rounded-xl p-3 shadow-lg ring-1 ${
                   expired > 0
-                    ? "bg-red-900 ring-red-500/30 animate-pulse"
-                    : "bg-charcoal ring-white/10"
+                    ? "bg-resume-card ring-danger animate-pulse"
+                    : "bg-resume-card ring-white/10"
                 }`}
               >
                 {session.recipeImage && (
@@ -218,14 +218,14 @@ export default function ContinueCooking() {
                   <img src={session.recipeImage} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-sans text-xs text-white/50">
+                  <p className="font-sans text-xs text-warm-white/50">
                     {expired > 0 ? `${expired} timer${expired > 1 ? "s" : ""} done!` : "Continue cooking"}
                   </p>
-                  <p className="font-sans text-sm font-semibold text-white truncate">
+                  <p className="font-sans text-sm font-semibold text-warm-white truncate">
                     {session.recipeTitle}
                   </p>
                   {nextTimer && !expired && (
-                    <p className="font-sans text-xs text-white/40 tabular-nums">
+                    <p className="font-sans text-xs text-warm-white/40 tabular-nums">
                       Next timer: {formatSeconds(nextSecondsLeft)}
                     </p>
                   )}
@@ -239,14 +239,14 @@ export default function ContinueCooking() {
                       localStorage.setItem("cookJumpToStep", String(expiredStep + 1));
                     }
                   }}
-                  className="shrink-0 rounded-lg bg-terracotta px-3 py-2 font-sans text-xs font-semibold text-white hover:bg-terracotta-dark transition-colors"
+                  className="shrink-0 rounded-lg bg-terracotta px-3 py-2 font-sans text-xs font-semibold text-warm-white hover:bg-terracotta-dark transition-colors"
                 >
                   Resume
                 </Link>
                 <button
                   onClick={() => setEndingSlug(session.slug)}
                   aria-label="End cooking session"
-                  className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-warm-white/30 hover:text-warm-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -266,7 +266,7 @@ export default function ContinueCooking() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-charcoal/60 backdrop-blur-sm" onClick={() => setEndingSlug(null)} />
             <div className="relative w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-charcoal/10">
-              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gold-light/30">
+              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-hairline/30">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-gold">
                   <circle cx="12" cy="13" r="8" />
                   <path d="M12 9v4l2 2" />
@@ -280,7 +280,7 @@ export default function ContinueCooking() {
                 Your cooking progress, checked ingredients, and any active timers for <span className="font-semibold text-charcoal">{session.recipeTitle}</span> will be lost.
               </p>
               <div className="mt-6 flex gap-3">
-                <button onClick={() => setEndingSlug(null)} className="flex-1 rounded-lg bg-terracotta px-4 py-3 font-sans text-sm font-medium text-white transition-colors hover:bg-terracotta-dark cursor-pointer">
+                <button onClick={() => setEndingSlug(null)} className="flex-1 rounded-lg bg-terracotta px-4 py-3 font-sans text-sm font-medium text-warm-white transition-colors hover:bg-terracotta-dark cursor-pointer">
                   Keep Cooking
                 </button>
                 <button onClick={() => endSession(endingSlug)} className="flex-1 rounded-lg border border-cream-dark px-4 py-3 font-sans text-sm font-medium text-slate transition-colors hover:bg-cream-dark/20 cursor-pointer">

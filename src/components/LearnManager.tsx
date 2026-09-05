@@ -156,7 +156,7 @@ export default function LearnManager() {
     <section className="mb-8 rounded-xl border border-charcoal/10 bg-white p-5">
       <div className="mb-1 flex items-center justify-between">
         <h2 className="font-serif text-lg font-semibold text-charcoal">Learn</h2>
-        <button className={`${btn} bg-terracotta text-white hover:bg-terracotta/90`} onClick={() => startEdit()}>
+        <button className={`${btn} bg-terracotta text-warm-white hover:bg-terracotta/90`} onClick={() => startEdit()}>
           New item
         </button>
       </div>
@@ -166,7 +166,7 @@ export default function LearnManager() {
         week, for the best item.
       </p>
 
-      {error && <p className="mb-3 font-sans text-xs text-red-600">{error}</p>}
+      {error && <p className="mb-3 font-sans text-xs text-warning">{error}</p>}
       {!items && !error && <p className="font-sans text-xs text-slate/70">Loading…</p>}
 
       {editing && (
@@ -271,7 +271,7 @@ export default function LearnManager() {
           )}
           <div className="flex gap-2">
             <button
-              className={`${btn} bg-terracotta text-white hover:bg-terracotta/90`}
+              className={`${btn} bg-terracotta text-warm-white hover:bg-terracotta/90`}
               onClick={save}
               disabled={busy === "save" || !draft.title.trim()}
             >
@@ -319,7 +319,7 @@ export default function LearnManager() {
             {series.map((s) => (
               <div key={s.id}>
                 <Row item={s} {...rowProps} />
-                <div className="ml-4 border-l-2 border-gold-light/60 pl-3">
+                <div className="ml-4 border-l-2 border-hairline/60 pl-3">
                   {lessonsOf(s.id).map((v) => (
                     <Row key={v.id} item={v} {...rowProps} />
                   ))}
@@ -402,7 +402,7 @@ function Section({
 
   return (
     <div>
-      <div className="mb-1 flex items-baseline gap-2 border-b border-gold-light/60 pb-1">
+      <div className="mb-1 flex items-baseline gap-2 border-b border-hairline/60 pb-1">
         <h3 className="font-serif text-base font-semibold text-charcoal">{title}</h3>
         <span className="font-sans text-xs text-slate/70">{count}</span>
       </div>
@@ -410,7 +410,7 @@ function Section({
       {count === 0 ? (
         <p className="py-2 font-sans text-xs text-slate/60">Nothing here yet.</p>
       ) : (
-        <div className="divide-y divide-gold-light/40">{shown}</div>
+        <div className="divide-y divide-hairline/40">{shown}</div>
       )}
       {collapseAfter !== undefined && rows.length > collapseAfter && (
         <button
@@ -452,7 +452,7 @@ function Row({
           )}
           <span className="truncate font-sans text-sm font-medium text-charcoal">{item.title}</span>
           {item.status !== "published" && (
-            <span className={`${badge} bg-gold-light/50 text-charcoal/70`}>draft</span>
+            <span className={`${badge} bg-hairline/50 text-charcoal/70`}>draft</span>
           )}
           {item.pinnedDate && (
             <span className={`${badge} bg-terracotta/10 text-terracotta`}>pinned {item.pinnedDate}</span>
@@ -465,7 +465,7 @@ function Row({
               checklist you stop reading. Videos just show the ✓ when they
               have one. */}
           {item.type === "weekly" && !item.recipe && (
-            <span className={`${badge} bg-red-50 text-red-700`}>no recipe card</span>
+            <span className={`${badge} bg-danger/10 text-danger`}>no recipe card</span>
           )}
           {item.recipe && <span className={`${badge} bg-terracotta/10 text-terracotta`}>recipe ✓</span>}
         </div>
@@ -488,7 +488,7 @@ function Row({
         </button>
         {item.status === "published" && item.type !== "series" && (
           <button
-            className={`${btn} bg-gold-light/40 text-charcoal hover:bg-gold-light/60`}
+            className={`${btn} bg-hairline/40 text-charcoal hover:bg-hairline/60`}
             disabled={busy === `notify:${item.id}`}
             onClick={() => onNotify(item)}
           >
@@ -496,7 +496,7 @@ function Row({
           </button>
         )}
         <button
-          className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}
+          className={`${btn} bg-danger/10 text-danger hover:bg-danger/20`}
           disabled={busy === `del:${item.id}`}
           onClick={() => onDelete(item)}
         >
@@ -528,7 +528,7 @@ function ConfirmBox({
       <p className="mb-3 font-sans text-xs text-slate">{detail}</p>
       <div className="flex gap-2">
         <button
-          className="rounded-lg bg-charcoal px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-charcoal/85 disabled:opacity-40"
+          className="rounded-lg bg-charcoal px-3 py-1.5 font-sans text-xs font-medium text-warm-white hover:bg-charcoal/85 disabled:opacity-40"
           onClick={onConfirm}
           disabled={busy}
         >

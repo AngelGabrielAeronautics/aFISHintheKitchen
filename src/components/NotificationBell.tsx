@@ -85,7 +85,7 @@ export default function NotificationBell() {
           <path fillRule="evenodd" d="M5.25 9a6.75 6.75 0 0 1 13.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 0 1-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 1 1-7.48 0 24.585 24.585 0 0 1-4.831-1.244.75.75 0 0 1-.298-1.205A8.217 8.217 0 0 0 5.25 9.75V9Zm4.502 8.9a2.25 2.25 0 1 0 4.496 0 25.057 25.057 0 0 1-4.496 0Z" clipRule="evenodd" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-terracotta text-[9px] font-bold text-white">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-terracotta text-[9px] font-bold text-warm-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -151,14 +151,14 @@ export default function NotificationBell() {
                         <button
                           type="button"
                           onClick={() => handleRespond(n, "declined")}
-                          className="rounded-lg bg-red-500/10 px-3 py-1.5 font-sans text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                          className="rounded-lg bg-danger/10 px-3 py-1.5 font-sans text-xs font-medium text-danger hover:bg-danger/20 transition-colors cursor-pointer"
                         >
                           Decline
                         </button>
                       </div>
                     )}
                     {isAssignment && response && (
-                      <p className={`mt-1.5 font-sans text-xs font-medium ${response === "accepted" ? "text-sage-dark" : "text-red-500"}`}>
+                      <p className={`mt-1.5 font-sans text-xs font-medium ${response === "accepted" ? "text-sage-dark" : "text-danger"}`}>
                         {response === "accepted" ? "Accepted" : "Declined"}
                       </p>
                     )}

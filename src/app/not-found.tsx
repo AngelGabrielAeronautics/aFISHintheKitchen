@@ -44,7 +44,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-3 font-sans text-sm font-medium text-white shadow-sm transition-colors hover:bg-terracotta-dark"
+            className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-3 font-sans text-sm font-medium text-warm-white shadow-sm transition-colors hover:bg-terracotta-dark"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

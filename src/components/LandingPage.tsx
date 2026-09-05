@@ -377,7 +377,7 @@ export default function LandingPage() {
             className="reveal-pop mx-auto h-40 w-40 rounded-full shadow-md"
             style={{ animationDelay: "1.1s" }}
           />
-          <h1 className="mt-6 font-serif text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl">
+          <h1 className="mt-6 font-serif text-4xl font-bold tracking-tight text-warm-white sm:text-5xl md:text-6xl">
             <span className="block">
               {["Your", "family’s", "recipes,"].map((word, i) => (
                 <span
@@ -436,7 +436,7 @@ export default function LandingPage() {
             {HOW_IT_WORKS.map((s, i) => (
               <Reveal key={s.step} delay={i * 0.1}>
                 <div className="text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-terracotta font-serif text-xl font-bold text-white">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-terracotta font-serif text-xl font-bold text-warm-white">
                     {s.step}
                   </div>
                   <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">{s.title}</h3>
@@ -622,7 +622,7 @@ export default function LandingPage() {
               {billing === "gift" && (
                 <Link
                   href="/gift"
-                  className="mt-8 block rounded-lg bg-terracotta px-6 py-3 text-center font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+                  className="mt-8 block rounded-lg bg-terracotta px-6 py-3 text-center font-sans text-sm font-semibold text-warm-white transition-colors hover:bg-terracotta-dark"
                 >
                   How gifting works
                 </Link>

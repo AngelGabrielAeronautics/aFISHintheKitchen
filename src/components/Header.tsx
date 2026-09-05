@@ -45,7 +45,7 @@ export default function Header() {
 
   return (
     <header
-      className={`z-50 bg-warm-white/50 backdrop-blur-md border-b border-gold-light/50 ${
+      className={`z-50 bg-warm-white/50 backdrop-blur-md border-b border-hairline/50 ${
         isLanding
           ? `fixed inset-x-0 top-0 transition-all duration-300 ${
               scrolled
@@ -97,7 +97,7 @@ export default function Header() {
                 </Link>
                 <Link
                   href="/#download"
-                  className="ml-2 px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors"
+                  className="ml-2 px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-warm-white hover:bg-terracotta-dark transition-colors"
                 >
                   Get the app
                 </Link>
@@ -180,7 +180,7 @@ export default function Header() {
             {!loading && (
               <>
                 {user ? (
-                  <div className="ml-2 pl-3 border-l border-gold-light flex items-center gap-1">
+                  <div className="ml-2 pl-3 border-l border-hairline flex items-center gap-1">
                     <NotificationBell />
                     <Link href="/account" className="flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-cream-dark/60">
                       <Avatar name={user.displayName || user.email || "?"} size="sm" ring />
@@ -195,7 +195,7 @@ export default function Header() {
                     className={`ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive("/auth")
                         ? "text-terracotta bg-terracotta/8"
-                        : "bg-terracotta text-white hover:bg-terracotta-dark"
+                        : "bg-terracotta text-warm-white hover:bg-terracotta-dark"
                     }`}
                   >
                     Sign In
@@ -211,7 +211,7 @@ export default function Header() {
                 just for signed-out visitors. Being signed in used to swap this
                 for an app navigation whose every link the proxy bounced. */}
             {!loading && (!WEB_APP_ENABLED || !user) ? (
-            <Link href="/#download" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-white hover:bg-terracotta-dark transition-colors">
+            <Link href="/#download" className="md:hidden px-4 py-2 rounded-lg text-sm font-medium bg-terracotta text-warm-white hover:bg-terracotta-dark transition-colors">
               Get the app
             </Link>
           ) : (
@@ -251,7 +251,7 @@ export default function Header() {
 
       {/* Mobile dropdown */}
       {menuOpen && (
-        <nav className="md:hidden border-t border-gold-light/60 bg-warm-white max-h-[calc(100vh-5rem)] overflow-y-auto">
+        <nav className="md:hidden border-t border-hairline/60 bg-warm-white max-h-[calc(100vh-5rem)] overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-1">
             {allLinks.map((link) => (
               <Link
@@ -285,7 +285,7 @@ export default function Header() {
 
             {/* Mobile auth */}
             {!loading && (
-              <div className="mt-2 pt-2 border-t border-gold-light/60">
+              <div className="mt-2 pt-2 border-t border-hairline/60">
                 {user ? (
                   <Link
                     href="/account"

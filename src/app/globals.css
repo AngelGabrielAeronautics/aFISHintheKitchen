@@ -13,13 +13,48 @@
   --color-sage-light: #9BAF8E;
   --color-sage-dark: #4A5C3E;
   --color-gold: #8B7B4A;
-  --color-gold-light: #C4B88A;
+  /* The workhorse hairline — field borders, header rules, separators. Was
+     gold-light: renamed on all three platforms because it is not a lighter gold
+     in any sense you would reach for it. */
+  --color-hairline: #C4B88A;
   --color-navy: #1A2E1A;
+  /* The floating "Continue cooking" card — warm near-black, NOT navy (which is
+     Cook Mode's dark-green background) and NOT charcoal. Matches iOS/Android. */
+  --color-resume-card: #23241F;
+  /* Destructive actions only — delete, leave, remove. The system red, kept on
+     purpose: iOS forces it inside menus and confirmation dialogs, so a brand
+     red elsewhere would mean two reds. Never the brand green. */
+  --color-danger: #FF3B30;
+  /* Inline validation and soft warnings — amber, not red: nothing has been
+     destroyed yet. Same value as Theme.warning / colors.warning. */
+  --color-warning: #B45309;
   /* Francois One is a bold condensed sans display font. When it can't load,
      fall back to a condensed bold sans (Arial Narrow) rather than a generic
      sans, so headings keep their shape. */
   --font-serif: "Francois One", "Arial Narrow", Arial, Helvetica, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
+
+  /* The native type ramp, so web work can land on the same numbers as iOS
+     (Theme.display/body) and Android (Type.kt). Tailwind's own steps only
+     coincide with it at 24px (text-2xl) and 16px (text-base); these fill the
+     gaps under the Material slot names all three platforms share. rem, not px,
+     for the same reason Android uses sp: it must follow the reader's setting. */
+  --text-display-lg: 2rem;          /* 32 — cookbook name on a cover */
+  --text-display-lg--line-height: 1.15;
+  --text-display-md: 1.75rem;       /* 28 — screen title */
+  --text-display-md--line-height: 1.15;
+  --text-headline-md: 1.3125rem;    /* 21 — sub-heading inside a page */
+  --text-headline-md--line-height: 1.2;
+  --text-headline-sm: 1.1875rem;    /* 19 — card title, list row title */
+  --text-headline-sm--line-height: 1.25;
+  --text-title-md: 1.0625rem;       /* 17 — a value that must not be missed */
+  --text-title-md--line-height: 1.35;
+  --text-body-md: 0.9375rem;        /* 15 — descriptions, secondary copy */
+  --text-body-md--line-height: 1.55;
+  --text-body-sm: 0.8125rem;        /* 13 — meta rows, captions */
+  --text-body-sm--line-height: 1.5;
+  --text-label-sm: 0.6875rem;       /* 11 — badges, the smallest thing on screen */
+  --text-label-sm--line-height: 1.45;
 }
 
 body {
@@ -300,6 +335,50 @@ html {
   }
 }
 
+/* The no-photo state — "Kookbook paper", chosen from the design-system
+   directions on 2026-09-02. A missing photo is a page nobody has written on
+   yet: ruled paper, a red margin, and the category where the heading would go.
+   Mirrors PaperPlaceholder on iOS and Android — keep the three in step.
+   --paper-margin and --paper-rule are the two knobs (14px/28px on a card,
+   22px/30px on a hero, 9px/14px on a 64px thumbnail). */
+.paper-placeholder {
+  --paper-margin: 14px;
+  --paper-rule: 28px;
+  position: relative;
+  background-color: var(--color-warm-white);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 calc(var(--paper-rule) - 1px),
+    color-mix(in srgb, var(--color-gold) 28%, transparent) calc(var(--paper-rule) - 1px) var(--paper-rule)
+  );
+  background-position: 0 calc(var(--paper-rule) / 2);
+}
+.paper-placeholder::before {
+  /* The exercise-book margin. Artwork, not a token — it appears nowhere else,
+     and it must stay this muted so it never reads as --color-danger. */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--paper-margin);
+  width: 1px;
+  background: rgba(184, 60, 60, 0.35);
+}
+.paper-placeholder > .paper-label {
+  position: absolute;
+  top: 8px;
+  left: calc(var(--paper-margin) + 8px);
+  right: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Recipe content styling */
 .recipe-instructions ol {
   list-style: none;
@@ -321,7 +400,7 @@ html {
   width: 2rem;
   height: 2rem;
   background: var(--color-terracotta);
-  color: white;
+  color: var(--color-warm-white);
   border-radius: 50%;
   display: flex;
   align-items: center;

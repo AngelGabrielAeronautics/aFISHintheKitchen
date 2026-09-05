@@ -174,7 +174,7 @@ export default async function GiftPage() {
           <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
               <div key={s.step} className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-terracotta font-serif text-xl font-bold text-white">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-terracotta font-serif text-xl font-bold text-warm-white">
                   {s.step}
                 </div>
                 <h3 className="mt-4 font-serif text-lg font-bold text-charcoal">{s.title}</h3>

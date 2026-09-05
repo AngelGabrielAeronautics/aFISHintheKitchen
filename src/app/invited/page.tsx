@@ -47,11 +47,11 @@ export default async function InvitedPage({
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-lg ring-1 ring-charcoal/5 sm:p-8">
           <ol className="space-y-4 text-left">
             <li className="flex gap-3 font-sans text-sm text-charcoal">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-white">1</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-warm-white">1</span>
               <span className="pt-1">Download the app on your phone or tablet.</span>
             </li>
             <li className="flex gap-3 font-sans text-sm text-charcoal">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-white">2</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-warm-white">2</span>
               <span className="pt-1">
                 Sign up with{" "}
                 {email ? (

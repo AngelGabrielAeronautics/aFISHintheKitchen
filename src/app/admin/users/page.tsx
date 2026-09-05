@@ -263,7 +263,7 @@ export default function AdminUsersPage() {
   }
 
   const inputClasses =
-    "w-full rounded-lg border border-gold-light bg-warm-white px-4 py-3 font-sans text-charcoal placeholder:text-slate/50 focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/30 transition-colors";
+    "w-full rounded-lg border border-hairline bg-warm-white px-4 py-3 font-sans text-charcoal placeholder:text-slate/50 focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/30 transition-colors";
 
   return (
     <div className="min-h-screen bg-cream px-4 py-8">
@@ -293,7 +293,7 @@ export default function AdminUsersPage() {
                 type="button"
                 onClick={handleNotifyMe}
                 disabled={requestingUpgrade}
-                className="mt-4 rounded-lg bg-terracotta px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark disabled:opacity-60 cursor-pointer"
+                className="mt-4 rounded-lg bg-terracotta px-5 py-2.5 font-sans text-sm font-semibold text-warm-white transition-colors hover:bg-terracotta-dark disabled:opacity-60 cursor-pointer"
               >
                 {requestingUpgrade ? "Saving…" : "Notify me"}
               </button>
@@ -359,7 +359,7 @@ export default function AdminUsersPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark focus:outline-none focus:ring-2 focus:ring-terracotta/50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-warm-white transition-colors hover:bg-terracotta-dark focus:outline-none focus:ring-2 focus:ring-terracotta/50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Adding..." : "Send Invite"}
             </button>
@@ -379,7 +379,7 @@ export default function AdminUsersPage() {
               No users invited yet.
             </p>
           ) : (
-            <div className="divide-y divide-gold-light/50">
+            <div className="divide-y divide-hairline/50">
               {users.map((invitedUser) => (
                 <div
                   key={invitedUser.email}
@@ -418,13 +418,13 @@ export default function AdminUsersPage() {
                         </span>
                         <button
                           onClick={() => handleRemove(invitedUser.email)}
-                          className="rounded-lg bg-red-600 px-3 py-1.5 font-sans text-xs font-medium text-white transition-colors hover:bg-red-700"
+                          className="rounded-lg bg-danger px-3 py-1.5 font-sans text-xs font-medium text-warm-white transition-colors hover:bg-danger/90"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => setConfirmDelete(null)}
-                          className="rounded-lg border border-gold-light px-3 py-1.5 font-sans text-xs font-medium text-slate transition-colors hover:bg-cream"
+                          className="rounded-lg border border-hairline px-3 py-1.5 font-sans text-xs font-medium text-slate transition-colors hover:bg-cream"
                         >
                           No
                         </button>
@@ -432,7 +432,7 @@ export default function AdminUsersPage() {
                     ) : (
                       <button
                         onClick={() => setConfirmDelete(invitedUser.email)}
-                        className="rounded-lg border border-gold-light px-3 py-1.5 font-sans text-xs font-medium text-slate transition-colors hover:border-red-300 hover:text-red-600"
+                        className="rounded-lg border border-hairline px-3 py-1.5 font-sans text-xs font-medium text-slate transition-colors hover:border-danger/40 hover:text-danger"
                       >
                         Remove
                       </button>

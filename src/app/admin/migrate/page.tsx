@@ -146,7 +146,7 @@ export default function MigratePage() {
         <button
           onClick={runMigration}
           disabled={running || !!householdId}
-          className="rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-medium text-white hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-medium text-warm-white hover:bg-terracotta-dark disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           {running ? "Running..." : householdId ? "Migration Complete" : "Run Migration"}
         </button>
@@ -154,7 +154,7 @@ export default function MigratePage() {
         {status.length > 0 && (
           <div className="mt-6 rounded-xl bg-charcoal p-4 max-h-96 overflow-y-auto">
             {status.map((line, i) => (
-              <p key={i} className={`font-mono text-xs leading-relaxed ${line.startsWith("ERROR") ? "text-red-400" : line === "" ? "" : "text-cream/80"}`}>
+              <p key={i} className={`font-mono text-xs leading-relaxed ${line.startsWith("ERROR") ? "text-danger" : line === "" ? "" : "text-cream/80"}`}>
                 {line || "\u00A0"}
               </p>
             ))}

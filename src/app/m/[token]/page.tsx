@@ -69,7 +69,7 @@ export default async function SharedMenuPage({ params }: { params: Promise<{ tok
         <div className="text-center max-w-md">
           <h1 className="font-serif text-3xl font-bold text-charcoal">This menu link isn&rsquo;t available</h1>
           <p className="mt-3 font-sans text-slate">It may have been removed by the family planning it.</p>
-          <Link href="/" className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-white">
+          <Link href="/" className="mt-6 inline-block rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold text-warm-white">
             Visit A Fish in the Kitchen
           </Link>
         </div>
@@ -87,7 +87,7 @@ export default async function SharedMenuPage({ params }: { params: Promise<{ tok
   return (
     <main className="min-h-screen bg-cream">
       <div className="bg-terracotta px-6 py-3 text-center">
-        <p className="font-sans text-sm text-white">
+        <p className="font-sans text-sm text-warm-white">
           <span className="font-semibold">{share.sharedByName}</span> invited you to help plan{" "}
           <span className="font-semibold">{menu.name}</span> with <span className="font-semibold">{share.bookName}</span>
         </p>

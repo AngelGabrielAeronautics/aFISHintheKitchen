@@ -78,7 +78,7 @@ interface Overview {
 const stateColors: Record<string, string> = {
   active: "text-sage-dark",
   read_only: "text-gold",
-  suspended: "text-red-600",
+  suspended: "text-danger",
 };
 
 export default function SuperAdminPage() {
@@ -239,7 +239,7 @@ export default function SuperAdminPage() {
         </p>
         <button
           onClick={() => signOut(getFirebaseAuth())}
-          className="mt-1 rounded-lg bg-terracotta px-4 py-2 font-sans text-sm font-semibold text-white"
+          className="mt-1 rounded-lg bg-terracotta px-4 py-2 font-sans text-sm font-semibold text-warm-white"
         >
           Sign out
         </button>
@@ -264,7 +264,7 @@ export default function SuperAdminPage() {
       <h1 className="mb-1 font-serif text-3xl font-bold text-charcoal">Super Admin</h1>
       <p className="mb-6 font-sans text-sm text-slate">Platform-wide oversight of every cookbook.</p>
 
-      {error && <p className="mb-4 font-sans text-sm text-red-600">{error}</p>}
+      {error && <p className="mb-4 font-sans text-sm text-warning">{error}</p>}
       {notice && (
         <p className="mb-4 rounded-lg bg-sage/15 px-3 py-2 font-sans text-sm text-sage-dark">
           {notice}{" "}
@@ -307,7 +307,7 @@ export default function SuperAdminPage() {
                 Owners who hit the seat cap and asked to be notified. Captured demand for the paid
                 extra-seats add-on — reach out, then mark handled.
               </p>
-              <ul className="divide-y divide-gold-light/50">
+              <ul className="divide-y divide-hairline/50">
                 {data.households
                   .filter((h) => h.seatUpgradeRequestedAt)
                   .sort((a, b) => (a.seatUpgradeRequestedAt! < b.seatUpgradeRequestedAt! ? 1 : -1))
@@ -356,9 +356,9 @@ export default function SuperAdminPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-xl border border-gold-light bg-white">
+          <div className="overflow-x-auto rounded-xl border border-hairline bg-white">
             <table className="w-full text-left font-sans text-sm">
-              <thead className="border-b border-gold-light bg-cream/40 text-xs uppercase text-slate/60">
+              <thead className="border-b border-hairline bg-cream/40 text-xs uppercase text-slate/60">
                 <tr>
                   <th className="px-4 py-3">Cookbook</th>
                   <th className="px-4 py-3">Members</th>
@@ -369,7 +369,7 @@ export default function SuperAdminPage() {
               </thead>
               <tbody>
                 {visibleHouseholds.map((h) => (
-                  <tr key={h.id} className="border-b border-gold-light/50 last:border-0">
+                  <tr key={h.id} className="border-b border-hairline/50 last:border-0">
                     <td className="px-4 py-3">
                       <div className="font-medium text-charcoal">{h.name || h.id}</div>
                       {/* Who to actually email when something here needs a human.
@@ -429,9 +429,9 @@ const fundingColors: Record<Funding, string> = {
   gifted: "text-terracotta",
   comped: "text-gold",
   trialing: "text-slate",
-  lapsed: "text-red-600",
+  lapsed: "text-danger",
   canceled: "text-slate",
-  uncovered: "text-red-600",
+  uncovered: "text-danger",
   none: "text-slate/70",
 };
 
@@ -681,7 +681,7 @@ function BusinessPanels({
 
         <div className="mt-3 border-t border-charcoal/10 pt-2">
           <p className="font-sans text-xs font-semibold text-charcoal">Nightly job</p>
-          <p className={`font-sans text-xs ${sweepLate ? "text-red-600" : "text-slate"}`}>
+          <p className={`font-sans text-xs ${sweepLate ? "text-danger" : "text-slate"}`}>
             {sweep
               ? `last ran ${new Date(sweep.at).toLocaleString()}${sweepLate ? " — LATE" : ""}`
               : "has never recorded a run"}
@@ -748,7 +748,7 @@ function SignIn() {
           <button
             type="submit"
             disabled={busy || !email || !password}
-            className="w-full rounded-lg bg-terracotta py-2 font-sans text-sm font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-lg bg-terracotta py-2 font-sans text-sm font-semibold text-warm-white disabled:opacity-50"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
@@ -760,7 +760,7 @@ function SignIn() {
         >
           Continue with Google
         </button>
-        {err && <p className="mt-3 font-sans text-xs text-red-600">{err}</p>}
+        {err && <p className="mt-3 font-sans text-xs text-warning">{err}</p>}
       </div>
     </main>
   );
@@ -801,13 +801,13 @@ function Line({
 }) {
   const body = (
     <>
-      <span className={`font-sans text-sm ${warn ? "text-red-600" : "text-slate"}`}>{label}</span>
+      <span className={`font-sans text-sm ${warn ? "text-danger" : "text-slate"}`}>{label}</span>
       <span className="flex items-baseline gap-1.5">
         {note && <span className="font-sans text-[11px] text-slate/70">{note}</span>}
         <span
           className={`font-sans tabular-nums ${
             strong ? "text-base font-semibold text-charcoal" : "text-sm text-charcoal"
-          } ${warn ? "text-red-600" : ""}`}
+          } ${warn ? "text-danger" : ""}`}
         >
           {value === null ? "—" : value}
         </span>
@@ -836,7 +836,7 @@ function Line({
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-gold-light bg-white p-4">
+    <div className="rounded-xl border border-hairline bg-white p-4">
       <div className="font-serif text-2xl text-charcoal">{value}</div>
       <div className="font-sans text-xs uppercase tracking-wide text-slate/60">{label}</div>
     </div>
@@ -908,8 +908,8 @@ function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={!ready}
-            className={`rounded-lg px-4 py-2 font-sans text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 ${
-              copy.danger ? "bg-red-600" : "bg-terracotta"
+            className={`rounded-lg px-4 py-2 font-sans text-sm font-semibold text-warm-white disabled:cursor-not-allowed disabled:opacity-40 ${
+              copy.danger ? "bg-danger" : "bg-terracotta"
             }`}
           >
             {copy.danger ? "Yes, do it" : "Confirm"}
@@ -938,7 +938,7 @@ function ActionBtn({
       disabled={busy}
       className={`rounded-md px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer ${
         danger
-          ? "bg-red-50 text-red-600 hover:bg-red-100"
+          ? "bg-danger/10 text-danger hover:bg-danger/20"
           : "bg-cream-dark/30 text-charcoal hover:bg-cream-dark/50"
       }`}
     >

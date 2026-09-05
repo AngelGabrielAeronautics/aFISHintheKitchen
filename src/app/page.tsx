@@ -204,7 +204,7 @@ function HomeContent() {
             priority
           />
 
-          <p className="mt-4 font-serif text-xl italic text-gold-light md:text-2xl">
+          <p className="mt-4 font-serif text-xl italic text-hairline md:text-2xl">
             The food your family is built on
           </p>
 
@@ -216,7 +216,7 @@ function HomeContent() {
           <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row">
             <Link
               href="/recipes"
-              className="inline-flex items-center rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold tracking-wide text-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
+              className="inline-flex items-center rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold tracking-wide text-warm-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
             >
               Browse Recipes
             </Link>
@@ -251,7 +251,7 @@ function HomeContent() {
                   onClick={() => setFiltersOpen(!filtersOpen)}
                   className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 font-sans text-xs font-medium transition-colors cursor-pointer ${
                     filtersOpen || activeFilterCount > 0
-                      ? "bg-terracotta text-white"
+                      ? "bg-terracotta text-warm-white"
                       : "bg-cream-dark/30 text-slate hover:bg-cream-dark/50"
                   }`}
                 >
@@ -262,7 +262,7 @@ function HomeContent() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-full bg-terracotta px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-terracotta-dark transition-colors cursor-pointer"
+                  className="rounded-full bg-terracotta px-3 py-1.5 font-sans text-xs font-medium text-warm-white hover:bg-terracotta-dark transition-colors cursor-pointer"
                 >
                   Go
                 </button>
@@ -275,21 +275,21 @@ function HomeContent() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Category</label>
-                  <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                  <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="all">All categories</option>
                     {CATEGORIES.map((cat) => (<option key={cat.slug} value={cat.slug}>{cat.name}</option>))}
                   </select>
                 </div>
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Cook</label>
-                  <select value={filterCook} onChange={(e) => setFilterCook(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                  <select value={filterCook} onChange={(e) => setFilterCook(e.target.value)} className="w-full rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="all">All cooks</option>
                     {contributors.map((name) => (<option key={name} value={name}>{name}</option>))}
                   </select>
                 </div>
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Difficulty</label>
-                  <select value={filterDifficulty} onChange={(e) => setFilterDifficulty(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                  <select value={filterDifficulty} onChange={(e) => setFilterDifficulty(e.target.value)} className="w-full rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="all">Any difficulty</option>
                     <option value="Easy">Easy</option>
                     <option value="Medium">Medium</option>
@@ -298,7 +298,7 @@ function HomeContent() {
                 </div>
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Protein</label>
-                  <select value={filterProtein} onChange={(e) => setFilterProtein(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                  <select value={filterProtein} onChange={(e) => setFilterProtein(e.target.value)} className="w-full rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="all">Any protein</option>
                     <option value="beef">Beef</option>
                     <option value="eggs">Eggs</option>
@@ -313,11 +313,11 @@ function HomeContent() {
                 </div>
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Ingredient</label>
-                  <input type="text" value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)} placeholder="e.g. chicken, garlic, butter" className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20" />
+                  <input type="text" value={filterIngredient} onChange={(e) => setFilterIngredient(e.target.value)} placeholder="e.g. chicken, garlic, butter" className="w-full rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20" />
                 </div>
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Max total time</label>
-                  <select value={filterMaxTime} onChange={(e) => setFilterMaxTime(e.target.value)} className="w-full rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                  <select value={filterMaxTime} onChange={(e) => setFilterMaxTime(e.target.value)} className="w-full rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="">Any time</option>
                     <option value="15">Under 15 min</option>
                     <option value="30">Under 30 min</option>
@@ -331,14 +331,14 @@ function HomeContent() {
               <div className="mt-4 flex items-center justify-between">
                 <div>
                   <label className="mb-1.5 block font-sans text-xs font-medium text-charcoal">Sort by</label>
-                  <select value={filterSort} onChange={(e) => setFilterSort(e.target.value)} className="rounded-lg border border-gold-light bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
+                  <select value={filterSort} onChange={(e) => setFilterSort(e.target.value)} className="rounded-lg border border-hairline bg-warm-white px-3 py-2.5 font-sans text-sm text-charcoal outline-none focus:border-terracotta/50 focus:ring-2 focus:ring-terracotta/20 appearance-none">
                     <option value="newest">Newest first</option>
                     <option value="quickest">Quickest first</option>
                     <option value="longest">Longest first</option>
                     <option value="az">A - Z</option>
                   </select>
                 </div>
-                <button type="button" onClick={handleSearch} className="rounded-full bg-terracotta px-6 py-2.5 font-sans text-sm font-medium text-white hover:bg-terracotta-dark transition-colors cursor-pointer">
+                <button type="button" onClick={handleSearch} className="rounded-full bg-terracotta px-6 py-2.5 font-sans text-sm font-medium text-warm-white hover:bg-terracotta-dark transition-colors cursor-pointer">
                   Search
                 </button>
               </div>
@@ -353,7 +353,7 @@ function HomeContent() {
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center mb-10">
               <h2 className="font-serif text-3xl font-bold text-charcoal md:text-4xl inline-flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7 text-gold-light">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7 text-hairline">
                   <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
                 </svg>
                 My Recipe of the Week
@@ -376,20 +376,11 @@ function HomeContent() {
                     />
                   </div>
                 ) : (
-                  <div className="relative aspect-[4/3] md:aspect-auto md:w-1/2 shrink-0 bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 64 64"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-24 w-24 text-terracotta opacity-20"
-                    >
-                      <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
-                      <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
-                    </svg>
+                  <div
+                    className="paper-placeholder relative aspect-[4/3] md:aspect-auto md:w-1/2 shrink-0 md:min-h-[260px]"
+                    style={{ "--paper-margin": "22px", "--paper-rule": "30px" } as React.CSSProperties}
+                  >
+                    <span className="paper-label">{getCategoryBySlug(recipeOfTheWeek.category)?.name ?? "Recipe of the week"}</span>
                   </div>
                 )}
 
@@ -464,7 +455,7 @@ function HomeContent() {
                   <div className="mt-2">
                     <Link
                       href={`/recipes/${recipeOfTheWeek.slug}`}
-                      className="inline-flex items-center rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold tracking-wide text-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
+                      className="inline-flex items-center rounded-lg bg-terracotta px-6 py-3 font-sans text-sm font-semibold tracking-wide text-warm-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
                     >
                       View Recipe
                     </Link>
@@ -582,7 +573,7 @@ function HomeContent() {
           <div className="mt-10">
             <Link
               href="/submit"
-              className="inline-flex items-center rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold tracking-wide text-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
+              className="inline-flex items-center rounded-lg bg-terracotta px-8 py-3.5 font-sans text-sm font-semibold tracking-wide text-warm-white shadow-md transition-colors duration-200 hover:bg-terracotta-dark"
             >
               Submit Your Recipe
             </Link>

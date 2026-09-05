@@ -22,7 +22,9 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
       className="group block rounded-xl bg-white shadow-sm ring-1 ring-charcoal/5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
     >
       {/* Recipe image or placeholder */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-terracotta-light/30 via-gold-light/20 to-sage-light/30">
+      {/* Recipe image, or the paper it will one day be written on. The paper
+          also sits under a loading photo, so nothing flashes grey. */}
+      <div className="paper-placeholder relative aspect-[4/3] overflow-hidden rounded-t-xl">
         {(recipe.images?.[0] || recipe.image) ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -31,23 +33,8 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center opacity-20 transition-opacity duration-300 group-hover:opacity-30">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 64 64"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-20 w-20 text-terracotta"
-            >
-              <path d="M20 8v10M16 8v6a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8M20 22v34" />
-              <path d="M44 8c0 0-4 4-4 14s4 10 4 10v24M44 8v24" />
-            </svg>
-          </div>
+          <span className="paper-label">{category?.name ?? "Recipe"}</span>
         )}
-
       </div>
 
       {/* Content */}

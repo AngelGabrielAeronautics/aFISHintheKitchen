@@ -9,12 +9,12 @@ import { useHousehold } from "@/context/HouseholdContext";
 const FLAGSHIP_HOUSEHOLD_ID = "IJOnirYRuMqn7O0p1Rzh";
 
 const AVATAR_COLORS = [
-  { bg: "bg-terracotta", text: "text-white" },
-  { bg: "bg-sage", text: "text-white" },
+  { bg: "bg-terracotta", text: "text-warm-white" },
+  { bg: "bg-sage", text: "text-warm-white" },
   { bg: "bg-navy", text: "text-warm-white" },
   { bg: "bg-gold", text: "text-charcoal" },
-  { bg: "bg-terracotta-dark", text: "text-white" },
-  { bg: "bg-sage-dark", text: "text-white" },
+  { bg: "bg-terracotta-dark", text: "text-warm-white" },
+  { bg: "bg-sage-dark", text: "text-warm-white" },
   { bg: "bg-slate", text: "text-warm-white" },
   { bg: "bg-charcoal", text: "text-cream" },
 ];

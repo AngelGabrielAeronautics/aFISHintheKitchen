@@ -32,7 +32,7 @@ export default function HouseholdStateGate() {
           {isOwner && (
             <Link
               href="/settings"
-              className="inline-block rounded-lg bg-terracotta px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-terracotta-dark"
+              className="inline-block rounded-lg bg-terracotta px-5 py-2.5 font-sans text-sm font-semibold text-warm-white transition-colors hover:bg-terracotta-dark"
             >
               Reactivate subscription
             </Link>
@@ -44,7 +44,7 @@ export default function HouseholdStateGate() {
 
   if (accessState === "read_only") {
     return (
-      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-gold-light/90 px-4 py-2 text-center font-sans text-sm text-charcoal">
+      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-hairline/90 px-4 py-2 text-center font-sans text-sm text-charcoal">
         <span>
           {isOwner
             ? "Your subscription has lapsed — this cookbook is read-only."

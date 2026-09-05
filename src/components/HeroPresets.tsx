@@ -142,7 +142,7 @@ export default function HeroPresets() {
         the photo alone, so families already using it keep theirs.
       </p>
 
-      {error && <p className="mb-3 font-sans text-xs text-red-600">{error}</p>}
+      {error && <p className="mb-3 font-sans text-xs text-warning">{error}</p>}
       {!data && !error && <p className="font-sans text-xs text-slate/70">Loading…</p>}
 
       {data && (
@@ -205,7 +205,7 @@ export default function HeroPresets() {
                     →
                   </button>
                   <button
-                    className={`${btn} bg-red-50 text-red-700 hover:bg-red-100`}
+                    className={`${btn} bg-danger/10 text-danger hover:bg-danger/20`}
                     disabled={busy === `del:${p.id}`}
                     onClick={() => setConfirmDelete(p)}
                   >
@@ -229,7 +229,7 @@ export default function HeroPresets() {
               </p>
               <div className="flex gap-2">
                 <button
-                  className="rounded-lg bg-charcoal px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-charcoal/85 disabled:opacity-40"
+                  className="rounded-lg bg-charcoal px-3 py-1.5 font-sans text-xs font-medium text-warm-white hover:bg-charcoal/85 disabled:opacity-40"
                   disabled={busy === `del:${confirmDelete.id}`}
                   onClick={() => remove(confirmDelete)}
                 >
@@ -268,7 +268,7 @@ export default function HeroPresets() {
                 />
               </label>
               <button
-                className="rounded-lg bg-terracotta px-3 py-2 font-sans text-xs font-medium text-white hover:bg-terracotta/90 disabled:opacity-40"
+                className="rounded-lg bg-terracotta px-3 py-2 font-sans text-xs font-medium text-warm-white hover:bg-terracotta/90 disabled:opacity-40"
                 disabled={!file || !newLabel.trim() || busy === "upload"}
                 onClick={upload}
               >
@@ -281,7 +281,7 @@ export default function HeroPresets() {
             </p>
           </div>
 
-          <div className="mt-5 border-t border-gold-light/50 pt-3">
+          <div className="mt-5 border-t border-hairline/50 pt-3">
             <h3 className="font-sans text-xs font-semibold text-charcoal">
               Their own photos ({data.custom.length})
             </h3>
