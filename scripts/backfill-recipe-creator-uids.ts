@@ -95,7 +95,11 @@ function initAdmin(): void {
 
 async function loadAllRecipes(): Promise<RecipeRow[]> {
   const snap = await getFirestore().collection("recipes").get();
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<RecipeRow, "id">) }));
+  // Spread the data FIRST so the authoritative document id always wins.
+  // Seeded recipes carry their own `id` field; if that ever drifts from the
+  // doc id, spreading it last would make the batch update target the wrong
+  // document.
+  return snap.docs.map((d) => ({ ...(d.data() as Omit<RecipeRow, "id">), id: d.id }));
 }
 
 async function loadAllMembers(): Promise<MemberRow[]> {

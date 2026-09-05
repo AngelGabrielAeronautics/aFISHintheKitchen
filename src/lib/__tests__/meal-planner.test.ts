@@ -52,9 +52,11 @@ describe("getWeekId", () => {
     expect(getWeekId(new Date(2026, 0, 5))).toMatch(/^\d{4}-W\d{2}$/);
   });
 
-  it("assigns Sun Dec 28 2025 to week 52 of 2025 (ISO year boundary)", () => {
-    // 2025-12-28 falls in ISO week 52 of 2025 (Mon 29 Dec starts W53? Actually
-    // 2025 has 52 weeks; 2025-12-29 through 2026-01-04 is ISO 2026-W01).
+  it("handles the ISO year boundary (late-December days can belong to next year's W01)", () => {
+    // 2025 has 52 ISO weeks. Sun 28 Dec 2025 is the last day of 2025-W52;
+    // Mon 29 Dec 2025 begins 2026-W01 because that week contains Jan 1 2026
+    // (a Thursday), and ISO week 1 is the week containing the year's first
+    // Thursday.
     expect(getWeekId(new Date(2025, 11, 28))).toBe("2025-W52");
     expect(getWeekId(new Date(2025, 11, 29))).toBe("2026-W01");
   });
@@ -113,10 +115,15 @@ describe("dayKeyForDate + getTodayDayKey", () => {
 
   it("getTodayDayKey delegates to dayKeyForDate(new Date())", () => {
     vi.useFakeTimers();
-    // Wed 15 Apr 2026 local
-    vi.setSystemTime(new Date(2026, 3, 15, 12, 0));
-    expect(getTodayDayKey()).toBe("wednesday");
-    vi.useRealTimers();
+    try {
+      // Wed 15 Apr 2026 local
+      vi.setSystemTime(new Date(2026, 3, 15, 12, 0));
+      expect(getTodayDayKey()).toBe("wednesday");
+    } finally {
+      // Always restore, even if the assertion throws, so faked timers
+      // can't leak into the tests that follow.
+      vi.useRealTimers();
+    }
   });
 });
 

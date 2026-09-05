@@ -293,6 +293,33 @@ export default function EditRecipePage() {
     });
 
     try {
+      const editor = user?.displayName || user?.email || "Unknown";
+      // Prefer the uid stamped at creation; fall back to the display-name
+      // comparison for legacy recipes that predate createdByUid.
+      const isOriginalAuthor = recipe.createdByUid
+        ? recipe.createdByUid === user?.uid
+        : editor === recipe.contributedBy;
+
+      // Check if core recipe content changed
+      const ingredientsChanged = ingredients.filter(i => i.trim()).join() !== recipe.ingredients.join();
+      const instructionsChanged = instructions.filter(i => i.trim()).join() !== recipe.instructions.join();
+      const coreChanged = ingredientsChanged || instructionsChanged;
+
+      // Post-migration recipes: Firestore only lets the creator change
+      // non-social fields. A non-creator who hasn't changed the core
+      // content would otherwise hit a bare permission error, so explain
+      // the constraint and how to proceed. Checked before any uploads so
+      // a blocked attempt doesn't orphan files in Storage.
+      if (!isOriginalAuthor && recipe.createdByUid && !coreChanged) {
+        setErrors((prev) => ({
+          ...prev,
+          submit:
+            "Only the person who added this recipe can edit its details. " +
+            "Change the ingredients or instructions to save your own version instead.",
+        }));
+        return;
+      }
+
       // Upload new images
       const newImageUrls: string[] = [];
       for (const file of photoFiles) {
@@ -348,14 +375,6 @@ export default function EditRecipePage() {
         finalVideoUrl = await uploadRecipeImage(videoFile, `${recipe.slug}/video`);
       }
       recipeData.video = finalVideoUrl || "";
-
-      const editor = user?.displayName || user?.email || "Unknown";
-      const isOriginalAuthor = editor === recipe.contributedBy;
-
-      // Check if core recipe content changed
-      const ingredientsChanged = ingredients.filter(i => i.trim()).join() !== recipe.ingredients.join();
-      const instructionsChanged = instructions.filter(i => i.trim()).join() !== recipe.instructions.join();
-      const coreChanged = ingredientsChanged || instructionsChanged;
 
       if (!isOriginalAuthor && coreChanged) {
         if (!user) {
@@ -1082,17 +1101,17 @@ export default function EditRecipePage() {
             Legacy recipes (no createdByUid) remain deletable by any signed-in
             user; Firestore rules mirror this. */}
         {recipe && (!recipe.createdByUid || recipe.createdByUid === user?.uid) && (
-        <div className="mt-8 border-t border-cream-dark/30 pt-6">
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-red-500/10 px-4 py-2 font-sans text-sm font-medium text-red-600 transition-colors hover:bg-red-500/20 cursor-pointer"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
-            </svg>
-            Delete Recipe
-          </button>
-        </div>
+          <div className="mt-8 border-t border-cream-dark/30 pt-6">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-500/10 px-4 py-2 font-sans text-sm font-medium text-red-600 transition-colors hover:bg-red-500/20 cursor-pointer"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+              </svg>
+              Delete Recipe
+            </button>
+          </div>
         )}
 
         {showDeleteModal && recipe && (
