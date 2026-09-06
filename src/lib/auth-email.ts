@@ -185,6 +185,64 @@ export function buildVerifyEmail(actionUrl: string): BuiltEmail {
   return { subject: `Confirm your email for ${FROM_NAME}`, html, text };
 }
 
+// A member asked the owner to let somebody in (lib/member-requests.ts). The
+// owner is the only one who can add people, so this is the nudge that turns
+// their member's request into a decision — nobody else can make it.
+export function buildMemberRequestEmail(opts: {
+  requesterName: string;
+  forName: string;
+  bookName: string;
+  note?: string;
+}): BuiltEmail {
+  const { requesterName, forName, bookName, note } = opts;
+  const { html, text } = shell({
+    heading: `${requesterName} wants to add someone`,
+    bodyLines: [
+      `${requesterName} has asked to add <strong>${forName}</strong> to ${bookName}.`,
+      ...(note ? [`They said: “${note}”`] : []),
+      `Open the app and go to Invite — approve it and a join code is made, which ${requesterName} can pass on to ${forName} themselves. You can also say no; nothing happens until you decide.`,
+    ],
+    ctaLabel: "Open the app",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `${requesterName} wants to add ${forName} to ${bookName}`, html, text };
+}
+
+// The answer, back to whoever asked. Approved carries the code — they are the
+// one who knows the person, so they are the one who passes it on.
+export function buildMemberRequestDecidedEmail(opts: {
+  forName: string;
+  bookName: string;
+  approved: boolean;
+  code?: string;
+}): BuiltEmail {
+  const { forName, bookName, approved, code } = opts;
+  if (!approved) {
+    const { html, text } = shell({
+      heading: "Not this time",
+      bodyLines: [
+        `Your request to add <strong>${forName}</strong> to ${bookName} wasn’t approved.`,
+        "If you think it was a mistake, have a word with whoever owns the cookbook — they can add anyone at any time.",
+      ],
+      ctaLabel: "Open the app",
+      actionUrl: "https://www.afishinthekitchen.com",
+    });
+    return { subject: `About adding ${forName} to ${bookName}`, html, text };
+  }
+  const pretty = code && code.length > 4 ? `${code.slice(0, 4)}-${code.slice(4)}` : code ?? "";
+  const { html, text } = shell({
+    heading: `${forName} can join`,
+    bodyLines: [
+      `Your request to add <strong>${forName}</strong> to ${bookName} was approved.`,
+      `Their join code is <strong>${pretty}</strong>. Send it to them any way you like — they open the app, sign in with whatever account they already have, and enter it under “Join a cookbook”.`,
+      "It works once and lasts seven days.",
+    ],
+    ctaLabel: "Open the app",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `${forName} can join ${bookName}`, html, text };
+}
+
 // Sent once by the lapse sweep a few days before a signup trial expires —
 // without it the first sign of an ended trial is a read-only cookbook.
 export function buildTrialEndingEmail(daysLeft: number): BuiltEmail {

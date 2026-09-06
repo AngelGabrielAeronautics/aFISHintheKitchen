@@ -288,6 +288,21 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || isOwner(resource.data.householdId);
     }
 
+    // ── Member requests ──
+    // A member asking the owner to let somebody in (lib/member-requests.ts).
+    // Reads: the member sees their OWN requests, the owner sees their
+    // cookbook's. ⚠ This doc carries `joinCode` once approved — it is the one
+    // place a non-owner may read a code, and only the code granted to them.
+    // All writes are server-side (/api/invite/request and .../decide), which
+    // is where the seat cap and the owner check live.
+    match /memberRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (resource.data.requestedBy == request.auth.uid
+            || isSuperAdmin()
+            || isOwner(resource.data.householdId));
+      allow write: if false;
+    }
+
     // ── Join codes ──
     // `joinCodes/{CODE}` — the owner's invitation that needs no email address
     // (lib/join-codes.ts). Like a gift code it is a BEARER TOKEN: whoever holds
