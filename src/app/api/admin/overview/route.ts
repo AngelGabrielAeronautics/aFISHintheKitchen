@@ -59,7 +59,12 @@ export async function GET(req: NextRequest) {
     if (r.starter === true) u.starterRecipes += 1;
     else u.ownRecipes += 1;
     if (r.draft === true) u.drafts += 1;
-    if ((typeof r.image === "string" && r.image !== "") || (Array.isArray(r.images) && r.images.length > 0)) u.withPhoto += 1;
+    // ⚠ OWN recipes only. Starter content ships with photos, so counting them
+    // put "with a photo" ABOVE "recipes written" — a subset larger than the
+    // set it belongs to, which is how you know a number is lying.
+    const hasPhoto =
+      (typeof r.image === "string" && r.image !== "") || (Array.isArray(r.images) && r.images.length > 0);
+    if (r.starter !== true && hasPhoto) u.withPhoto += 1;
     // Starter content arrives with the cookbook; counting its date as activity
     // would make every untouched book look freshly used.
     if (r.starter !== true) seen(u, r.createdAt);
