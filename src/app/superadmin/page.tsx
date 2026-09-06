@@ -37,6 +37,23 @@ interface HouseholdRow {
   lapsedAt: string | null;
   createdAt: string | null;
   seatUpgradeRequestedAt: string | null;
+  usage: Usage;
+}
+
+/** Per-cookbook usage. `ownRecipes` is the one that answers "is this used?" */
+interface Usage {
+  ownRecipes: number;
+  starterRecipes: number;
+  drafts: number;
+  withPhoto: number;
+  tips: number;
+  menus: number;
+  plans: number;
+  shoppingListsUsed: number;
+  devices: number;
+  profiles: number;
+  sharedRecipes: number;
+  lastActivityAt: string | null;
 }
 
 interface Business {
@@ -71,6 +88,20 @@ interface Overview {
     byAccessState: Record<string, number>;
     bySubscription: Record<string, number>;
     byFunding: Record<string, number>;
+    usage: {
+      activated: number;
+      neverAddedARecipe: number;
+      activeLast7Days: number;
+      activeLast30Days: number;
+      ownRecipes: number;
+      recipesWithPhoto: number;
+      devices: number;
+      noDevice: number;
+      plansMade: number;
+      shoppingListsUsed: number;
+      sharedRecipes: number;
+      cookSessionsMeasurable: boolean;
+    };
   };
   households: HouseholdRow[];
 }
@@ -285,6 +316,8 @@ export default function SuperAdminPage() {
             <Metric label="Seat requests" value={data.metrics.seatRequests ?? 0} />
           </div>
 
+          <UsagePanel metrics={data.metrics} total={data.metrics.households} />
+
           {biz && (
             <BusinessPanels
               biz={biz}
@@ -362,6 +395,8 @@ export default function SuperAdminPage() {
                 <tr>
                   <th className="px-4 py-3">Cookbook</th>
                   <th className="px-4 py-3">Members</th>
+                  <th className="px-4 py-3">Recipes</th>
+                  <th className="px-4 py-3">Last used</th>
                   <th className="px-4 py-3">Access</th>
                   <th className="px-4 py-3">Paid for by</th>
                   <th className="px-4 py-3">Actions</th>
@@ -381,6 +416,8 @@ export default function SuperAdminPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate">{h.memberCount}</td>
+                    <td className="px-4 py-3"><RecipesCell usage={h.usage} /></td>
+                    <td className="px-4 py-3"><LastUsedCell at={h.usage.lastActivityAt} /></td>
                     <td className={`px-4 py-3 font-medium ${stateColors[h.accessState] ?? "text-slate"}`}>
                       {h.accessState}
                     </td>
@@ -832,6 +869,75 @@ function Line({
       {body}
     </button>
   );
+}
+
+/**
+ * The "is anybody using this?" panel.
+ *
+ * ⚠ The number that answers it is OWN recipes. Signing up gives a cookbook
+ * five starter recipes, so a book can look stocked and have never been opened
+ * — 9 of 13 were in exactly that state when this was written (2026-09-06).
+ */
+function UsagePanel({ metrics, total }: { metrics: Overview["metrics"]; total: number }) {
+  const u = metrics.usage;
+  if (!u) return null;
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+  return (
+    <div className="mb-8 rounded-xl border border-hairline bg-white p-5">
+      <h2 className="font-serif text-lg text-charcoal">How it&rsquo;s being used</h2>
+      <p className="mt-1 font-sans text-xs text-slate/70">
+        A cookbook starts with five starter recipes, so &ldquo;has recipes&rdquo; means nothing on its own.
+        These count what people added themselves.
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Metric label={`Added a recipe (${pct(u.activated)}%)`} value={u.activated} />
+        <Metric label="Never added one" value={u.neverAddedARecipe} />
+        <Metric label="Active this week" value={u.activeLast7Days} />
+        <Metric label="Active this month" value={u.activeLast30Days} />
+        <Metric label="Recipes written" value={u.ownRecipes} />
+        <Metric label="…with a photo" value={u.recipesWithPhoto} />
+        <Metric label="Devices signed in" value={u.devices} />
+        <Metric label="Books with no device" value={u.noDevice} />
+        <Metric label="Weeks planned" value={u.plansMade} />
+        <Metric label="Shopping lists used" value={u.shoppingListsUsed} />
+        <Metric label="Recipes shared out" value={u.sharedRecipes} />
+      </div>
+      <p className="mt-3 font-sans text-xs text-slate/60">
+        ⚠ How often anyone actually <em>cooks</em> can&rsquo;t be counted here — Cook Mode keeps its
+        session on the device. Recipes with photos and recipes shared out are the nearest proxies.
+      </p>
+    </div>
+  );
+}
+
+/** own / (own + starter), so a book living on starter content is obvious. */
+function RecipesCell({ usage }: { usage: Usage }) {
+  const total = usage.ownRecipes + usage.starterRecipes;
+  return (
+    <div>
+      <span className={usage.ownRecipes === 0 ? "font-medium text-gold" : "font-medium text-charcoal"}>
+        {usage.ownRecipes}
+      </span>
+      <span className="text-slate/60"> of {total}</span>
+      <div className="mt-0.5 font-sans text-xs text-slate/60">
+        {usage.ownRecipes === 0
+          ? "starter only"
+          : [
+              usage.withPhoto ? `${usage.withPhoto} with photo` : null,
+              usage.drafts ? `${usage.drafts} draft` : null,
+            ].filter(Boolean).join(" · ") || "their own"}
+      </div>
+    </div>
+  );
+}
+
+/** Days since anything was written — starter content deliberately excluded. */
+function LastUsedCell({ at }: { at: string | null }) {
+  if (!at) return <span className="text-gold">never</span>;
+  const days = Math.floor((Date.now() - Date.parse(at)) / 86_400_000);
+  const label = days <= 0 ? "today" : days === 1 ? "yesterday" : `${days}d ago`;
+  const tone = days <= 7 ? "text-sage-dark" : days <= 30 ? "text-slate" : "text-gold";
+  return <span className={tone}>{label}</span>;
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
