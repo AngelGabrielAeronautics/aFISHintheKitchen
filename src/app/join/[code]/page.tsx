@@ -13,10 +13,23 @@ export const dynamic = "force-dynamic";
 // this is for the phone WITHOUT the app, or a laptop. It shows the code big
 // enough to type and points at the stores. It deliberately reveals nothing
 // about the cookbook to somebody holding a dead code.
-export const metadata: Metadata = {
-  title: "Join a cookbook",
-  robots: { index: false, follow: false },
-};
+// The link is what lands in WhatsApp, so its preview does the inviting: a live
+// code names the cookbook and who's asking; a dead one stays generic (the page
+// deliberately reveals nothing to somebody holding a stale link).
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const { code } = await params;
+  const { jc, bookName } = await load(code);
+  const base: Metadata = { robots: { index: false, follow: false } };
+  if (!jc || !isOpen(jc)) return { ...base, title: "Join a cookbook" };
+  const title = `${jc.createdByName} wants you in ${bookName ?? "their cookbook"}`;
+  const description = "You're invited to a private family cookbook on A Fish in the Kitchen. Tap to join — it's free for you.";
+  return {
+    ...base,
+    title,
+    openGraph: { title, description, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 async function load(code: string): Promise<{ jc: JoinCode | null; bookName: string | null }> {
   try {

@@ -86,6 +86,10 @@ export async function POST(req: NextRequest) {
       ok: true,
       code,
       link: joinLink(code),
+      // Echoed so the apps can list "Mum · 86AQ-X9YQ" without a refetch — the
+      // first-invite step showed every code as "Invite" while this was missing.
+      ...(forName ? { forName } : {}),
+      createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + JOIN_CODE_TTL_MS).toISOString(),
       householdName: hh.customisation?.brandName ?? hh.name ?? "",
     });
