@@ -1,5 +1,6 @@
 import { getAdminDb, getAdminMessaging } from "@/lib/firebase-admin";
 import { deleteTokenEverywhere } from "@/lib/device-tokens";
+import { honourPushPrefs } from "@/lib/push-prefs";
 
 // The Monday push for "Learn this recipe this week" (docs/LEARN.md).
 //
@@ -83,7 +84,12 @@ export async function sendWeeklyRecipePushIfDue(): Promise<Record<string, unknow
   if (!pick) return { skipped: "empty_pool" };
 
   const tokensSnap = await db.collection("deviceTokens").get();
-  const tokens = [...new Set(tokensSnap.docs.map((d) => d.data().token as string))].filter(Boolean);
+  const wanted = await honourPushPrefs(
+    db,
+    tokensSnap.docs.map((d) => d.data() as { token: string; uid?: string }),
+    "notifyWeekly"
+  );
+  const tokens = [...new Set(wanted.map((t) => t.token))].filter(Boolean);
   if (tokens.length === 0) {
     await stampRef.set({ lastPushMonday: thisMonday, pickId: pick.id, sent: 0 }, { merge: true });
     return { skipped: "no_devices", week: thisMonday };

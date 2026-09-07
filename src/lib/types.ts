@@ -325,6 +325,10 @@ export interface AppNotification {
 
 export interface UserPreferences {
   notifyNewRecipes: boolean;
+  /** Event assignments + menu replies. Missing = true. */
+  notifyEvents?: boolean;
+  /** Monday's recipe + Learn publishes. Missing = true. */
+  notifyWeekly?: boolean;
   // Terms-of-Service acceptance recorded at signup (version + ISO timestamp).
   termsAcceptedVersion?: string;
   termsAcceptedAt?: string;

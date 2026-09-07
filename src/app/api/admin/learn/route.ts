@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteTokenEverywhere } from "@/lib/device-tokens";
+import { honourPushPrefs } from "@/lib/push-prefs";
 import { getAdminDb, getAdminMessaging } from "@/lib/firebase-admin";
 import { verifySuperAdmin } from "@/lib/admin-auth";
 
@@ -209,7 +210,12 @@ export async function POST(req: NextRequest) {
       if (item.status !== "published") return NextResponse.json({ error: "not_published" }, { status: 400 });
 
       const tokensSnap = await db.collection("deviceTokens").get();
-      const tokens = [...new Set(tokensSnap.docs.map((d) => d.data().token as string))].filter(Boolean);
+      const wanted = await honourPushPrefs(
+        db,
+        tokensSnap.docs.map((d) => d.data() as { token: string; uid?: string }),
+        "notifyWeekly"
+      );
+      const tokens = [...new Set(wanted.map((t) => t.token))].filter(Boolean);
       if (tokens.length === 0) return NextResponse.json({ ok: true, sent: 0 });
 
       const message = String(item.title).slice(0, 240);

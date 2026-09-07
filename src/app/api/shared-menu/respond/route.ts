@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb, getAdminMessaging } from "@/lib/firebase-admin";
+import { honourPushPrefs } from "@/lib/push-prefs";
 import { FieldValue } from "firebase-admin/firestore";
 import { randomUUID } from "crypto";
 
@@ -107,9 +108,12 @@ export async function POST(req: NextRequest) {
       });
       try {
         const devices = await db.collection("deviceTokens").where("householdId", "==", share.householdId).get();
-        const tokens = [
-          ...new Set(devices.docs.map((d) => d.data().token as string).filter(Boolean)),
-        ];
+        const wanted = await honourPushPrefs(
+          db,
+          devices.docs.map((d) => d.data() as { token: string; uid?: string }),
+          "notifyEvents"
+        );
+        const tokens = [...new Set(wanted.map((t) => t.token).filter(Boolean))];
         if (tokens.length > 0) {
           await getAdminMessaging().sendEachForMulticast({
             tokens,
