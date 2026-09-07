@@ -15,8 +15,16 @@ import sgMail from "@sendgrid/mail";
 import { isNeverEmail } from "./never-email";
 
 export const FROM_NAME = "A Fish in the Kitchen";
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL ?? "noreply@afishinthekitchen.com";
-const DEFAULT_REPLY_TO = process.env.SENDGRID_REPLY_TO_EMAIL ?? "admin@afishinthekitchen.com";
+// ⚠ The fallback is the `mail.` SUBDOMAIN, not the apex, and that matters.
+// `afishinthekitchen.com` is a Google Workspace domain, and Gmail shows the
+// Workspace ORG logo (Angel Gabriel's) as the sender avatar for any address on
+// it without its own profile photo — which `noreply@`, an alias, cannot have.
+// Sending from a subdomain with no MX gives Gmail no org to look up. That was
+// fixed in July by setting SENDGRID_FROM_EMAIL in Vercel; leaving the apex here
+// meant one missing or empty env var silently brought the wrong logo back, and
+// sent the tracking pixel to the retired `url7639` host with it.
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@mail.afishinthekitchen.com";
+const DEFAULT_REPLY_TO = process.env.SENDGRID_REPLY_TO_EMAIL || "admin@afishinthekitchen.com";
 
 export interface TransactionalEmail {
   to: string;
