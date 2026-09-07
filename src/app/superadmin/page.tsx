@@ -54,6 +54,10 @@ interface Usage {
   profiles: number;
   sharedRecipes: number;
   lastActivityAt: string | null;
+  cooks30d: number;
+  activity30d: number;
+  activeMembers30d: number;
+  invitesSent: number;
 }
 
 interface Business {
@@ -397,6 +401,7 @@ export default function SuperAdminPage() {
                   <th className="px-4 py-3">Members</th>
                   <th className="px-4 py-3">Recipes</th>
                   <th className="px-4 py-3">Last used</th>
+                  <th className="px-4 py-3">30 days</th>
                   <th className="px-4 py-3">Access</th>
                   <th className="px-4 py-3">Paid for by</th>
                   <th className="px-4 py-3">Actions</th>
@@ -418,6 +423,7 @@ export default function SuperAdminPage() {
                     <td className="px-4 py-3 text-slate">{h.memberCount}</td>
                     <td className="px-4 py-3"><RecipesCell usage={h.usage} /></td>
                     <td className="px-4 py-3"><LastUsedCell at={h.usage.lastActivityAt} /></td>
+                    <td className="px-4 py-3"><EngagementCell usage={h.usage} members={h.memberCount} /></td>
                     <td className={`px-4 py-3 font-medium ${stateColors[h.accessState] ?? "text-slate"}`}>
                       {h.accessState}
                     </td>
@@ -932,6 +938,23 @@ function RecipesCell({ usage }: { usage: Usage }) {
 }
 
 /** Days since anything was written — starter content deliberately excluded. */
+/**
+ * The three numbers that say whether a cookbook is ALIVE, not just installed:
+ * cooks finished, members who opened it, and whether anyone was ever invited.
+ * All three were invisible until 2026-09-07 — the table said "last used 2d
+ * ago" for a book nobody had cooked from in a month.
+ */
+function EngagementCell({ usage, members }: { usage: Usage; members: number }) {
+  const quiet = usage.cooks30d === 0 && usage.activeMembers30d === 0;
+  return (
+    <div className={`font-sans text-xs leading-5 ${quiet ? "text-slate/50" : "text-slate"}`}>
+      <div><span className="font-semibold text-charcoal">{usage.cooks30d}</span> cook{usage.cooks30d === 1 ? "" : "s"}</div>
+      <div><span className="font-semibold text-charcoal">{usage.activeMembers30d}</span> of {members} active</div>
+      <div className={usage.invitesSent === 0 ? "text-gold" : ""}>{usage.invitesSent} invite{usage.invitesSent === 1 ? "" : "s"} sent</div>
+    </div>
+  );
+}
+
 function LastUsedCell({ at }: { at: string | null }) {
   if (!at) return <span className="text-gold">never</span>;
   const days = Math.floor((Date.now() - Date.parse(at)) / 86_400_000);

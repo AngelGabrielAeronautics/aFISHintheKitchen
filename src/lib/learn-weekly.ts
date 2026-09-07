@@ -60,7 +60,8 @@ function pickOfTheWeek(pool: WeeklyDoc[], now: Date): WeeklyDoc | null {
  * nothing except on Mondays (UTC), and a stamp in config/learnWeekly stops a
  * re-run of the cron from sending twice.
  */
-export async function sendWeeklyRecipePushIfDue(): Promise<Record<string, unknown>> {
+/** `exclude`: households that got their own Recipe of the Week instead (lib/family-weekly). */
+export async function sendWeeklyRecipePushIfDue(exclude: Set<string> = new Set()): Promise<Record<string, unknown>> {
   const now = new Date();
   if (now.getUTCDay() !== 1) return { skipped: "not_monday" };
 
@@ -84,9 +85,13 @@ export async function sendWeeklyRecipePushIfDue(): Promise<Record<string, unknow
   if (!pick) return { skipped: "empty_pool" };
 
   const tokensSnap = await db.collection("deviceTokens").get();
+  // A device registered to a book that got its family's own pick this morning
+  // already had its Monday push; a second one from us would be noise.
   const wanted = await honourPushPrefs(
     db,
-    tokensSnap.docs.map((d) => d.data() as { token: string; uid?: string }),
+    tokensSnap.docs
+      .filter((d) => !exclude.has(d.data().householdId as string))
+      .map((d) => d.data() as { token: string; uid?: string }),
     "notifyWeekly"
   );
   const tokens = [...new Set(wanted.map((t) => t.token))].filter(Boolean);

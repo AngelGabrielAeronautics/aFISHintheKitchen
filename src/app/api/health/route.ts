@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { sendTransactionalEmail } from "@/lib/email";
 import { sendWeeklyRecipePushIfDue } from "@/lib/learn-weekly";
+import { sendFamilyRecipeOfWeekIfDue } from "@/lib/family-weekly";
+import { sendFamilyDigestIfDue } from "@/lib/family-digest";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -187,16 +189,36 @@ export async function GET(req: NextRequest) {
   // both Hobby cron slots are taken and 07:00 UTC is a humane push hour.
   // Self-gating (Mondays only, once per week) and wrapped: a push failure
   // must never mark the service unhealthy.
+  // The family's own Recipe of the Week goes FIRST; books it served are
+  // skipped by the Learn push so nobody gets two on a Monday morning.
+  let familyWeekly: unknown = null;
+  let served = new Set<string>();
+  try {
+    const r = await sendFamilyRecipeOfWeekIfDue();
+    familyWeekly = r;
+    served = new Set(r.served);
+  } catch (err) {
+    console.error("health: family weekly push failed", err);
+    familyWeekly = { error: String(err).slice(0, 200) };
+  }
   let weeklyPush: unknown = null;
   try {
-    weeklyPush = await sendWeeklyRecipePushIfDue();
+    weeklyPush = await sendWeeklyRecipePushIfDue(served);
   } catch (err) {
     console.error("health: weekly recipe push failed", err);
     weeklyPush = { error: String(err).slice(0, 200) };
   }
+  // Sundays: the week's news by email, for the members who declined push.
+  let digest: unknown = null;
+  try {
+    digest = await sendFamilyDigestIfDue();
+  } catch (err) {
+    console.error("health: family digest failed", err);
+    digest = { error: String(err).slice(0, 200) };
+  }
 
   return NextResponse.json(
-    { ok, alert, weeklyPush, checks, checkedAt: new Date().toISOString() },
+    { ok, alert, familyWeekly, weeklyPush, digest, checks, checkedAt: new Date().toISOString() },
     { status: ok ? 200 : 503 }
   );
 }

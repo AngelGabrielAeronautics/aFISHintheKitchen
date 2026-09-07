@@ -619,3 +619,20 @@ export function buildSoloEmail(bookName: string): BuiltEmail {
   return { subject: `Who else should be in ${bookName}?`, html, text };
 }
 
+// ── Weekly family digest (lib/family-digest) ─────────────────────────────────
+export function buildFamilyDigestEmail(bookName: string, lines: string[], more: number): BuiltEmail {
+  const bodyLines = [
+    `Here's what happened in ${bookName} this week:`,
+    ...lines.map((l) => `&bull;&nbsp; ${l}`),
+    ...(more > 0 ? [`&hellip;and ${more} more.`] : []),
+    "You get this on Sundays when the cookbook had news. Nothing happened, nothing sent. To stop it, switch off <strong>Family activity</strong> under More &rarr; Notifications in the app.",
+  ];
+  const { html, text } = shell({
+    heading: "This week in the kitchen",
+    bodyLines,
+    ctaLabel: "Open the cookbook",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `This week in ${bookName}`, html, text };
+}
+

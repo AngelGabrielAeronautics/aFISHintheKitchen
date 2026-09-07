@@ -316,5 +316,7 @@ async function redeemCode(db: ReturnType<typeof getAdminDb>, raw: string, who: J
   } catch {
     // Non-fatal.
   }
-  return NextResponse.json({ ok: true, joined: [jc.householdId], alreadyMember: false, householdId: jc.householdId, householdName: hh.customisation?.brandName ?? hh.name ?? "" });
+  // `invitedBy` lets the app welcome them by name — "Meg invited you" — with
+  // Meg's favourites, rather than dropping them into a book with no context.
+  return NextResponse.json({ ok: true, joined: [jc.householdId], alreadyMember: false, householdId: jc.householdId, householdName: hh.customisation?.brandName ?? hh.name ?? "", invitedBy: jc.createdByName ?? null });
 }

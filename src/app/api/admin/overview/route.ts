@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   // back, so this stays cheap as cookbooks fill up. At ~200 recipes a full read
   // is nothing; if that ever reaches five figures, move these to per-household
   // count() aggregations rather than dropping the numbers.
-  const [householdsSnap, subsSnap, membersSnap, recipesSnap, tipsSnap, collectionsSnap, plansSnap, listsSnap, tokensSnap, profilesSnap, sharedSnap] =
+  const [householdsSnap, subsSnap, membersSnap, recipesSnap, tipsSnap, collectionsSnap, plansSnap, listsSnap, tokensSnap, profilesSnap, sharedSnap, notesSnap, codesSnap, invitesSnap] =
     await Promise.all([
       db.collection("households").get(),
       db.collection("subscriptions").get(),
@@ -27,9 +27,12 @@ export async function GET(req: NextRequest) {
       db.collection("collections").select("householdId", "createdAt").get(),
       db.collection("mealPlans").select("householdId").get(),
       db.collection("shoppingLists").select("householdId", "entries", "extras", "checked").get(),
-      db.collection("deviceTokens").select("householdId").get(),
+      db.collection("deviceTokens").select("householdId", "uid", "updatedAt").get(),
       db.collection("members").select("householdId", "sample").get(),
       db.collection("sharedRecipes").select("householdId", "createdAt").get(),
+      db.collection("notifications").select("householdId", "type", "createdAt").get(),
+      db.collection("joinCodes").select("householdId").get(),
+      db.collection("invites").select("householdId").get(),
     ]);
 
   // ── Usage, per cookbook ──
@@ -42,7 +45,8 @@ export async function GET(req: NextRequest) {
     let u = usage.get(hid);
     if (!u) {
       u = { ownRecipes: 0, starterRecipes: 0, drafts: 0, withPhoto: 0, tips: 0, menus: 0,
-            plans: 0, shoppingListsUsed: 0, devices: 0, profiles: 0, sharedRecipes: 0, lastActivityAt: null };
+            plans: 0, shoppingListsUsed: 0, devices: 0, profiles: 0, sharedRecipes: 0, lastActivityAt: null,
+            cooks30d: 0, activity30d: 0, activeMembers30d: 0, invitesSent: 0 };
       usage.set(hid, u);
     }
     return u;
@@ -93,10 +97,42 @@ export async function GET(req: NextRequest) {
     const used = (l.entries?.length ?? 0) + (l.extras?.length ?? 0) + (l.checked?.length ?? 0) > 0;
     if (used) forHousehold(hid).shoppingListsUsed += 1;
   });
-  tokensSnap.docs.forEach((d) => {
-    const hid = d.data().householdId as string | undefined;
-    if (hid) forHousehold(hid).devices += 1;
+  // ── Engagement (2026-09-07) ──
+  // "Is anybody cooking?" — the cooked/loved/noted/joined pushes each leave an
+  // inbox row, so the inbox IS the activity log. Only from 1.12 onwards.
+  const cutoff30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  notesSnap.docs.forEach((d) => {
+    const n = d.data();
+    const hid = n.householdId as string | undefined;
+    if (!hid) return;
+    const u = forHousehold(hid);
+    seen(u, n.createdAt);
+    if (typeof n.createdAt === "string" && n.createdAt >= cutoff30) {
+      u.activity30d += 1;
+      if (n.type === "cooked") u.cooks30d += 1;
+    }
   });
+  // A device re-registers on every household load, so its updatedAt is
+  // "last opened this book on this phone" — distinct uids in 30d = active members.
+  const activeUids = new Map<string, Set<string>>();
+  tokensSnap.docs.forEach((d) => {
+    const t = d.data();
+    const hid = t.householdId as string | undefined;
+    if (!hid) return;
+    forHousehold(hid).devices += 1;
+    if (typeof t.updatedAt === "string" && t.updatedAt >= cutoff30 && t.uid) {
+      const set = activeUids.get(hid) ?? new Set<string>();
+      set.add(t.uid as string);
+      activeUids.set(hid, set);
+    }
+  });
+  activeUids.forEach((set, hid) => { forHousehold(hid).activeMembers30d = set.size; });
+  [codesSnap, invitesSnap].forEach((snap) =>
+    snap.docs.forEach((d) => {
+      const hid = d.data().householdId as string | undefined;
+      if (hid) forHousehold(hid).invitesSent += 1;
+    })
+  );
   profilesSnap.docs.forEach((d) => {
     const m = d.data();
     const hid = m.householdId as string | undefined;
@@ -149,6 +185,7 @@ export async function GET(req: NextRequest) {
       usage: usage.get(d.id) ?? {
         ownRecipes: 0, starterRecipes: 0, drafts: 0, withPhoto: 0, tips: 0, menus: 0,
         plans: 0, shoppingListsUsed: 0, devices: 0, profiles: 0, sharedRecipes: 0, lastActivityAt: null,
+        cooks30d: 0, activity30d: 0, activeMembers30d: 0, invitesSent: 0,
       },
     };
   });
@@ -233,6 +270,14 @@ interface Usage {
   profiles: number;
   sharedRecipes: number;
   lastActivityAt: string | null;
+  /** Cook Mode finishes in the last 30 days (inbox rows of type "cooked"). */
+  cooks30d: number;
+  /** All family-activity inbox rows in the last 30 days. */
+  activity30d: number;
+  /** Distinct members whose device re-registered in the last 30 days. */
+  activeMembers30d: number;
+  /** Join codes ever minted + legacy email invites — did anyone ask anyone? */
+  invitesSent: number;
 }
 
 function countBy<T>(items: T[], key: (item: T) => string): Record<string, number> {
