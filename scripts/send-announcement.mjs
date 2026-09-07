@@ -89,19 +89,37 @@ function readEnvVar(name, file = "../.env.local") {
 // only route in and anyone who could not see it was stuck (0f38cda, reported
 // by Meg on 2026-08-14). Naming which phone each fault belongs to is what
 // keeps the apology true for whoever is reading it.
-const SUBJECT = "Sorry about that — and what's new";
-const HEADING = "Sorry about that";
-const PARAGRAPHS = [
-  "If you tried to add a recipe recently and couldn't, that was us, not you — and I'm sorry. Adding a recipe is the whole point of the app.",
-  // ⚠ "both phones" carries the whole correction: the fault was Android's "+"
-  // hidden behind the navigation bar (54c59ef) AND, separately, an iOS empty
-  // cookbook that offered no way in at all (0f38cda, Meg on 2026-08-14). The
-  // detail is gone from the letter, not from the truth of it.
-  "It's fixed on both phones, and the updates are live now — on the App Store today, and on Google Play since Tuesday.",
-  "We're building on this all the time. If something is broken, missing, or just annoying — <strong>reply to this email</strong>. It comes straight to me.",
-  "Thank you for cooking with us.<br />— Dylan",
-];
-const CTA_LABEL = "Get the update";
+// The letter itself lives in a JSON file so this script is the same every
+// time and only the words change:
+//
+//   node scripts/send-announcement.mjs --content=scripts/notes/2026-09-1.12.json
+//
+// {"subject", "heading", "paragraphs": [...html allowed...], "ctaLabel"?}
+// See scripts/notes/release-note.example.json. Without --content the original
+// 2026-08-21 apology is used, kept so the file documents what was said.
+const contentArg = args.find((a) => a.startsWith("--content="))?.slice("--content=".length);
+const CONTENT = contentArg
+  ? JSON.parse(readFileSync(new URL(`../${contentArg}`, import.meta.url), "utf-8"))
+  : {
+      subject: "Sorry about that — and what's new",
+      heading: "Sorry about that",
+      paragraphs: [
+        "If you tried to add a recipe recently and couldn't, that was us, not you — and I'm sorry. Adding a recipe is the whole point of the app.",
+        "It's fixed on both phones, and the updates are live now — on the App Store today, and on Google Play since Tuesday.",
+        "We're building on this all the time. If something is broken, missing, or just annoying — <strong>reply to this email</strong>. It comes straight to me.",
+        "Thank you for cooking with us.<br />— Dylan",
+      ],
+      ctaLabel: "Get the update",
+    };
+for (const k of ["subject", "heading", "paragraphs"]) {
+  if (!CONTENT[k] || (k === "paragraphs" && !Array.isArray(CONTENT[k]))) {
+    console.error(`--content is missing "${k}"`); process.exit(1);
+  }
+}
+const SUBJECT = CONTENT.subject;
+const HEADING = CONTENT.heading;
+const PARAGRAPHS = CONTENT.paragraphs;
+const CTA_LABEL = CONTENT.ctaLabel ?? "Open the app";
 const OPT_OUT = "You're getting this because you have an A Fish in the Kitchen account. If you'd rather not get the occasional note like this, just reply and say so.";
 
 function stripTags(html) {

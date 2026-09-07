@@ -581,3 +581,41 @@ export function buildResetEmail(actionUrl: string): BuiltEmail {
   });
   return { subject: `Reset your ${FROM_NAME} password`, html, text };
 }
+
+// ── Activation nudges (lapse-sweep) ──────────────────────────────────────────
+//
+// Nine of the first twelve cookbooks were one person alone with the starter
+// recipes, and nobody ever heard from us again. Two emails, one each, only to
+// cookbooks created after these shipped — the earlier nine get a personal
+// note from Dylan instead, which will do better than anything automated.
+
+/** Day 3, no recipe of their own yet. Leads with the scan, not the form. */
+export function buildNoRecipeEmail(bookName: string): BuiltEmail {
+  const { html, text } = shell({
+    heading: "One card is all it takes",
+    bodyLines: [
+      `${bookName} is still waiting for its first recipe — and typing one out is nobody's idea of an evening.`,
+      "So don't. Open the app, tap <strong>Scan a recipe</strong>, and point the camera at a handwritten card, a cookbook page or a screenshot. It reads the whole thing and types it up for you; you just check it and save.",
+      "One recipe is enough to start. The rest of the family's will follow once they're in.",
+    ],
+    ctaLabel: "Scan your first recipe",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `${bookName} needs one recipe`, html, text };
+}
+
+/** Day 10, still nobody else in the book. */
+export function buildSoloEmail(bookName: string): BuiltEmail {
+  const { html, text } = shell({
+    heading: "A cookbook fills up when the family is in it",
+    bodyLines: [
+      `You're still the only person in ${bookName}. That's the one thing this app can't do for you — but it's the thing that makes it work.`,
+      "Invite one person. Open the app, go to <strong>Family → Invite</strong>, and send them the link. They join free — no subscription, nothing to pay — and their recipes land in your book alongside yours.",
+      "Start with whoever's recipes you'd most hate to lose.",
+    ],
+    ctaLabel: "Invite someone",
+    actionUrl: "https://www.afishinthekitchen.com",
+  });
+  return { subject: `Who else should be in ${bookName}?`, html, text };
+}
+

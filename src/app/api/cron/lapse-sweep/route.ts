@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { computeAccessStateFromLapse, DELETE_DAYS } from "@/lib/access";
 import { sendTransactionalEmail } from "@/lib/email";
+import { buildNoRecipeEmail, buildSoloEmail } from "@/lib/auth-email";
 import {
   buildTrialEndingEmail,
   buildTrialEndedEmail,
@@ -408,6 +409,51 @@ export async function GET(req: NextRequest) {
   //
   // ⚠ Wrapped: Apple or Play being unavailable must never fail the sweep that
   // enforces billing.
+  // ── Activation nudges ────────────────────────────────────────────────────
+  // Day 3 with no recipe of their own → "scan one card". Day 10 still alone →
+  // "invite one person". One of each, ever, per cookbook, and at most one per
+  // run so they never land together. Only cookbooks created after this
+  // shipped: the earlier ones are being written to personally.
+  const NUDGES_SINCE = "2026-09-07";
+  const nudges = { noRecipe: 0, solo: 0 };
+  try {
+    const books = await db.collection("households").where("createdAt", ">=", NUDGES_SINCE).get();
+    for (const hhSnap of books.docs) {
+      const hh = hhSnap.data();
+      if ((hh.accessState ?? "active") !== "active") continue;
+      const ageDays = (now.getTime() - new Date(hh.createdAt).getTime()) / 86_400_000;
+      const sent = (hh.nudges ?? {}) as { noRecipeAt?: string; soloAt?: string };
+      const bookName: string = hh.customisation?.brandName ?? hh.name ?? "Your cookbook";
+      const ownerEmail = async () => (await getAdminAuth().getUser(hh.ownerId)).email;
+
+      if (ageDays >= 3 && !sent.noRecipeAt) {
+        const recipes = await db.collection("recipes").where("householdId", "==", hhSnap.id).get();
+        const own = recipes.docs.some((d) => d.data().starter !== true && d.data().draft !== true);
+        if (!own) {
+          const email = await ownerEmail();
+          if (email) {
+            const { subject, html, text } = buildNoRecipeEmail(bookName);
+            await sendTransactionalEmail({ to: email, subject, html, text });
+          }
+          await hhSnap.ref.update({ "nudges.noRecipeAt": now.toISOString() });
+          nudges.noRecipe++;
+          continue; // one nudge per run
+        }
+      }
+      if (ageDays >= 10 && !sent.soloAt && hh.customisation?.groupType !== "solo" && (hh.memberIds ?? []).length < 2) {
+        const email = await ownerEmail();
+        if (email) {
+          const { subject, html, text } = buildSoloEmail(bookName);
+          await sendTransactionalEmail({ to: email, subject, html, text });
+        }
+        await hhSnap.ref.update({ "nudges.soloAt": now.toISOString() });
+        nudges.solo++;
+      }
+    }
+  } catch (err) {
+    reportError(err, { route: "cron/lapse-sweep", step: "nudges" });
+  }
+
   let reach: unknown = null;
   try {
     reach = await refreshReachStats();
@@ -418,5 +464,5 @@ export async function GET(req: NextRequest) {
   // ⚠ Recorded AFTER the work, so a heartbeat means "finished", not "started".
   await recordHeartbeat("lapse-sweep", summary);
 
-  return NextResponse.json({ ok: true, ...summary, reach });
+  return NextResponse.json({ ok: true, ...summary, nudges, reach });
 }

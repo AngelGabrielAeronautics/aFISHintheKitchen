@@ -4,6 +4,7 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { MAX_SEATS, MAX_GUEST_BOOKS } from "@/lib/access";
 import { INVITES, syncLegacyMirror, type InviteDoc } from "@/lib/invites";
 import { JOIN_CODES, loadJoinCode, isOpen } from "@/lib/join-codes";
+import { addInboxNotification, sendHouseholdPush } from "@/lib/push-send";
 
 export const runtime = "nodejs";
 
@@ -152,6 +153,7 @@ export async function POST(req: NextRequest) {
       batch.update(hhRef, { memberIds: FieldValue.arrayUnion(uid) });
       batch.update(inviteDoc.ref, { status: "registered", registeredAt: now });
       await batch.commit();
+      await announceJoin(db, householdId, uid, displayName);
 
       myHouseholds.add(householdId);
       guestBooks += 1;
@@ -228,6 +230,35 @@ async function addMember(
   batch.update(db.collection("households").doc(householdId), { memberIds: FieldValue.arrayUnion(who.uid) });
   extraWrites?.(batch);
   await batch.commit();
+  await announceJoin(db, householdId, who.uid, displayName);
+}
+
+/**
+ * "Mum joined the cookbook" — to everyone already in it. The most reactivating
+ * push there is: the person who sent the invite has been waiting for exactly
+ * this, and it is the first time the book has news that isn't their own.
+ * Best-effort; a push failure must never fail a join.
+ */
+async function announceJoin(db: ReturnType<typeof getAdminDb>, householdId: string, joinerUid: string, displayName: string) {
+  try {
+    const hh = (await db.collection("households").doc(householdId).get()).data();
+    const bookName = hh?.customisation?.brandName ?? hh?.name ?? "the cookbook";
+    const message = `${displayName} joined ${bookName}`;
+    await Promise.all([
+      sendHouseholdPush(db, {
+        householdId,
+        type: "joined",
+        title: "New member",
+        message,
+        link: "/members",
+        prefKey: "notifyNewRecipes",
+        excludeUid: joinerUid,
+      }),
+      addInboxNotification(db, { householdId, type: "joined", message, link: "/members", authorName: displayName }),
+    ]);
+  } catch (err) {
+    console.error("join: announce failed", err);
+  }
 }
 
 /**
