@@ -449,6 +449,12 @@ function HomeContent() {
                       </svg>
                       <span>Cook: {formatTime(recipeOfTheWeek.cookTime)}</span>
                     </div>
+                    {recipeOfTheWeek.restTime ? (
+                      <>
+                        <span className="text-cream-dark">|</span>
+                        <span>Rest: {formatTime(recipeOfTheWeek.restTime)}</span>
+                      </>
+                    ) : null}
                   </div>
 
                   {/* CTA */}

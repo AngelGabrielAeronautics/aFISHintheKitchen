@@ -27,6 +27,7 @@ export const RECIPE_JSON_SPEC = `Return ONLY valid JSON with this exact structur
   "instructions": ["Step 1 text", "Step 2 text"],
   "prepTime": 15,
   "cookTime": 30,
+  "restTime": 0,
   "servings": 4,
   "category": "mains",
   "protein": "poultry",
@@ -37,7 +38,8 @@ export const RECIPE_JSON_SPEC = `Return ONLY valid JSON with this exact structur
 }
 
 Rules:
-- prepTime and cookTime are in minutes (integers).
+- prepTime and cookTime are in minutes (integers). prepTime is hands-on time; cookTime is time on heat.
+- restTime is the UNATTENDED minutes the method requires — chilling, resting, marinating, proving, rising, soaking, freezing, setting, cooling before serving ("overnight" = 720). 0 if none. Never fold it into prepTime or cookTime.
 - If the dish requires NO cooking or heat at all (salads, no-bake desserts, dips), set cookTime to 0 and noCook to true. Otherwise noCook is false.
 - servings is an integer. Default to 4 if not stated.
 - category must be one of: ${CATEGORIES.join(", ")}
@@ -91,6 +93,7 @@ export function sanitiseRecipe(raw: unknown): Clean {
     instructions: strArr(r.instructions)?.slice(0, 100),
     prepTime: int(r.prepTime),
     cookTime: int(r.cookTime),
+    restTime: int(r.restTime),
     servings: int(r.servings),
     category: oneOf(r.category, CATEGORIES),
     protein: oneOf(r.protein, PROTEINS),

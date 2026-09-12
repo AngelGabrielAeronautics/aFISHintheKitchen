@@ -85,6 +85,7 @@ export interface Recipe {
   prepTime: number;
   cookTime: number;
   noCook?: boolean; // raw dishes — cookTime 0 is intentional (iOS-set)
+  restTime?: number; // hands-off minutes — chilling, proving, marinating; missing = 0
   servings: number;
   difficulty: "Easy" | "Medium" | "Hard";
   protein?: Protein;
@@ -267,6 +268,11 @@ export interface RecipeCollection {
 
 export function getCategoryBySlug(slug: string): CategoryInfo | undefined {
   return CATEGORIES.find((c) => c.slug === slug);
+}
+
+/** Prep + cook + rest — the number a family plans dinner on. */
+export function totalMinutes(r: { prepTime: number; cookTime: number; restTime?: number }): number {
+  return r.prepTime + r.cookTime + (r.restTime ?? 0);
 }
 
 export function formatTime(minutes: number): string {

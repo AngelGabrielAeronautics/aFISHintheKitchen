@@ -11,6 +11,7 @@ export function buildShareSnapshot(recipe: FirebaseFirestore.DocumentData) {
     category: recipe.category ?? "other",
     prepTime: recipe.prepTime ?? 0,
     cookTime: recipe.cookTime ?? 0,
+    restTime: recipe.restTime ?? 0,
     noCook: recipe.noCook ?? false,
     servings: recipe.servings ?? 0,
     difficulty: recipe.difficulty ?? "Medium",

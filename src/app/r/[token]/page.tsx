@@ -86,6 +86,7 @@ export default async function SharedRecipePage({ params }: { params: Promise<{ t
         <div className="mt-6 flex flex-wrap gap-4 font-sans text-sm text-slate">
           <span>Prep: {formatTime(r.prepTime)}</span>
           <span>Cook: {r.noCook ? "None" : formatTime(r.cookTime)}</span>
+          {r.restTime ? <span>Rest: {formatTime(r.restTime)}</span> : null}
           <span>Serves: {r.servings}</span>
           <span>{r.difficulty}</span>
         </div>

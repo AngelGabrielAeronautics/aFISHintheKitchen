@@ -37,7 +37,7 @@ async function checkRate(uid: string): Promise<"ok" | "limited"> {
   }
 }
 
-const FIXABLE_FIELDS = ["category", "protein", "difficulty", "noCook", "prepTime", "cookTime", "servings", "seasons", "heat"] as const;
+const FIXABLE_FIELDS = ["category", "protein", "difficulty", "noCook", "prepTime", "cookTime", "restTime", "servings", "seasons", "heat"] as const;
 const FLAG_FIELDS = ["title", "description", "ingredients", "instructions", "tags"] as const;
 const ALLOWED = {
   category: ["starters-snacks","breakfast-brunch","soups","stews","curry","mains","seafood","sides-salads","baking-breads","cakes","desserts","jams-preserves","sauces-condiments","drinks","braai","bbq","holiday-specials"],
@@ -60,16 +60,17 @@ Look for problems like:
 - Placeholder text left in a field — a description that just says "Description", a title of "Untitled", an ingredient of "ingredient 1", "TBC", "lorem ipsum" and the like
 - Seasons that contradict the dish only when blatant
 
-TIMES — the app shows prepTime + cookTime as the recipe's Total, and families plan dinner on it, so check the method against it:
-- prepTime is hands-on time; cookTime is time on heat (oven, hob, grill, air fryer). Add up the durations the method states (e.g. "bake blind for 10 minutes ... bake for 40 minutes" = 50 on heat). Flag cookTime or prepTime only when it is clearly out — off by more than a third, or by more than 20 minutes — and give the corrected integer as the fix.
-- UNATTENDED time is the big one. If the method requires chilling, resting, marinating, proving, rising, soaking, freezing, setting, cooling before serving, or leaving something "overnight", and those waits add up to 30 minutes or more, the Total shown to the cook is wrong and there is no time field for it. Report this ONCE, on the "description" field with fix null, in the form: "The method needs about <total> of <chilling/proving/etc.> that the times don't show — Total will read as <prepTime+cookTime> min. Say so in the description (e.g. 'plus 3 hours chilling') so nobody starts it at 5pm." Do not also file it under prepTime or cookTime, and do not fold unattended time into either.
+TIMES — the app shows prepTime + cookTime + restTime as the recipe's Total, and families plan dinner on it, so check the method against all three:
+- prepTime is hands-on time; cookTime is time on heat (oven, hob, grill, air fryer); restTime is UNATTENDED time — chilling, resting, marinating, proving, rising, soaking, freezing, setting, cooling before serving, "overnight" (= 720). Add up the durations the method states for each (e.g. "bake blind for 10 minutes ... bake for 40 minutes" = 50 on heat; "refrigerate for at least two hours ... in the fridge for an hour" = 180 rest).
+- Flag a time only when it is clearly out — off by more than a third, or by more than 20 minutes — and give the corrected integer as the fix. A missing restTime (0) when the method needs 30 minutes or more of unattended time IS clearly out: flag restTime with the total as the fix, and say what the wait is for.
+- Unattended time folded into prepTime or cookTime (a 1470-minute prep that is really a 24-hour soak) is two issues: the corrected prepTime/cookTime, and the restTime that should carry it.
 
 Do NOT flag: style, phrasing, missing optional data (story, tags, photos), a genuinely empty description, or anything subjective. If the data is coherent, return an empty list. Be conservative — a false alarm erodes trust.
 
 Return ONLY valid JSON (no markdown):
-{"issues": [{"field": "<one of: category|protein|difficulty|noCook|prepTime|cookTime|servings|seasons|heat|title|description|ingredients|instructions|tags>", "problem": "<one plain sentence a home cook understands>", "fix": <corrected value for that field, or null if only a human can decide>}]}
+{"issues": [{"field": "<one of: category|protein|difficulty|noCook|prepTime|cookTime|restTime|servings|seasons|heat|title|description|ingredients|instructions|tags>", "problem": "<one plain sentence a home cook understands>", "fix": <corrected value for that field, or null if only a human can decide>}]}
 
-fix value types: category/protein/difficulty = string from the app's allowed values; noCook = true/false; prepTime/cookTime/servings/heat = integer; seasons = array of season strings. For title/description/ingredients/instructions/tags, fix must be null (flag only).`;
+fix value types: category/protein/difficulty = string from the app's allowed values; noCook = true/false; prepTime/cookTime/restTime/servings/heat = integer; seasons = array of season strings. For title/description/ingredients/instructions/tags, fix must be null (flag only).`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
           else if (field === "protein" && ALLOWED.protein.includes(String(i.fix))) fix = String(i.fix);
           else if (field === "difficulty" && ALLOWED.difficulty.includes(String(i.fix))) fix = String(i.fix);
           else if (field === "noCook" && typeof i.fix === "boolean") fix = String(i.fix);
-          else if (["prepTime", "cookTime", "servings", "heat"].includes(field)) {
+          else if (["prepTime", "cookTime", "restTime", "servings", "heat"].includes(field)) {
             const n = Number(i.fix);
             if (Number.isFinite(n) && n >= 0 && n <= 6000) fix = String(Math.round(n));
           } else if (field === "seasons" && Array.isArray(i.fix)) {

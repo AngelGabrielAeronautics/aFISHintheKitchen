@@ -40,6 +40,7 @@ interface LearnRecipeInput {
   category?: string;
   prepTime?: number;
   cookTime?: number;
+  restTime?: number;
   servings?: number;
   difficulty?: string;
   ingredients?: string[];
@@ -64,6 +65,7 @@ function sanitizeRecipe(input: LearnRecipeInput): { ok: true; recipe: Record<str
       category: String(input.category ?? "other"),
       prepTime: Number.isFinite(input.prepTime) ? Number(input.prepTime) : 0,
       cookTime: Number.isFinite(input.cookTime) ? Number(input.cookTime) : 0,
+      restTime: Number.isFinite(input.restTime) ? Number(input.restTime) : 0,
       servings: Number.isFinite(input.servings) ? Number(input.servings) : 4,
       difficulty: ["Easy", "Medium", "Hard"].includes(String(input.difficulty)) ? String(input.difficulty) : "Medium",
       ingredients,

@@ -13,7 +13,7 @@ interface RecipeCardProps {
 
 export default function RecipeCard({ recipe }: RecipeCardProps) {
   const category = getCategoryBySlug(recipe.category);
-  const totalTime = recipe.prepTime + recipe.cookTime;
+  const totalTime = recipe.prepTime + recipe.cookTime + (recipe.restTime ?? 0);
   const [iconError, setIconError] = useState(false);
 
   return (

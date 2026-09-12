@@ -140,6 +140,7 @@ export async function copyCookbook(
       category: r.category ?? "other",
       prepTime: r.prepTime ?? 0,
       cookTime: r.cookTime ?? 0,
+      restTime: r.restTime ?? 0,
       noCook: r.noCook ?? null,
       servings: r.servings ?? 0,
       difficulty: r.difficulty ?? null,

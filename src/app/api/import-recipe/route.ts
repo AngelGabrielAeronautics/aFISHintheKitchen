@@ -24,7 +24,7 @@ const SYSTEM_PROMPT = `You are a recipe extraction assistant. You are given a re
 ${RECIPE_JSON_SPEC}
 
 Extra rules for extraction:
-- Estimate prepTime and cookTime if they are not stated.
+- Estimate prepTime, cookTime and restTime if they are not stated.
 - Pasted text often carries the surrounding page with it — navigation, adverts, cookie notices, comment threads, "jump to recipe", a long personal story before the recipe. Ignore all of it and extract only the recipe.
 - If you cannot read or extract a recipe, return: {"error": "Could not extract a recipe from this."}`;
 
