@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { recordAiCall } from "@/lib/ai-usage";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
@@ -96,7 +97,10 @@ export async function POST(req: NextRequest) {
 
     const response = await client.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 2000,
+      // ⚠ 2000 cut the JSON off mid-issue on a recipe with a lot wrong with it
+      // (Reuben's pastrami: 24h soak + four flags) and the cook saw "didn't
+      // complete" three times in a row. The sanitiser caps issues at 10 anyway.
+      max_tokens: 4000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: `Audit this recipe's data:\n${JSON.stringify(recipe).slice(0, 30000)}` }],
     });
@@ -119,6 +123,7 @@ export async function POST(req: NextRequest) {
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
+      reportError(new Error("check-recipe: model output was not JSON"), { route: "check-recipe", stage: "parse", stop: response.stop_reason ?? "", head: jsonStr.slice(0, 200) });
       return NextResponse.json({ error: "The check didn't complete — please try again." }, { status: 422 });
     }
 
@@ -152,6 +157,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, issues });
   } catch (err) {
     console.error("check-recipe error:", err);
+    reportError(err, { route: "check-recipe", stage: "request" });
     return NextResponse.json({ error: "The check failed. Please try again." }, { status: 500 });
   }
 }
