@@ -34,9 +34,12 @@ export interface StepIngredientMap {
   steps: Record<string, number[]>;
   at: string;
   model: string;
+  /** Bumped when the prompt changes so stored maps are recomputed; the apps ignore it. */
+  v: number;
 }
 
 const MODEL = "claude-sonnet-5";
+const PROMPT_VERSION = 2;
 const HEADER = "## ";
 
 export function stepIngredientsHash(ingredients: string[], instructions: string[]): string {
@@ -50,7 +53,8 @@ const SYSTEM_PROMPT = `You link the steps of a recipe to the ingredient lines ea
 You receive the ingredient lines and the method steps, each with an index. Lines beginning "## " are section headings, not ingredients or steps.
 
 For every step, list the indexes of the ingredient lines the step USES — adds, mixes, cooks, coats with, pours over, or otherwise handles. Read for meaning, not keywords:
-- Group references resolve to their members: "the dry ingredients" is the flour, sugar, salt and ground almonds; "the eggs" includes a listed yolk; "the remaining chocolate" is the chocolate line; "the filling" or "the sauce" when combined means that section's lines.
+- Group references to RAW ingredients resolve to their members: "the dry ingredients" is the flour, sugar, salt and ground almonds; "the eggs" includes a listed yolk; "the remaining chocolate" is the chocolate line.
+- A FINISHED component made in an earlier step — "the béchamel", "the pastry", "the filling", "the marinade" — is not re-listed when a later step uses it whole. Those lines belong to the step that made it; the cook has already combined them.
 - A step under a section heading ("## The Pastry") draws from that section's ingredients unless it plainly names another.
 - Incidental mentions are NOT uses: flour for dusting the bench, water for a bain-marie, oil for greasing a tin — unless the list has a line for exactly that.
 - Steps that only bake, rest, chill, or serve what was already assembled use nothing new. "Serve with crème fraîche" DOES use a "to serve" line.
@@ -117,6 +121,10 @@ export async function computeStepIngredients(
   return steps;
 }
 
+function isCurrent(stored: Partial<StepIngredientMap> | undefined, hash: string): boolean {
+  return stored?.hash === hash && stored?.v === PROMPT_VERSION;
+}
+
 /**
  * Bring one recipe's map up to date. "current" means the stored hash already
  * matches; "skipped" means there was nothing to map (drafts with no method).
@@ -135,14 +143,14 @@ export async function refreshStepIngredients(
   if (ingredients.length === 0 || instructions.length === 0) return "skipped";
 
   const hash = stepIngredientsHash(ingredients, instructions);
-  if (r.stepIngredients?.hash === hash) return "current";
+  if (isCurrent(r.stepIngredients, hash)) return "current";
 
   const steps = await computeStepIngredients(ingredients, instructions, {
     uid: usage.uid,
     householdId: r.householdId,
     route: usage.route,
   });
-  const map: StepIngredientMap = { hash, steps, at: new Date().toISOString(), model: MODEL };
+  const map: StepIngredientMap = { hash, steps, at: new Date().toISOString(), model: MODEL, v: PROMPT_VERSION };
   await ref.update({ stepIngredients: map });
   return "written";
 }
@@ -162,7 +170,7 @@ export async function sweepStepIngredients(db: Firestore, limit: number): Promis
     const ingredients: string[] = Array.isArray(r.ingredients) ? r.ingredients.map(String) : [];
     const instructions: string[] = Array.isArray(r.instructions) ? r.instructions.map(String) : [];
     if (ingredients.length === 0 || instructions.length === 0) continue;
-    if (r.stepIngredients?.hash === stepIngredientsHash(ingredients, instructions)) continue;
+    if (isCurrent(r.stepIngredients, stepIngredientsHash(ingredients, instructions))) continue;
     try {
       if ((await refreshStepIngredients(db, d.id, { route: "step-ingredients/sweep" })) === "written") written++;
     } catch (err) {
