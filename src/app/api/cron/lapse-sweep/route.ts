@@ -21,6 +21,7 @@ import { copyGiftedImages } from "@/lib/cookbook-copy";
 import { reportError } from "@/lib/error-reporting";
 import { recordHeartbeat } from "@/lib/heartbeat";
 import { refreshReachStats } from "@/lib/reach";
+import { sweepStepIngredients } from "@/lib/step-ingredients";
 
 const TRIAL_WARNING_DAYS = 3;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.afishinthekitchen.com"; // email the owner this many days before trial end
@@ -31,6 +32,9 @@ export const dynamic = "force-dynamic";
 // Daily lapse sweep (Vercel Cron). Advances each lapsed household along the
 // ladder: active → read-only (day 7) → suspended (day 30) → deleted (day 365).
 // The webhook only sets the starting state; this job moves it over time.
+// Up to 15 model calls for step-ingredient maps ride this run.
+export const maxDuration = 300;
+
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -461,8 +465,18 @@ export async function GET(req: NextRequest) {
     reportError(err, { route: "cron/lapse-sweep", step: "reach" });
   }
 
+  // Cook Mode's per-step ingredient maps (lib/step-ingredients): anything
+  // saved without a refresh, or edited since, gets mapped here. Capped so a
+  // cold backfill spreads over a few nights instead of eating the run.
+  let stepMaps: unknown = null;
+  try {
+    stepMaps = await sweepStepIngredients(db, 15);
+  } catch (err) {
+    reportError(err, { route: "cron/lapse-sweep", step: "step-ingredients" });
+  }
+
   // ⚠ Recorded AFTER the work, so a heartbeat means "finished", not "started".
   await recordHeartbeat("lapse-sweep", summary);
 
-  return NextResponse.json({ ok: true, ...summary, nudges, reach });
+  return NextResponse.json({ ok: true, ...summary, nudges, reach, stepMaps });
 }
