@@ -8,6 +8,7 @@ import ContinueCooking from "@/components/ContinueCooking";
 import ScrollToTop from "@/components/ScrollToTop";
 import HouseholdStateGate from "@/components/HouseholdStateGate";
 import EmailVerificationGate from "@/components/EmailVerificationGate";
+import MetricoolTracker from "@/components/MetricoolTracker";
 import "./globals.css";
 
 const francoisOne = Francois_One({
@@ -89,6 +90,7 @@ export default function RootLayout({
           <ContinueCooking />
         </Providers>
         <Analytics />
+        <MetricoolTracker />
       </body>
     </html>
   );

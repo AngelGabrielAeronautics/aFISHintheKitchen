@@ -106,7 +106,8 @@ export default function PrivacyPage() {
             <p>We use a small number of trusted providers to run the service, acting on our instructions:</p>
             <ul className="list-disc space-y-2 pl-5">
               <li><strong>Google Firebase</strong> &mdash; sign-in, database, and file storage.</li>
-              <li><strong>Vercel</strong> &mdash; application hosting.</li>
+              <li><strong>Vercel</strong> &mdash; application hosting and anonymous visitor analytics.</li>
+              <li><strong>Metricool</strong> &mdash; anonymous visitor analytics on our public pages (page address, screen size and the site you arrived from). It sets no cookies, and it is not used on shared-recipe, shared-menu, gift, invitation or account pages.</li>
               <li><strong>Twilio SendGrid</strong> &mdash; sending transactional emails.</li>
               <li><strong>Anthropic</strong> &mdash; AI recipe import, recipe checks and tag suggestions (only when you use them).</li>
               <li><strong>Google</strong> (Gemini API) &mdash; AI photo enhancement (only when you use it).</li>
