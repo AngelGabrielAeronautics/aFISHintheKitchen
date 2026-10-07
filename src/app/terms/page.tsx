@@ -4,6 +4,7 @@ import { TERMS_UPDATED, OPERATOR } from "@/lib/legal";
 export const metadata = {
   title: "Terms of Service",
   description: "The terms for using A Fish in the Kitchen.",
+  alternates: { canonical: "/terms" },
 };
 
 const UPDATED = TERMS_UPDATED;

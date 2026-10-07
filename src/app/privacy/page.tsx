@@ -5,6 +5,7 @@ export const metadata = {
   title: "Privacy Policy",
   description:
     "How A Fish in the Kitchen collects, uses, and protects your information.",
+  alternates: { canonical: "/privacy" },
 };
 
 const UPDATED = PRIVACY_UPDATED;

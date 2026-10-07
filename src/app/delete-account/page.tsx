@@ -30,6 +30,7 @@ export const metadata = {
   title: "Delete your account",
   description:
     "How to delete your A Fish in the Kitchen account and the data associated with it.",
+  alternates: { canonical: "/delete-account" },
 };
 
 export default function DeleteAccountPage() {

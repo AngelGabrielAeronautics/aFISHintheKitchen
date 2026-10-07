@@ -42,6 +42,13 @@ export const metadata: Metadata = {
   description:
     "Your family's private cookbook app. Keep the recipes, stories, and cooks together — plan the week, cook hands-free, and pass it all down.",
   metadataBase: new URL("https://www.afishinthekitchen.com"),
+  // Self-referencing canonical. AppAgg.com links to the landing page with
+  // ?from=…&utm_* on it, and Search Console flagged that copy "Duplicate
+  // without user-selected canonical" (2026-10-05) — Google had to guess which
+  // of the two was the real page. ⚠ Child pages INHERIT this, so every public
+  // page sets its own `alternates.canonical`; a client-component page (/faq)
+  // needs a layout.tsx to do it.
+  alternates: { canonical: "/" },
   openGraph: {
     title: "A Fish in the Kitchen — The food your family is built on",
     description:

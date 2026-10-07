@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   title: "Gift a cookbook — A Fish in the Kitchen",
   description:
     "Gift someone a year of their own family cookbook — and add a copy of yours with it.",
+  alternates: { canonical: "/gift" },
 };
 
 const WHAT_THEY_GET = [

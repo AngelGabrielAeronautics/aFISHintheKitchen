@@ -5,6 +5,7 @@ import Reveal from "@/components/Reveal";
 export const metadata = {
   title: "Our Story · A Fish in the Kitchen",
   description: "How a paperback called the Kookbook — written by a grandfather, asked for by a granddaughter — became this app.",
+  alternates: { canonical: "/our-story" },
 };
 
 export default function OurStoryPage() {
