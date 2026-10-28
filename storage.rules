@@ -1,57 +1,117 @@
 rules_version = '2';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cloud Storage — tightened 2026-10-28 (audit item A3).
+//
+// Before this, every write rule was only "signed in + size + type": any account
+// could OVERWRITE or DELETE any object, including the starter-recipe photos that
+// every cookbook shares (see project_storage_objects_are_shared), and park
+// 50 MB videos on our bill.
+//
+// The rules now hold to three things:
+//   1. CREATE only. No client ever overwrites or deletes an object — every app
+//      upload uses a unique filename (UUID / millisecond timestamp). Replacing
+//      or removing a file is server-side (Admin SDK) only.
+//   2. Household-scoped paths check membership AND an active cookbook, the same
+//      gate as Firestore's canWrite().
+//   3. Legacy paths (recipe-images/, tip-images/) carry no household id, so the
+//      best they can do is a verified account + create-only + size/type caps.
+//      The 1.13 apps still upload there; move both apps to {hid}/… paths and
+//      these can become read-only.
+// ─────────────────────────────────────────────────────────────────────────────
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Legacy paths (existing data)
+
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    // ⚠ Explicit, not left to `allow create`: an upload onto an existing path
+    // can be evaluated as a create, and that is exactly the overwrite this
+    // file exists to stop (caught in the emulator test).
+    function isNew() {
+      return resource == null;
+    }
+    function image(maxMb) {
+      return request.resource.size < maxMb * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    function video(maxMb) {
+      return request.resource.size < maxMb * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+    // Android 1.13 uploads hero + tip media with no content type set; the
+    // membership check is what protects those paths.
+    function untyped(maxMb) {
+      return request.resource.size < maxMb * 1024 * 1024
+        && (request.resource.contentType == null
+            || request.resource.contentType == 'application/octet-stream');
+    }
+    // Member of an ACTIVE cookbook. activeMember() mirrors firestore.rules
+    // canWrite(); memberOfActive() skips the verified-email check, matching the
+    // Firestore rule that lets an owner change branding before verifying.
+    function memberOfActive(hid) {
+      let hh = firestore.get(/databases/(default)/documents/households/$(hid)).data;
+      return request.auth != null
+        && request.auth.uid in hh.memberIds
+        && hh.get('accessState', 'active') == 'active';
+    }
+    function activeMember(hid) {
+      return verified() && memberOfActive(hid);
+    }
+
+    // ── Legacy, slug/tip-keyed paths (all live app uploads today) ──
     match /recipe-images/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 10 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+      allow create: if isNew() && verified() && image(10);
+    }
+    // Recipe videos live under the recipe's folder. They were refused outright
+    // before (the folder only took image/*), so no recipe video ever uploaded.
+    match /recipe-images/{slug}/video/{file} {
+      allow create: if isNew() && verified() && video(50);
     }
     match /tip-images/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 50 * 1024 * 1024
-                   && (request.resource.contentType.matches('image/.*')
-                       || request.resource.contentType.matches('video/.*'));
+      allow create: if isNew() && verified() && (image(10) || video(50));
     }
 
-    // Household-scoped paths (new data)
+    // ── Household-scoped paths ──
     match /{householdId}/recipe-images/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 10 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+      allow create: if isNew() && activeMember(householdId) && (image(10) || video(50));
     }
     match /{householdId}/tip-images/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 50 * 1024 * 1024
-                   && (request.resource.contentType.matches('image/.*')
-                       || request.resource.contentType.matches('video/.*'));
+      allow create: if isNew() && activeMember(householdId) && (image(10) || video(50));
     }
-
-    // Shared hero-image presets (app content, uploaded by us — read-only).
-    match /hero-presets/{allPaths=**} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    // Member profile photos (any household member may set them)
     match /{householdId}/avatars/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+      allow create: if isNew() && activeMember(householdId) && image(5);
     }
-
-    // Household logos
     match /{householdId}/branding/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+      allow create: if isNew() && memberOfActive(householdId) && image(5);
+    }
+
+    // Android 1.13 writes these two. They had NO rule, so every Android hero
+    // photo and tip photo/video upload was refused (nothing has ever landed in
+    // either folder).
+    match /hero/{householdId}/{file} {
+      allow read: if true;
+      allow create: if isNew() && memberOfActive(householdId) && (image(5) || untyped(5));
+    }
+    match /tips/{householdId}/{file} {
+      allow read: if true;
+      allow create: if isNew() && activeMember(householdId)
+        && (image(10) || video(50) || untyped(50));
+    }
+
+    // App content we upload ourselves (server-side) — read-only to clients.
+    match /hero-presets/{allPaths=**} {
+      allow read: if true;
+    }
+    match /avatar-presets/{allPaths=**} {
+      allow read: if true;
     }
   }
 }
