@@ -3,7 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { MAX_SEATS, MAX_GUEST_BOOKS } from "@/lib/access";
 import { INVITES, syncLegacyMirror, type InviteDoc } from "@/lib/invites";
-import { JOIN_CODES, loadJoinCode, isOpen } from "@/lib/join-codes";
+import { JOIN_CODES, loadJoinCode, isOpen, type JoinCode } from "@/lib/join-codes";
 import { addInboxNotification, sendHouseholdPush } from "@/lib/push-send";
 
 export const runtime = "nodejs";
@@ -199,45 +199,6 @@ export async function POST(req: NextRequest) {
 
 type Joiner = { uid: string; emailLower: string; tokenName?: string };
 
-/** Add `uid` to `householdId` as a member, with a profile card, in one batch. */
-async function addMember(
-  db: ReturnType<typeof getAdminDb>,
-  householdId: string,
-  who: Joiner,
-  displayName: string,
-  extraWrites?: (batch: FirebaseFirestore.WriteBatch) => void,
-) {
-  const now = new Date().toISOString();
-  const profileCount = (
-    await db.collection("members").where("householdId", "==", householdId).count().get()
-  ).data().count;
-  const batch = db.batch();
-  batch.set(db.collection("householdMembers").doc(), {
-    userId: who.uid,
-    householdId,
-    displayName,
-    role: "member",
-    joinedAt: now,
-  });
-  batch.set(db.collection("members").doc(), {
-    householdId,
-    userId: who.uid,
-    order: profileCount,
-    name: displayName,
-    title: "",
-    bio: "",
-    goodAt: [],
-    loves: [],
-    hates: [],
-    favouriteFromBook: "",
-    favouriteNotInBook: "",
-  });
-  batch.update(db.collection("households").doc(householdId), { memberIds: FieldValue.arrayUnion(who.uid) });
-  extraWrites?.(batch);
-  await batch.commit();
-  await announceJoin(db, householdId, who.uid, displayName);
-}
-
 /**
  * "Mum joined the cookbook" — to everyone already in it. The most reactivating
  * push there is: the person who sent the invite has been waiting for exactly
@@ -285,37 +246,91 @@ async function redeemCode(db: ReturnType<typeof getAdminDb>, raw: string, who: J
   }
   if (hh.ownerId === who.uid) return NextResponse.json({ error: "own_cookbook" }, { status: 409 });
 
-  const mineSnap = await db.collection("householdMembers").where("userId", "==", who.uid).get();
-  if (mineSnap.docs.some((d) => d.data().householdId === jc.householdId)) {
-    return NextResponse.json({ ok: true, joined: [], alreadyMember: true, alreadyMemberOf: [jc.householdId], householdId: jc.householdId });
-  }
-  const guestBooks = mineSnap.docs.filter((d) => d.data().role === "member").length;
-  if (guestBooks >= MAX_GUEST_BOOKS) {
-    return NextResponse.json({ error: "guest_book_limit", limit: MAX_GUEST_BOOKS }, { status: 409 });
-  }
-
-  const [activeMembers, subSnap] = await Promise.all([
-    db.collection("householdMembers").where("householdId", "==", jc.householdId).where("role", "==", "member").get(),
-    db.collection("subscriptions").doc(hh.ownerId).get(),
-  ]);
-  const extraSeats: number = subSnap.exists ? (subSnap.data()?.extraSeats ?? 0) : 0;
-  if (activeMembers.size >= MAX_SEATS + extraSeats) {
-    return NextResponse.json({ error: "seat_limit", limit: MAX_SEATS + extraSeats }, { status: 409 });
-  }
-
   // The name the owner wrote on the code beats the account's display name —
   // identity in a cookbook is the NAME, and "Michael" is what his brother
   // will look for, not whatever Apple put on the account.
   const displayName = jc.forName || who.tokenName || who.emailLower;
   const now = new Date().toISOString();
-  await addMember(db, jc.householdId, who, displayName, (batch) => {
-    batch.update(db.collection(JOIN_CODES).doc(jc.code), {
-      status: "used",
-      usedAt: now,
-      usedBy: who.uid,
-      usedByName: displayName,
+  const subSnap = await db.collection("subscriptions").doc(hh.ownerId).get();
+  const extraSeats: number = subSnap.exists ? (subSnap.data()?.extraSeats ?? 0) : 0;
+  const seatLimit = MAX_SEATS + extraSeats;
+  const profileCount = (
+    await db.collection("members").where("householdId", "==", jc.householdId).count().get()
+  ).data().count;
+
+  // ⚠ ONE TRANSACTION re-checks the code, the seat count and the joiner's
+  // memberships, then writes the join (audit A10, 2026-10-28). These were
+  // separate reads before the batch, so two people redeeming one code at the
+  // same moment both got in, and a double-tap made duplicate membership rows
+  // and profile cards. Every redemption reads AND writes the household doc,
+  // so concurrent joins to one book serialise and the seat count is current.
+  const codeRef = db.collection(JOIN_CODES).doc(jc.code);
+  const hhRef = db.collection("households").doc(jc.householdId);
+  let outcome: string;
+  try {
+    outcome = await db.runTransaction<string>(async (tx) => {
+      const [codeSnap, hhNow, seats, mine] = await Promise.all([
+        tx.get(codeRef),
+        tx.get(hhRef),
+        tx.get(db.collection("householdMembers").where("householdId", "==", jc.householdId).where("role", "==", "member")),
+        tx.get(db.collection("householdMembers").where("userId", "==", who.uid)),
+      ]);
+      if (mine.docs.some((d) => d.data().householdId === jc.householdId)) return "already_member";
+      const code = codeSnap.data();
+      if (!code || code.status === "used") return "code_used";
+      if (!isOpen({ ...(code as JoinCode), code: jc.code })) return "code_expired";
+      if (!hhNow.exists || (hhNow.data()!.accessState ?? "active") !== "active") return "household_inactive";
+      if (mine.docs.filter((d) => d.data().role === "member").length >= MAX_GUEST_BOOKS) return "guest_book_limit";
+      if (seats.size >= seatLimit) return "seat_limit";
+
+      // Deterministic id: a second, racing write for the same person + book
+      // fails the create instead of adding a duplicate row.
+      tx.create(db.collection("householdMembers").doc(`${who.uid}_${jc.householdId}`), {
+        userId: who.uid,
+        householdId: jc.householdId,
+        displayName,
+        role: "member",
+        joinedAt: now,
+      });
+      tx.set(db.collection("members").doc(), {
+        householdId: jc.householdId,
+        userId: who.uid,
+        order: profileCount,
+        name: displayName,
+        title: "",
+        bio: "",
+        goodAt: [],
+        loves: [],
+        hates: [],
+        favouriteFromBook: "",
+        favouriteNotInBook: "",
+      });
+      tx.update(hhRef, { memberIds: FieldValue.arrayUnion(who.uid) });
+      tx.update(codeRef, { status: "used", usedAt: now, usedBy: who.uid, usedByName: displayName });
+      return "joined";
     });
-  });
+  } catch (err) {
+    // A racing double-tap from the same person loses on the deterministic
+    // membership id — they ARE in, so say so rather than a 500.
+    if ((err as { code?: number }).code === 6) outcome = "already_member";
+    else throw err;
+  }
+
+  switch (outcome) {
+    case "already_member":
+      return NextResponse.json({ ok: true, joined: [], alreadyMember: true, alreadyMemberOf: [jc.householdId], householdId: jc.householdId });
+    case "code_used":
+      return NextResponse.json({ error: "code_used" }, { status: 409 });
+    case "code_expired":
+      return NextResponse.json({ error: "code_expired" }, { status: 410 });
+    case "household_inactive":
+      return NextResponse.json({ error: "household_inactive" }, { status: 403 });
+    case "guest_book_limit":
+      return NextResponse.json({ error: "guest_book_limit", limit: MAX_GUEST_BOOKS }, { status: 409 });
+    case "seat_limit":
+      return NextResponse.json({ error: "seat_limit", limit: seatLimit }, { status: 409 });
+  }
+  await announceJoin(db, jc.householdId, who.uid, displayName);
   try {
     await getAdminAuth().updateUser(who.uid, { emailVerified: true });
   } catch {

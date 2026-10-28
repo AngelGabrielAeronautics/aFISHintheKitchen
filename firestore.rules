@@ -33,8 +33,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
+    // Keyed by email, so the email must be VERIFIED — an unverified sign-up
+    // for a listed address with no account behind it was full admin.
     function isSuperAdmin() {
-      return isSignedIn()
+      return isEmailVerified()
         && exists(/databases/$(database)/documents/config/superAdmins)
         && email() in get(/databases/$(database)/documents/config/superAdmins).data.emails;
     }

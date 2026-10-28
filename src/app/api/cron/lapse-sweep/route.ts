@@ -35,7 +35,21 @@ export const dynamic = "force-dynamic";
 // Up to 15 model calls for step-ingredient maps ride this run.
 export const maxDuration = 300;
 
+// ⚠ Every per-cookbook step below is wrapped so ONE bad document can't stop
+// the rest (audit A12, 2026-10-28). Before, a single throw in the ladder loop
+// halted billing enforcement, the nudges and the heartbeat for every other
+// book, and the only trace was a 500 in Vercel's logs.
 export async function GET(req: NextRequest) {
+  try {
+    return await runSweep(req);
+  } catch (err) {
+    console.error("lapse-sweep failed:", err);
+    reportError(err, { route: "cron/lapse-sweep", stage: "top-level" });
+    return NextResponse.json({ error: "sweep_failed" }, { status: 500 });
+  }
+}
+
+async function runSweep(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -70,6 +84,7 @@ export async function GET(req: NextRequest) {
   let trialsExpired = 0;
   let trialWarningsSent = 0;
   let staleStoreTrials = 0;
+  let itemFailures = 0;
   const trialing = await db.collection("subscriptions").where("status", "==", "trialing").get();
   for (const subSnap of trialing.docs) {
     const sub = subSnap.data();
@@ -109,12 +124,17 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    await subSnap.ref.update({
-      status: "canceled",
-      lapsedAt: sub.trialEndsAt,
-      updatedAt: now.toISOString(),
-    });
-    trialsExpired++;
+    try {
+      await subSnap.ref.update({
+        status: "canceled",
+        lapsedAt: sub.trialEndsAt,
+        updatedAt: now.toISOString(),
+      });
+      trialsExpired++;
+    } catch (err) {
+      itemFailures++;
+      reportError(err, { route: "cron/lapse-sweep", stage: "trial-expire", subId: subSnap.id });
+    }
   }
 
   // Deliver gift cards that are due: post-dated ones, and any whose send failed
@@ -281,12 +301,17 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    await subSnap.ref.update({
-      status: "canceled",
-      lapsedAt: sub.currentPeriodEnd,
-      updatedAt: now.toISOString(),
-    });
-    giftsExpired++;
+    try {
+      await subSnap.ref.update({
+        status: "canceled",
+        lapsedAt: sub.currentPeriodEnd,
+        updatedAt: now.toISOString(),
+      });
+      giftsExpired++;
+    } catch (err) {
+      itemFailures++;
+      reportError(err, { route: "cron/lapse-sweep", stage: "gift-expire", subId: subSnap.id });
+    }
   }
 
   // Only unpaid subscriptions drive the ladder; recovered ones are reset to
@@ -360,32 +385,38 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const { accessState, shouldDelete } = computeAccessStateFromLapse(sub.lapsedAt, now);
-    const hhRef = db.collection("households").doc(sub.householdId);
+    try {
+      const { accessState, shouldDelete } = computeAccessStateFromLapse(sub.lapsedAt, now);
+      const hhRef = db.collection("households").doc(sub.householdId);
 
-    if (shouldDelete) {
-      if (hardDelete) {
-        await deleteHouseholdData(sub.householdId, subSnap.id);
-        deleted++;
-      } else {
-        // Safety default: mark for review instead of unattended cascade deletion.
-        const deleteAfter = new Date(
-          new Date(sub.lapsedAt).getTime() + DELETE_DAYS * 86_400_000
-        ).toISOString();
-        await hhRef.set(
-          { accessState: "suspended", deleteAfter, stateChangedAt: now.toISOString() },
-          { merge: true }
-        );
-        flaggedForDelete++;
-        console.warn(`lapse-sweep: household ${sub.householdId} past delete horizon (hard-delete disabled)`);
+      if (shouldDelete) {
+        if (hardDelete) {
+          await deleteHouseholdData(sub.householdId, subSnap.id);
+          deleted++;
+        } else {
+          // Safety default: mark for review instead of unattended cascade deletion.
+          const deleteAfter = new Date(
+            new Date(sub.lapsedAt).getTime() + DELETE_DAYS * 86_400_000
+          ).toISOString();
+          await hhRef.set(
+            { accessState: "suspended", deleteAfter, stateChangedAt: now.toISOString() },
+            { merge: true }
+          );
+          flaggedForDelete++;
+          console.warn(`lapse-sweep: household ${sub.householdId} past delete horizon (hard-delete disabled)`);
+        }
+        continue;
       }
-      continue;
-    }
 
-    const hhSnap = await hhRef.get();
-    if (hhSnap.exists && (hhSnap.data()?.accessState ?? "active") !== accessState) {
-      await hhRef.update({ accessState, stateChangedAt: now.toISOString() });
-      transitioned++;
+      const hhSnap = await hhRef.get();
+      if (hhSnap.exists && (hhSnap.data()?.accessState ?? "active") !== accessState) {
+        await hhRef.update({ accessState, stateChangedAt: now.toISOString() });
+        transitioned++;
+      }
+    } catch (err) {
+      itemFailures++;
+      console.error(`lapse-sweep: ladder step failed for ${subSnap.id}:`, err);
+      reportError(err, { route: "cron/lapse-sweep", stage: "ladder", subId: subSnap.id, householdId: sub.householdId });
     }
   }
 
@@ -406,6 +437,7 @@ export async function GET(req: NextRequest) {
     flaggedForDelete,
     deleted,
     hardDelete,
+    itemFailures,
   };
 
   // Reach rides this cron rather than one of its own — it is a once-a-day

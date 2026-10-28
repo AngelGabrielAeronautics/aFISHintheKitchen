@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { TRIAL_DAYS } from "@/lib/access";
 import { STARTER_RECIPES, SAMPLE_MEMBERS } from "@/lib/starter-content";
+import { reportError } from "@/lib/error-reporting";
 
 export const runtime = "nodejs";
 
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
     const db = getAdminDb();
 
     // One owned cookbook per user — return the existing one if present.
+    // (Fast path; the transaction below is what actually enforces it.)
     const existing = await db.collection("households").where("ownerId", "==", uid).limit(1).get();
     if (!existing.empty) {
       return NextResponse.json({ ok: true, householdId: existing.docs[0].id, existed: true });
@@ -64,38 +66,80 @@ export async function POST(req: NextRequest) {
     }
 
     const createdAt = new Date().toISOString();
-    const hhRef = await db.collection("households").add({
-      name,
-      slug,
-      ownerId: uid,
-      memberIds: [uid],
-      customisation: { brandName: name, tagline: body.tagline?.trim() || defaultTagline, groupType },
-      plan: "free",
-      accessState: "active",
-      createdAt,
+    // Every new owner starts the 14-day trial clock. Without the subscription
+    // doc the lapse sweep never looks at the household and access is free
+    // forever. A real StoreKit purchase later overwrites provider/status via
+    // /api/billing/appstore (merge:true on the same doc).
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString();
+
+    // ⚠ ONE TRANSACTION for the book, the owner's membership, their profile
+    // card and the subscription (audit A11, 2026-10-28). These were five
+    // separate writes with the subscription last, so a failure part-way left
+    // a book with no subscription doc — free forever — and a retry then
+    // returned "existed". `ownedHouseholds/{uid}` is the lock: every create
+    // reads and writes it, so two racing requests (a double-tap) serialise and
+    // the second returns the first's book instead of making another.
+    const hhRef = db.collection("households").doc();
+    const lockRef = db.collection("ownedHouseholds").doc(uid);
+    const result = await db.runTransaction(async (tx) => {
+      const lock = await tx.get(lockRef);
+      const lockedId = lock.data()?.householdId as string | undefined;
+      if (lockedId && (await tx.get(db.collection("households").doc(lockedId))).exists) {
+        return { existed: true as const, householdId: lockedId };
+      }
+      // Books created before the lock existed have no lock doc.
+      const owned = await tx.get(db.collection("households").where("ownerId", "==", uid).limit(1));
+      if (!owned.empty) return { existed: true as const, householdId: owned.docs[0].id };
+
+      tx.set(lockRef, { householdId: hhRef.id, createdAt });
+      tx.set(hhRef, {
+        name,
+        slug,
+        ownerId: uid,
+        memberIds: [uid],
+        customisation: { brandName: name, tagline: body.tagline?.trim() || defaultTagline, groupType },
+        plan: "free",
+        accessState: "active",
+        createdAt,
+      });
+      tx.set(db.collection("householdMembers").doc(), {
+        userId: uid,
+        householdId: hhRef.id,
+        displayName: tokenName || email || "Owner",
+        role: "owner",
+        joinedAt: createdAt,
+      });
+      // The owner is a member of their own cookbook — give them a profile card
+      // (invited joiners get theirs from /api/join; owners were ghosts before).
+      tx.set(db.collection("members").doc(), {
+        householdId: hhRef.id,
+        userId: uid,                 // immutable link profile → account
+        order: 0,
+        name: tokenName || email || "Owner",
+        title: "",
+        bio: "",
+        goodAt: [],
+        loves: [],
+        hates: [],
+        favouriteFromBook: "",
+        favouriteNotInBook: "",
+      });
+      tx.set(db.collection("subscriptions").doc(uid), {
+        userId: uid,
+        householdId: hhRef.id,
+        provider: "none",
+        status: "trialing",
+        plan: null,
+        trialEndsAt,
+        hasUsedTrial: true,
+        extraSeats: 0,
+        updatedAt: createdAt,
+      });
+      return { existed: false as const, householdId: hhRef.id };
     });
-    await db.collection("householdMembers").add({
-      userId: uid,
-      householdId: hhRef.id,
-      displayName: tokenName || email || "Owner",
-      role: "owner",
-      joinedAt: createdAt,
-    });
-    // The owner is a member of their own cookbook — give them a profile card
-    // (invited joiners get theirs from /api/join; owners were ghosts before).
-    await db.collection("members").add({
-      householdId: hhRef.id,
-      userId: uid,                 // immutable link profile → account
-      order: 0,
-      name: tokenName || email || "Owner",
-      title: "",
-      bio: "",
-      goodAt: [],
-      loves: [],
-      hates: [],
-      favouriteFromBook: "",
-      favouriteNotInBook: "",
-    });
+    if (result.existed) {
+      return NextResponse.json({ ok: true, householdId: result.householdId, existed: true });
+    }
 
     // Opt-in starter content, so the new book is never an empty screen: a few
     // recipes from the founder family's Kookbook (deletable, flagged
@@ -123,25 +167,14 @@ export async function POST(req: NextRequest) {
           });
         }
       }
-      await batch.commit();
+      // The book already exists by now; a starter-content failure must not
+      // turn a successful sign-up into an error screen.
+      try {
+        await batch.commit();
+      } catch (err) {
+        reportError(err, { route: "create-household", stage: "starter-content" });
+      }
     }
-
-    // Every new owner starts the 14-day trial clock. Without this doc the
-    // lapse sweep never looks at the household and access is free forever.
-    // A real StoreKit purchase later overwrites provider/status via
-    // /api/billing/appstore (merge:true on the same doc).
-    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString();
-    await db.collection("subscriptions").doc(uid).set({
-      userId: uid,
-      householdId: hhRef.id,
-      provider: "none",
-      status: "trialing",
-      plan: null,
-      trialEndsAt,
-      hasUsedTrial: true,
-      extraSeats: 0,
-      updatedAt: createdAt,
-    });
 
     return NextResponse.json({ ok: true, householdId: hhRef.id, trialEndsAt });
   } catch (err) {

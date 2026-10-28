@@ -30,8 +30,8 @@ const STORE_TEST_EMAILS = new Set([
   "rmdjz9nbwm@privaterelay.appleid.com", // Apple's reviewer ("Test test" book)
 ]);
 
-async function mayBuyWithTestPurchase(email: string): Promise<boolean> {
-  if (!email) return false;
+async function mayBuyWithTestPurchase(email: string, verified: boolean): Promise<boolean> {
+  if (!email || !verified) return false;
   if (STORE_TEST_EMAILS.has(email)) return true;
   const snap = await getAdminDb().doc("config/superAdmins").get();
   const admins: string[] = snap.exists ? (snap.data()?.emails ?? []) : [];
@@ -55,11 +55,13 @@ export async function POST(req: NextRequest) {
     let uid: string;
     let buyerName: string;
     let buyerEmail: string;
+    let buyerVerified: boolean;
     try {
       const decoded = await getAdminAuth().verifyIdToken(token);
       uid = decoded.uid;
       buyerName = ((decoded.name as string | undefined) ?? "").trim();
       buyerEmail = (decoded.email ?? "").toLowerCase().trim();
+      buyerVerified = decoded.email_verified === true;
     } catch {
       return NextResponse.json({ error: "invalid_token" }, { status: 401 });
     }
@@ -143,7 +145,7 @@ export async function POST(req: NextRequest) {
     // A sandbox / license-tester purchase costs nothing, so it may only mint a
     // gift for the review and admin accounts. Anyone with TestFlight could
     // otherwise hand out real years for free.
-    if (isTestPurchase && !(await mayBuyWithTestPurchase(buyerEmail))) {
+    if (isTestPurchase && !(await mayBuyWithTestPurchase(buyerEmail, buyerVerified))) {
       console.warn(`gift/purchase: test purchase refused for ${uid}`);
       return NextResponse.json({ error: "test_purchase" }, { status: 400 });
     }
