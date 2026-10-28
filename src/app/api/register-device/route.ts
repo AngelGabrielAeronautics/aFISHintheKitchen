@@ -50,16 +50,28 @@ export async function POST(req: NextRequest) {
     });
 
     // Housekeeping on the device's OTHER registrations: retire the legacy
-    // token-keyed doc (a 1.10 registration this one supersedes) and any
+    // token-keyed doc (a 1.10 registration this one supersedes), any
     // registration for a book this user has since left — otherwise a leaver
-    // keeps receiving that cookbook's pushes.
+    // keeps receiving that cookbook's pushes — and ANY registration of this
+    // device under another account.
+    //
+    // ⚠ One token is one installed app, signed in as one person at a time. A
+    // row for the same token under a different uid is the previous account on
+    // this phone, left behind when sign-out couldn't unregister (offline, or
+    // Android before 1.14, which never did — audit D3). Without this the next
+    // person to use the phone received the old account's family pushes.
     const mine = await db.collection("householdMembers").where("userId", "==", uid).get();
     const myBooks = new Set(mine.docs.map((d) => d.data().householdId as string));
     const others = await registrationsFor(db, fcmToken);
     await Promise.all(
       others
-        .filter((d) => d.data().uid === uid)
-        .filter((d) => d.id === fcmToken || !myBooks.has(d.data().householdId))
+        .filter(
+          (d) =>
+            d.data().uid !== uid ||
+            d.id === fcmToken ||
+            !myBooks.has(d.data().householdId)
+        )
+        .filter((d) => d.id !== deviceTokenId(fcmToken, householdId))
         .map((d) => d.ref.delete().catch(() => {}))
     );
 
