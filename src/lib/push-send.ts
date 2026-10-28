@@ -42,7 +42,17 @@ export async function sendHouseholdPush(db: Firestore, push: HouseholdPush): Pro
 
   if (push.targetNames && push.targetNames.length > 0) {
     const wanted = new Set(push.targetNames);
+    // ⚠ Names in the app are PROFILE names (members/{id}.name, linked to the
+    // account by userId) — assignments, loves, notes. Matching only the
+    // account's displayName missed anyone whose profile is called something
+    // else ("Dylan" vs "Dylan Coppard"), so their assignment pushes never
+    // arrived (audit C5). Either name now resolves to the person.
     const uids = new Set(members.docs.filter((d) => wanted.has(d.data().displayName as string)).map((d) => d.data().userId as string));
+    const profiles = await db.collection("members").where("householdId", "==", push.householdId).get();
+    profiles.docs.forEach((d) => {
+      const p = d.data() as { name?: string; userId?: string };
+      if (p.userId && p.name && wanted.has(p.name)) uids.add(p.userId);
+    });
     targets = targets.filter((t) => uids.has(t.uid));
   }
   targets = await honourPushPrefs(db, targets, push.prefKey);
