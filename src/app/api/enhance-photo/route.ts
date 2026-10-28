@@ -3,6 +3,7 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { recordAiCall } from "@/lib/ai-usage";
 import { getStorage } from "firebase-admin/storage";
 import { randomUUID } from "crypto";
+import { checkThrottle } from "@/lib/recipe-ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // image generation can take 20-30s
@@ -24,8 +25,6 @@ export const maxDuration = 60; // image generation can take 20-30s
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const HOUR_LIMIT = 10;
 const MONTH_LIMIT = 20;
-const HOUR_MS = 60 * 60 * 1000;
-const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 const PROMPT =
   "You are a professional food photographer and food stylist. Take THIS DISH and produce the photograph " +
@@ -90,27 +89,6 @@ async function classifyImage(
   }
 }
 
-async function checkRate(uid: string): Promise<"ok" | "limited"> {
-  try {
-    const ref = getAdminDb().collection("enhanceThrottle").doc(uid);
-    const now = Date.now();
-    const data = (await ref.get()).data() as
-      | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
-      | undefined;
-    const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_MS;
-    const monthStart = monthFresh ? now : data!.monthStart!;
-    const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
-    const hourFresh = !data?.windowStart || now - data.windowStart > HOUR_MS;
-    const windowStart = hourFresh ? now : data!.windowStart!;
-    const count = hourFresh ? 0 : data?.count ?? 0;
-    if (monthCount >= MONTH_LIMIT || count >= HOUR_LIMIT) return "limited";
-    await ref.set({ windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
-    return "ok";
-  } catch (err) {
-    console.error("enhance throttle failed (continuing):", err);
-    return "ok";
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -137,6 +115,17 @@ export async function POST(req: NextRequest) {
     const mime = file.type || "image/jpeg";
     const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
 
+    // The classifier is a paid model call too, and it runs BEFORE the main
+    // counter (so a rejected photo doesn't cost a user one of their 20/month).
+    // Give it its own, looser cap — before 2026-10-28 it had none, so it could
+    // be called without limit.
+    if ((await checkThrottle("enhanceClassifyThrottle", uid, 30, 100)) !== "ok") {
+      return NextResponse.json(
+        { error: "You've tried a lot of photos recently. Try again later." },
+        { status: 429 }
+      );
+    }
+
     // Content gate before spending on the image model (and before the rate
     // counter, so a rejected photo doesn't cost a user one of their 20/month).
     const verdict = await classifyImage(base64, mime);
@@ -153,7 +142,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if ((await checkRate(uid)) === "limited") {
+    if ((await checkThrottle("enhanceThrottle", uid, HOUR_LIMIT, MONTH_LIMIT)) !== "ok") {
       return NextResponse.json(
         { error: "You've enhanced a lot of photos recently — the limit is 20 a month. Try again later." },
         { status: 429 }

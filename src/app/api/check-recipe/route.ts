@@ -3,6 +3,7 @@ import { recordAiCall } from "@/lib/ai-usage";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { reportError } from "@/lib/error-reporting";
+import { checkThrottle } from "@/lib/recipe-ai";
 
 export const runtime = "nodejs";
 
@@ -12,30 +13,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // caps are looser but still bounded.
 const HOUR_LIMIT = 30;
 const MONTH_LIMIT = 150;
-const HOUR_MS = 60 * 60 * 1000;
-const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
-async function checkRate(uid: string): Promise<"ok" | "limited"> {
-  try {
-    const ref = getAdminDb().collection("checkThrottle").doc(uid);
-    const now = Date.now();
-    const data = (await ref.get()).data() as
-      | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
-      | undefined;
-    const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_MS;
-    const monthStart = monthFresh ? now : data!.monthStart!;
-    const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
-    const hourFresh = !data?.windowStart || now - data.windowStart > HOUR_MS;
-    const windowStart = hourFresh ? now : data!.windowStart!;
-    const count = hourFresh ? 0 : data?.count ?? 0;
-    if (monthCount >= MONTH_LIMIT || count >= HOUR_LIMIT) return "limited";
-    await ref.set({ windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
-    return "ok";
-  } catch (err) {
-    console.error("check-recipe throttle failed (continuing):", err);
-    return "ok";
-  }
-}
 
 const FIXABLE_FIELDS = ["category", "protein", "difficulty", "noCook", "prepTime", "cookTime", "restTime", "servings", "seasons", "heat"] as const;
 const FLAG_FIELDS = ["title", "description", "ingredients", "instructions", "tags"] as const;
@@ -85,7 +63,7 @@ export async function POST(req: NextRequest) {
     const membership = await getAdminDb().collection("householdMembers").where("userId", "==", uid).limit(1).get();
     if (membership.empty) return NextResponse.json({ error: "Join or create a cookbook first." }, { status: 403 });
 
-    if ((await checkRate(uid)) === "limited") {
+    if ((await checkThrottle("checkThrottle", uid, HOUR_LIMIT, MONTH_LIMIT)) !== "ok") {
       return NextResponse.json(
         { error: "You've run a lot of checks recently — please try again later." },
         { status: 429 }

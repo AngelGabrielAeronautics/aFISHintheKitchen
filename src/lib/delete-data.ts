@@ -57,6 +57,7 @@ const USER_KEYED_COLLECTIONS = [
   "authEmailThrottle",
   "checkThrottle",
   "enhanceThrottle",
+  "enhanceClassifyThrottle",
   "tagThrottle",
   "importThrottle",
   "suggestThrottle",

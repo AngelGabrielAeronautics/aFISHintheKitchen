@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { recordAiCall } from "@/lib/ai-usage";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { checkThrottle } from "@/lib/recipe-ai";
 
 export const runtime = "nodejs";
 
@@ -10,31 +11,8 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // One call tags up to 30 recipes — cheap, but still bounded per user.
 const HOUR_LIMIT = 10;
 const MONTH_LIMIT = 40;
-const HOUR_MS = 60 * 60 * 1000;
-const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_RECIPES = 30;
 
-async function checkRate(uid: string): Promise<"ok" | "limited"> {
-  try {
-    const ref = getAdminDb().collection("tagThrottle").doc(uid);
-    const now = Date.now();
-    const data = (await ref.get()).data() as
-      | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
-      | undefined;
-    const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_MS;
-    const monthStart = monthFresh ? now : data!.monthStart!;
-    const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
-    const hourFresh = !data?.windowStart || now - data.windowStart > HOUR_MS;
-    const windowStart = hourFresh ? now : data!.windowStart!;
-    const count = hourFresh ? 0 : data?.count ?? 0;
-    if (monthCount >= MONTH_LIMIT || count >= HOUR_LIMIT) return "limited";
-    await ref.set({ windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
-    return "ok";
-  } catch (err) {
-    console.error("suggest-tags throttle failed (continuing):", err);
-    return "ok";
-  }
-}
 
 const SYSTEM_PROMPT = `You suggest search tags for recipes in a family cookbook app. For each recipe you receive, propose 3-6 short, useful, lowercase tags a home cook would search for: cuisine (e.g. "south african", "italian"), cooking method ("braai", "one-pot", "baked"), occasion ("weeknight", "sunday lunch", "party"), key ingredient ("chicken", "chocolate"), and dietary notes ("vegetarian", "gluten-free" ONLY when clearly true).
 
@@ -58,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
     const membership = await getAdminDb().collection("householdMembers").where("userId", "==", uid).limit(1).get();
     if (membership.empty) return NextResponse.json({ error: "Join or create a cookbook first." }, { status: 403 });
-    if ((await checkRate(uid)) === "limited") {
+    if ((await checkThrottle("tagThrottle", uid, HOUR_LIMIT, MONTH_LIMIT)) !== "ok") {
       return NextResponse.json({ error: "You've run a lot of tag suggestions recently — try again later." }, { status: 429 });
     }
 

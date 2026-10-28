@@ -121,9 +121,17 @@ export function parseModelJson(text: string): unknown | null {
 }
 
 /**
- * Fixed-window per-uid counter in Firestore. Serverless has no memory, so this
- * mirrors the authEmailThrottle pattern. Fails OPEN on a Firestore error —
- * availability of the feature beats a perfect limiter.
+ * Fixed-window per-uid counter in Firestore — the ONE throttle every AI route
+ * uses. Serverless has no memory, so the count lives in `{collection}/{uid}`.
+ *
+ * ⚠ Read-and-increment happens inside a TRANSACTION. It used to be a plain
+ * get-then-set, so 200 requests fired at once all read count=0, all passed,
+ * and the counter ended at 1: the hourly and monthly caps on paid model calls
+ * meant nothing to anyone willing to send requests in parallel (2026-10-28).
+ *
+ * Fails OPEN on an ordinary Firestore error — availability of the feature beats
+ * a perfect limiter — but CLOSED on transaction contention (ABORTED), because
+ * contention on one user's counter is exactly what a parallel burst looks like.
  */
 export async function checkThrottle(
   collection: string,
@@ -133,26 +141,33 @@ export async function checkThrottle(
 ): Promise<"ok" | "hour" | "month"> {
   const HOUR_MS = 60 * 60 * 1000;
   const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+  const db = getAdminDb();
+  const ref = db.collection(collection).doc(uid);
   try {
-    const ref = getAdminDb().collection(collection).doc(uid);
-    const now = Date.now();
-    const data = (await ref.get()).data() as
-      | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
-      | undefined;
+    return await db.runTransaction(async (tx) => {
+      const now = Date.now();
+      const data = (await tx.get(ref)).data() as
+        | { windowStart?: number; count?: number; monthStart?: number; monthCount?: number }
+        | undefined;
 
-    const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_MS;
-    const monthStart = monthFresh ? now : data!.monthStart!;
-    const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
-    if (monthCount >= monthLimit) return "month";
+      const monthFresh = !data?.monthStart || now - data.monthStart > MONTH_MS;
+      const monthStart = monthFresh ? now : data!.monthStart!;
+      const monthCount = monthFresh ? 0 : data?.monthCount ?? 0;
+      if (monthCount >= monthLimit) return "month" as const;
 
-    const hourFresh = !data?.windowStart || now - data.windowStart > HOUR_MS;
-    const windowStart = hourFresh ? now : data!.windowStart!;
-    const count = hourFresh ? 0 : data?.count ?? 0;
-    if (count >= hourLimit) return "hour";
+      const hourFresh = !data?.windowStart || now - data.windowStart > HOUR_MS;
+      const windowStart = hourFresh ? now : data!.windowStart!;
+      const count = hourFresh ? 0 : data?.count ?? 0;
+      if (count >= hourLimit) return "hour" as const;
 
-    await ref.set({ windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
-    return "ok";
+      tx.set(ref, { windowStart, count: count + 1, monthStart, monthCount: monthCount + 1 });
+      return "ok" as const;
+    });
   } catch (err) {
+    if ((err as { code?: number | string }).code === 10 || (err as { code?: string }).code === "aborted") {
+      console.warn(`${collection} throttle contention for ${uid} — refusing`);
+      return "hour";
+    }
     console.error(`${collection} throttle check failed (continuing):`, err);
     return "ok";
   }
