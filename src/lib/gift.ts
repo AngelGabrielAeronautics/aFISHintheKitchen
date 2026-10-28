@@ -99,6 +99,8 @@ export interface Gift {
    * returns the gift that already exists instead of minting a second year.
    */
   transactionId: string;
+  /** Bought with a sandbox / license-tester purchase (review + admin accounts only). */
+  test?: boolean;
   purchasedByUid: string;
   purchasedByName: string;
   recipientName: string;

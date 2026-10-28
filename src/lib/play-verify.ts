@@ -126,6 +126,12 @@ export interface PlayProductPurchase {
   orderId: string;
   obfuscatedAccountId: string | null;
   acknowledged: boolean;
+  /**
+   * Play sets `purchaseType` ONLY on non-real purchases: 0 = license-tester
+   * (test card, no money moves), 1 = promo code, 2 = rewarded. Absent means a
+   * real paid purchase.
+   */
+  purchaseType: number | null;
 }
 
 /**
@@ -157,6 +163,7 @@ export async function verifyPlayProduct(
     productId?: string;
     obfuscatedExternalAccountId?: string;
     acknowledgementState?: number;
+    purchaseType?: number;
   }>({ url, method: "GET" });
 
   const d = res.data;
@@ -166,6 +173,7 @@ export async function verifyPlayProduct(
     orderId: d.orderId ?? "",
     obfuscatedAccountId: d.obfuscatedExternalAccountId ?? null,
     acknowledged: d.acknowledgementState === 1,
+    purchaseType: typeof d.purchaseType === "number" ? d.purchaseType : null,
   };
 }
 

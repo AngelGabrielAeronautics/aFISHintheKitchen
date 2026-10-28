@@ -68,6 +68,15 @@ service cloud.firestore {
       return isSuperAdmin() || (isMember(hid) && stateOf(hid) == "active" && isEmailVerified());
     }
 
+    // An update may not move a doc to another household. canWrite() on the
+    // UPDATE checks the household the doc is IN; without this a member of book
+    // A could rewrite householdId to book B and inject content into a cookbook
+    // they have no access to (found 2026-10-28). Use on every household-scoped
+    // update.
+    function householdUnchanged() {
+      return request.resource.data.householdId == resource.data.householdId;
+    }
+
     // ── Households ──
     match /households/{hid} {
       // uids this update would add to / remove from memberIds.
@@ -142,14 +151,16 @@ service cloud.firestore {
     match /recipes/{id} {
       allow read: if canRead(resource.data.householdId);
       allow create: if canWrite(request.resource.data.householdId);
-      allow update, delete: if canWrite(resource.data.householdId);
+      allow update: if canWrite(resource.data.householdId) && householdUnchanged();
+      allow delete: if canWrite(resource.data.householdId);
     }
 
     // ── Family member profiles ──
     match /members/{id} {
       allow read: if canRead(resource.data.householdId);
       allow create: if canWrite(request.resource.data.householdId);
-      allow update, delete: if canWrite(resource.data.householdId);
+      allow update: if canWrite(resource.data.householdId) && householdUnchanged();
+      allow delete: if canWrite(resource.data.householdId);
     }
 
     // ── Shared-recipe snapshots + shared-menu tokens (server-only; via API/SSR) ──
@@ -170,7 +181,11 @@ service cloud.firestore {
       allow read: if isSignedIn() && (resource == null || canRead(resource.data.householdId));
       allow create: if canWrite(request.resource.data.householdId)
         && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if canWrite(resource.data.householdId)
+      allow update: if canWrite(resource.data.householdId)
+        && resource.data.userId == request.auth.uid
+        && householdUnchanged()
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if canWrite(resource.data.householdId)
         && resource.data.userId == request.auth.uid;
     }
 
@@ -209,14 +224,16 @@ service cloud.firestore {
     match /collections/{id} {
       allow read: if canRead(resource.data.householdId);
       allow create: if canWrite(request.resource.data.householdId);
-      allow update, delete: if canWrite(resource.data.householdId);
+      allow update: if canWrite(resource.data.householdId) && householdUnchanged();
+      allow delete: if canWrite(resource.data.householdId);
     }
 
     // ── Tips & tricks ──
     match /tips/{id} {
       allow read: if canRead(resource.data.householdId);
       allow create: if canWrite(request.resource.data.householdId);
-      allow update, delete: if canWrite(resource.data.householdId);
+      allow update: if canWrite(resource.data.householdId) && householdUnchanged();
+      allow delete: if canWrite(resource.data.householdId);
     }
 
     // ── Hero presets (the photos a new owner picks from) ──

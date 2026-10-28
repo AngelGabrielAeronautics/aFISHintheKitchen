@@ -1,7 +1,7 @@
 import { getStorage } from "firebase-admin/storage";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { STARTER_RECIPES } from "@/lib/starter-content";
-import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 
 // Deleting data, in the two shapes this product actually has.
 //
@@ -60,6 +60,7 @@ const USER_KEYED_COLLECTIONS = [
   "tagThrottle",
   "importThrottle",
   "suggestThrottle",
+  "stepIngredientsThrottle",
 ] as const;
 
 /** Firestore caps a batch at 500 writes; stay under it with room to spare. */
@@ -345,6 +346,38 @@ export async function deleteUserData(uid: string): Promise<DeletionReport> {
   // Left behind, they would keep this phone receiving a family's notifications
   // after its owner deleted their account.
   report["deviceTokens"] = await deleteQuery(db, "deviceTokens", "uid", uid);
+
+  // Their own week plans and shopping lists: personal, keyed by userId.
+  report["mealPlans"] = await deleteQuery(db, "mealPlans", "userId", uid);
+  report["shoppingLists"] = await deleteQuery(db, "shoppingLists", "userId", uid);
+
+  // ⚠ Leave every cookbook they were a MEMBER of. Before 2026-10-28 this was
+  // skipped: the deleted person stayed listed, kept holding one of the 5 seats
+  // forever, and their name stayed on the members screen. Their recipes and
+  // profile card stay — remove ≠ delete (see the header above).
+  //
+  // An OWNER's row is left alone on purpose: the cookbook outlives its owner's
+  // account by design, and ownership hand-over is a support conversation, not
+  // something to guess at here. The route reports ownsCookbook for that.
+  const memberships = await db.collection("householdMembers").where("userId", "==", uid).get();
+  let left = 0;
+  for (const m of memberships.docs) {
+    const d = m.data() as { householdId?: string; role?: string };
+    if (d.role === "owner") continue;
+    const batch = db.batch();
+    batch.delete(m.ref);
+    if (d.householdId) {
+      // update, not set+merge: a merge on a household that no longer exists
+      // would conjure up a stub doc holding nothing but memberIds.
+      const hhRef = db.collection("households").doc(d.householdId);
+      if ((await hhRef.get()).exists) {
+        batch.update(hhRef, { memberIds: FieldValue.arrayRemove(uid) });
+      }
+    }
+    await batch.commit();
+    left++;
+  }
+  report["householdMembers"] = left;
 
   await getAdminAuth().deleteUser(uid);
   report["authUser"] = 1;

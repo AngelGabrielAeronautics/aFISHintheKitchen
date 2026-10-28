@@ -41,8 +41,6 @@ export interface InviteEmailParams {
   name: string;
   inviterName: string;
   householdName?: string;
-  /** The app's /auth URL; invitee details are appended as query params. */
-  signupUrl: string;
 }
 
 export interface BuiltEmail {
@@ -56,7 +54,6 @@ export function buildInviteEmail({
   name,
   inviterName,
   householdName,
-  signupUrl,
 }: InviteEmailParams): BuiltEmail {
   const subject = householdName
     ? `${inviterName} invited you to ${householdName} on ${FROM_NAME}`
@@ -67,10 +64,16 @@ export function buildInviteEmail({
   const safeHousehold = householdName ? escapeHtml(householdName) : null;
   // Carry the invitee's details so /auth can greet them, prefill + lock the
   // email, and just ask for a password. Auth/join still verify server-side.
-  const safeUrl =
-    `${signupUrl}?email=${encodeURIComponent(email)}` +
+  //
+  // ⚠ The link is built HERE from our own origin, never taken from the
+  // request. The route used to accept a client-supplied signupUrl and drop it
+  // straight into href="…", so any account could send phishing links (or
+  // break out of the attribute) from our sending domain (found 2026-10-28).
+  const inviteUrl =
+    `${SITE_URL}/auth?email=${encodeURIComponent(email)}` +
     `&name=${encodeURIComponent(name)}` +
     (householdName ? `&book=${encodeURIComponent(householdName)}` : "");
+  const safeUrl = escapeHtml(inviteUrl);
 
   const intro = safeHousehold
     ? `<strong>${safeInviter}</strong> has invited you to join <strong>${safeHousehold}</strong> &mdash; your family&rsquo;s private cookbook for recipes, meal plans, and kitchen tips.`
@@ -176,7 +179,7 @@ export function buildInviteEmail({
     "",
     `Joining is completely free — ${inviterName} covers the subscription. All you need to do is choose a password.`,
     "",
-    `Accept your invitation: ${safeUrl}`,
+    `Accept your invitation: ${inviteUrl}`,
     "",
     `A Fish in the Kitchen is an app for iPhone, iPad and Android. Download it, then sign up using ${email} — this address is your invitation, so the cookbook opens automatically.`,
     "",

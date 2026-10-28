@@ -32,11 +32,13 @@ export async function POST(req: NextRequest) {
     let uid: string;
     let emailLower: string;
     let tokenName: string | undefined;
+    let emailVerified: boolean;
     try {
       const decoded = await getAdminAuth().verifyIdToken(token);
       uid = decoded.uid;
       emailLower = (decoded.email ?? "").toLowerCase().trim();
       tokenName = decoded.name as string | undefined;
+      emailVerified = decoded.email_verified === true;
     } catch {
       return NextResponse.json({ error: "invalid_token" }, { status: 401 });
     }
@@ -56,6 +58,16 @@ export async function POST(req: NextRequest) {
 
     if (code) {
       return redeemCode(db, code, { uid, emailLower, tokenName });
+    }
+
+    // ⚠ The email-invite path matches on the address in the token, so the
+    // address must be PROVEN. Without this, anyone could create an
+    // email/password account for an invited address nobody had claimed yet and
+    // walk into that private cookbook (found 2026-10-28). Google and Apple
+    // sign-ins arrive verified; email/password users verify first. Join codes
+    // above are unaffected — the code itself is the proof.
+    if (!emailVerified) {
+      return NextResponse.json({ error: "email_not_verified" }, { status: 403 });
     }
     const pendingSnap = await db
       .collection(INVITES)
@@ -164,13 +176,6 @@ export async function POST(req: NextRequest) {
     await syncLegacyMirror(db, emailLower);
 
     if (joined.length > 0 || alreadyMember.length > 0) {
-      // Being invited proves control of the address; unblock the write gate
-      // that otherwise waits on the verification email.
-      try {
-        await getAdminAuth().updateUser(uid, { emailVerified: true });
-      } catch {
-        // Non-fatal.
-      }
       return NextResponse.json({
         ok: true,
         joined,

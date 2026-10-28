@@ -22,9 +22,9 @@ interface InviteBody {
   name: string;
   // Display name of the inviting owner, for the email + the invitedBy field.
   inviterName: string;
-  // The app's /auth URL (origin-relative is resolved client-side). Invitee
-  // details are appended by the email builder.
-  signupUrl: string;
+  // Ignored: older clients still send it, but the email builder makes the
+  // link from our own origin. See lib/invite-email.ts.
+  signupUrl?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -52,9 +52,8 @@ export async function POST(req: NextRequest) {
     const householdId = body.householdId?.trim();
     const inviteEmail = body.email?.toLowerCase().trim();
     const inviteName = body.name?.trim();
-    const signupUrl = body.signupUrl?.trim();
     const inviterName = body.inviterName?.trim() || callerEmail;
-    if (!householdId || !inviteEmail || !inviteName || !signupUrl) {
+    if (!householdId || !inviteEmail || !inviteName) {
       return NextResponse.json({ error: "missing_fields" }, { status: 400 });
     }
     // Cheap sanity check; the real gate is that the address must accept the email.
@@ -200,7 +199,6 @@ export async function POST(req: NextRequest) {
         name: inviteName,
         inviterName,
         householdName,
-        signupUrl,
       });
       await sendTransactionalEmail({ to: inviteEmail, subject, html, text });
       emailSent = true;

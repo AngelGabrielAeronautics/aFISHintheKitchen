@@ -19,6 +19,25 @@ export const dynamic = "force-dynamic";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.afishinthekitchen.com";
 
+// Accounts allowed to buy a gift with a NON-REAL purchase (Apple sandbox /
+// TestFlight, Play license-tester). App Review buys in the sandbox while
+// signed in as the review account, so it must keep working for them; everyone
+// else's free test purchase must not become a real year. Super admins
+// (config/superAdmins) are allowed too, so we can test end to end.
+const STORE_TEST_EMAILS = new Set([
+  "demo@afishinthekitchen.com",
+  "appreview@afishinthekitchen.com",
+  "rmdjz9nbwm@privaterelay.appleid.com", // Apple's reviewer ("Test test" book)
+]);
+
+async function mayBuyWithTestPurchase(email: string): Promise<boolean> {
+  if (!email) return false;
+  if (STORE_TEST_EMAILS.has(email)) return true;
+  const snap = await getAdminDb().doc("config/superAdmins").get();
+  const admins: string[] = snap.exists ? (snap.data()?.emails ?? []) : [];
+  return admins.map((e) => e.toLowerCase().trim()).includes(email);
+}
+
 // Records a gift purchase and mints its code.
 //
 // ⚠ The gift is for a cookbook the recipient will own OUTRIGHT. Nothing here
@@ -35,10 +54,12 @@ export async function POST(req: NextRequest) {
 
     let uid: string;
     let buyerName: string;
+    let buyerEmail: string;
     try {
       const decoded = await getAdminAuth().verifyIdToken(token);
       uid = decoded.uid;
       buyerName = ((decoded.name as string | undefined) ?? "").trim();
+      buyerEmail = (decoded.email ?? "").toLowerCase().trim();
     } catch {
       return NextResponse.json({ error: "invalid_token" }, { status: 401 });
     }
@@ -47,6 +68,9 @@ export async function POST(req: NextRequest) {
       platform?: "appstore" | "play";
       jws?: string; // App Store signed transaction
       purchaseToken?: string; // Play purchase token
+      // ⚠ Accepted for old clients but NEVER trusted: the server checks the
+      // receipt against GIFT_PRODUCT_ID. Reading this let any subscription
+      // receipt — a free trial included — mint a year gift (found 2026-10-28).
       productId?: string;
       recipientName?: string;
       recipientEmail?: string;
@@ -72,12 +96,13 @@ export async function POST(req: NextRequest) {
     // ── Verify the purchase with the store ──────────────────────────────────
     let transactionId: string;
     let platform: "appstore" | "play";
+    let isTestPurchase: boolean;
 
     if (body.platform === "play") {
       platform = "play";
       const purchaseToken = (body.purchaseToken ?? "").trim();
       if (!purchaseToken) return NextResponse.json({ error: "missing_token" }, { status: 400 });
-      const purchase = await verifyPlayProduct(purchaseToken, body.productId ?? GIFT_PRODUCT_ID);
+      const purchase = await verifyPlayProduct(purchaseToken, GIFT_PRODUCT_ID);
       if (!purchase.purchased) {
         return NextResponse.json({ error: "not_purchased" }, { status: 400 });
       }
@@ -90,18 +115,37 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "account_mismatch" }, { status: 403 });
       }
       transactionId = purchase.orderId;
+      isTestPurchase = purchase.purchaseType !== null;
     } else {
       platform = "appstore";
       const jws = (body.jws ?? "").trim();
       if (!jws) return NextResponse.json({ error: "missing_jws" }, { status: 400 });
       const tx = await verifyAppStoreTransaction(jws);
-      if (tx.productId !== (body.productId ?? GIFT_PRODUCT_ID)) {
+      if (tx.productId !== GIFT_PRODUCT_ID) {
         return NextResponse.json({ error: "wrong_product" }, { status: 400 });
       }
-      if (tx.appAccountToken && tx.appAccountToken !== appAccountTokenForUid(uid)) {
+      // A refunded purchase must not mint a year. The REFUND notification can
+      // only revoke gifts that already exist, so a buyer who held the receipt
+      // back until after the refund would otherwise get one for free.
+      if (tx.revocationDate) {
+        return NextResponse.json({ error: "revoked" }, { status: 400 });
+      }
+      // Lowercased like the subscription route: StoreKit hands the UUID back in
+      // whatever case it likes.
+      const accountToken = (tx.appAccountToken ?? "").toLowerCase();
+      if (accountToken && accountToken !== appAccountTokenForUid(uid)) {
         return NextResponse.json({ error: "account_mismatch" }, { status: 403 });
       }
       transactionId = String(tx.transactionId ?? "");
+      isTestPurchase = tx.environment !== "Production";
+    }
+
+    // A sandbox / license-tester purchase costs nothing, so it may only mint a
+    // gift for the review and admin accounts. Anyone with TestFlight could
+    // otherwise hand out real years for free.
+    if (isTestPurchase && !(await mayBuyWithTestPurchase(buyerEmail))) {
+      console.warn(`gift/purchase: test purchase refused for ${uid}`);
+      return NextResponse.json({ error: "test_purchase" }, { status: 400 });
     }
 
     if (!transactionId) {
@@ -168,10 +212,11 @@ export async function POST(req: NextRequest) {
 
     const gift: Gift = {
       code,
-      productId: body.productId ?? GIFT_PRODUCT_ID,
+      productId: GIFT_PRODUCT_ID,
       days: GIFT_DAYS,
       platform,
       transactionId,
+      ...(isTestPurchase ? { test: true } : {}),
       purchasedByUid: uid,
       purchasedByName: buyerName,
       recipientName,
