@@ -78,9 +78,14 @@ service cloud.firestore {
         return resource.data.memberIds.toSet().difference(request.resource.data.memberIds.toSet());
       }
 
+      // ⚠ NOT gated on suspended. This doc is the cookbook's name, branding and
+      // accessState — the apps need it to SHOW the "Cookbook paused / Renew"
+      // screen. Gating it made a suspended book unreadable even to its owner:
+      // both apps saw permission-denied, showed "Couldn't connect" forever and
+      // never reached the renew path (found 2026-10-28). The content
+      // collections stay locked by canRead(), which still checks suspended.
       allow read: if isSuperAdmin()
-        || (isSignedIn() && request.auth.uid in resource.data.memberIds
-            && resource.data.accessState != "suspended");
+        || (isSignedIn() && request.auth.uid in resource.data.memberIds);
       // Creation is server-side only (/api/create-household via Admin SDK): it is
       // the enforcement point for one-owned-book-per-user and slug uniqueness,
       // and it writes the owner's householdMembers doc, which clients can't.
