@@ -85,15 +85,6 @@ export async function POST(req: NextRequest) {
     const recipientName = (body.recipientName ?? "").trim();
     const recipientEmail = (body.recipientEmail ?? "").trim().toLowerCase();
     const message = (body.message ?? "").trim().slice(0, 500);
-    if (!recipientName || !recipientEmail) {
-      return NextResponse.json({ error: "missing_recipient" }, { status: 400 });
-    }
-    // Deliberately loose. A stricter pattern rejects real addresses, and the
-    // cost of a typo here is a bounced card the buyer can resend — not a lost
-    // payment. The store has the money either way.
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipientEmail)) {
-      return NextResponse.json({ error: "bad_recipient_email" }, { status: 400 });
-    }
 
     // ── Verify the purchase with the store ──────────────────────────────────
     let transactionId: string;
@@ -185,6 +176,20 @@ export async function POST(req: NextRequest) {
     if (!dupe.empty) {
       const existing = dupe.docs[0].data() as Gift;
       return NextResponse.json({ ok: true, code: existing.code, duplicate: true });
+    }
+
+    // ⚠ Checked AFTER the duplicate lookup, on purpose (audit C2/D17): an app
+    // recovering a purchase after a relaunch may no longer have the recipient
+    // details. It can still ask "was this already turned into a gift?" and
+    // finish the store transaction — and gets a clear refusal if not.
+    if (!recipientName || !recipientEmail) {
+      return NextResponse.json({ error: "missing_recipient" }, { status: 400 });
+    }
+    // Deliberately loose. A stricter pattern rejects real addresses, and the
+    // cost of a typo here is a bounced card the buyer can resend — not a lost
+    // payment. The store has the money either way.
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipientEmail)) {
+      return NextResponse.json({ error: "bad_recipient_email" }, { status: 400 });
     }
 
     // ── Mint the code ───────────────────────────────────────────────────────
