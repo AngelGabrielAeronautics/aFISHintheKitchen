@@ -50,15 +50,11 @@ service firebase.storage {
     // Member of an ACTIVE cookbook. activeMember() mirrors firestore.rules
     // canWrite(); memberOfActive() skips the verified-email check, matching the
     // Firestore rule that lets an owner change branding before verifying.
-    // ⚠ TEMPORARY (2026-10-28): the membership check is switched OFF until
-    // Storage is granted read access to Firestore
-    // (roles/firebaserules.firestoreServiceAgent on the Storage service agent).
-    // Without that grant firestore.get() fails and EVERY household-path upload
-    // is refused — which is what the first deploy did in production. The
-    // version with the check is in git history (15b0fbc); restore it once the
-    // grant is in place.
     function memberOfActive(hid) {
-      return request.auth != null;
+      let hh = firestore.get(/databases/(default)/documents/households/$(hid)).data;
+      return request.auth != null
+        && request.auth.uid in hh.memberIds
+        && hh.get('accessState', 'active') == 'active';
     }
     function activeMember(hid) {
       return verified() && memberOfActive(hid);
