@@ -58,6 +58,7 @@ const USER_KEYED_COLLECTIONS = [
   "checkThrottle",
   "enhanceThrottle",
   "enhanceClassifyThrottle",
+  "menuCommentThrottle",
   "tagThrottle",
   "importThrottle",
   "suggestThrottle",
