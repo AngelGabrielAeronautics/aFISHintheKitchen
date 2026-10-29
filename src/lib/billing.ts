@@ -43,6 +43,33 @@ export interface AppliedBilling {
  * Given the current subscription (if any) and an incoming event, compute the new
  * subscription fields and the household's mirrored access state. Pure & testable.
  */
+/**
+ * True while something WE granted outranks the store on this subscription doc:
+ * a comp (free, open-ended), a redeemed gift year, or an admin-extended trial,
+ * still inside its end date.
+ *
+ * ⚠ Audit F11 (2026-10-29). The store notification handlers find the doc by
+ * providerSubscriptionId, which gift redemption, comp and extend_trial all
+ * leave in place, and applyBillingEvent then overwrote provider/status. A
+ * subscriber in billing retry who redeemed a gift lost it either way: an
+ * EXPIRED notification walked the book to read-only while it held a paid year,
+ * or a DID_RENEW flipped provider back to the store and the gift vanished.
+ * While a grant is live, store notifications are ignored; once it ends they
+ * apply again. A real purchase still arrives through /api/billing/appstore or
+ * /api/billing/play, which is unaffected.
+ */
+export function grantOverridesStore(
+  sub: { provider?: string; comped?: boolean; trialGrantedAt?: string; trialEndsAt?: string; currentPeriodEnd?: string } | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (!sub) return false;
+  if (sub.comped === true) return true;
+  const until = (iso?: string) => (iso ? Date.parse(iso) || 0 : 0);
+  if (sub.provider === "gift" && until(sub.currentPeriodEnd) > now) return true;
+  if (sub.trialGrantedAt && until(sub.trialEndsAt) > now) return true;
+  return false;
+}
+
 export function applyBillingEvent(
   current: { hasUsedTrial?: boolean; lapsedAt?: string } | null,
   event: BillingEvent,

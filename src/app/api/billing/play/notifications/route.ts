@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { revokeGiftByTransaction } from "@/lib/gift-refund";
-import { applyBillingEvent, type BillingEvent } from "@/lib/billing";
+import { applyBillingEvent, type BillingEvent, grantOverridesStore } from "@/lib/billing";
 import { verifyPlayPurchase, statusForState } from "@/lib/play-verify";
 
 export const runtime = "nodejs";
@@ -118,6 +118,11 @@ export async function POST(req: NextRequest) {
     const userId = subDoc.id;
     const householdId = subDoc.data().householdId as string | undefined;
     if (!householdId) return NextResponse.json({ received: true, unresolved: true });
+    // A gift year, comp or admin trial in force outranks the store (audit F11).
+    if (grantOverridesStore(subDoc.data())) {
+      console.log(`play rtdn ignored for ${userId}: grant in force`);
+      return NextResponse.json({ received: true, ignored: "grant" });
+    }
 
     // A refund is the one case we don't take from the subscription state:
     // Google can still report a refunded subscription as active for the rest of

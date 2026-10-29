@@ -460,30 +460,47 @@ async function runSweep(req: NextRequest) {
       const ageDays = (now.getTime() - new Date(hh.createdAt).getTime()) / 86_400_000;
       const sent = (hh.nudges ?? {}) as { noRecipeAt?: string; soloAt?: string };
       const bookName: string = hh.customisation?.brandName ?? hh.name ?? "Your cookbook";
-      const ownerEmail = async () => (await getAdminAuth().getUser(hh.ownerId)).email;
+      // ⚠ An owner who deleted their account leaves the book behind by design;
+      // getUser then throws user-not-found. Treat that as "nobody to mail" so
+      // the nudge is stamped and the run moves on (audit F12) — it used to
+      // throw out of the whole loop, every night, and no newer book was
+      // ever nudged again.
+      const ownerEmail = async () => {
+        try {
+          return (await getAdminAuth().getUser(hh.ownerId)).email;
+        } catch (e) {
+          if ((e as { code?: string }).code === "auth/user-not-found") return undefined;
+          throw e;
+        }
+      };
 
-      if (ageDays >= 3 && !sent.noRecipeAt) {
-        const recipes = await db.collection("recipes").where("householdId", "==", hhSnap.id).get();
-        const own = recipes.docs.some((d) => d.data().starter !== true && d.data().draft !== true);
-        if (!own) {
+      try {
+        if (ageDays >= 3 && !sent.noRecipeAt) {
+          const recipes = await db.collection("recipes").where("householdId", "==", hhSnap.id).get();
+          const own = recipes.docs.some((d) => d.data().starter !== true && d.data().draft !== true);
+          if (!own) {
+            const email = await ownerEmail();
+            if (email) {
+              const { subject, html, text } = buildNoRecipeEmail(bookName);
+              await sendTransactionalEmail({ to: email, subject, html, text });
+            }
+            await hhSnap.ref.update({ "nudges.noRecipeAt": now.toISOString() });
+            nudges.noRecipe++;
+            continue; // one nudge per run
+          }
+        }
+        if (ageDays >= 10 && !sent.soloAt && hh.customisation?.groupType !== "solo" && (hh.memberIds ?? []).length < 2) {
           const email = await ownerEmail();
           if (email) {
-            const { subject, html, text } = buildNoRecipeEmail(bookName);
+            const { subject, html, text } = buildSoloEmail(bookName);
             await sendTransactionalEmail({ to: email, subject, html, text });
           }
-          await hhSnap.ref.update({ "nudges.noRecipeAt": now.toISOString() });
-          nudges.noRecipe++;
-          continue; // one nudge per run
+          await hhSnap.ref.update({ "nudges.soloAt": now.toISOString() });
+          nudges.solo++;
         }
-      }
-      if (ageDays >= 10 && !sent.soloAt && hh.customisation?.groupType !== "solo" && (hh.memberIds ?? []).length < 2) {
-        const email = await ownerEmail();
-        if (email) {
-          const { subject, html, text } = buildSoloEmail(bookName);
-          await sendTransactionalEmail({ to: email, subject, html, text });
-        }
-        await hhSnap.ref.update({ "nudges.soloAt": now.toISOString() });
-        nudges.solo++;
+      } catch (err) {
+        // One bad book must not cost every newer book its nudges.
+        reportError(err, { route: "cron/lapse-sweep", step: "nudges", householdId: hhSnap.id });
       }
     }
   } catch (err) {

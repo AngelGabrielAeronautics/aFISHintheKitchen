@@ -168,6 +168,30 @@ export async function POST(req: NextRequest) {
     // purchase more than once — a retried finish, a restored transaction, a
     // replayed notification — and each redelivery arriving as a fresh year
     // would be free money out the door. Returns the existing gift instead.
+    // ⚠ A lock per store transaction, taken BEFORE the duplicate check
+    // (audit F13). The check was a plain query, so two calls for one purchase
+    // racing — the 1.14 recovery paths retry at launch and on reconnect —
+    // could both find nothing and mint two codes / send two cards. The lock is
+    // created in a transaction; a stale one (a call that died mid-way) is
+    // taken over after two minutes.
+    const lockRef = db.collection("giftTx").doc(`${platform}_${transactionId}`.replace(/\//g, "_"));
+    const lock = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(lockRef);
+      const d = snap.data() as { code?: string; at?: number } | undefined;
+      if (d?.code) return { code: d.code };
+      if (d?.at && Date.now() - d.at < 120_000) return { busy: true as const };
+      tx.set(lockRef, { at: Date.now(), uid });
+      return {};
+    });
+    if ("code" in lock && lock.code) {
+      return NextResponse.json({ ok: true, code: lock.code, duplicate: true });
+    }
+    if ("busy" in lock) {
+      // Another call is minting this exact purchase right now; the app keeps
+      // the transaction open and retries.
+      return NextResponse.json({ error: "in_progress" }, { status: 409 });
+    }
+
     const dupe = await db
       .collection("gifts")
       .where("transactionId", "==", transactionId)
@@ -175,6 +199,7 @@ export async function POST(req: NextRequest) {
       .get();
     if (!dupe.empty) {
       const existing = dupe.docs[0].data() as Gift;
+      await lockRef.set({ code: existing.code }, { merge: true });
       return NextResponse.json({ ok: true, code: existing.code, duplicate: true });
     }
 
@@ -183,12 +208,14 @@ export async function POST(req: NextRequest) {
     // details. It can still ask "was this already turned into a gift?" and
     // finish the store transaction — and gets a clear refusal if not.
     if (!recipientName || !recipientEmail) {
+      await lockRef.delete().catch(() => {}); // free the lock for a corrected retry
       return NextResponse.json({ error: "missing_recipient" }, { status: 400 });
     }
     // Deliberately loose. A stricter pattern rejects real addresses, and the
     // cost of a typo here is a bounced card the buyer can resend — not a lost
     // payment. The store has the money either way.
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipientEmail)) {
+      await lockRef.delete().catch(() => {}); // free the lock for a corrected retry
       return NextResponse.json({ error: "bad_recipient_email" }, { status: 400 });
     }
 
@@ -207,6 +234,7 @@ export async function POST(req: NextRequest) {
     }
     if (!code) {
       reportError(new Error("gift code collision after 5 attempts"), { route: "gift/purchase" });
+      await lockRef.delete().catch(() => {}); // free the lock for a corrected retry
       return NextResponse.json({ error: "code_generation_failed" }, { status: 500 });
     }
 
@@ -242,6 +270,7 @@ export async function POST(req: NextRequest) {
     };
 
     await db.collection("gifts").doc(code).set(gift);
+    await lockRef.set({ code }, { merge: true });
 
     // Deliver now if it isn't post-dated; the nightly sweep picks up the rest.
     //

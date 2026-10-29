@@ -82,6 +82,12 @@ export async function POST(req: NextRequest) {
       notifyMessage = `${guestName} commented on ${share.bookName}'s menu`;
     } else {
       if (!body.recipeId) return NextResponse.json({ error: "missing_recipe" }, { status: 400 });
+      // Each claim/unclaim appends history, writes an inbox row and pushes the
+      // whole family, so it's rate-limited per account like comments (audit
+      // F10). The dish itself must be on the menu — checked in the transaction.
+      if ((await checkThrottle("menuClaimThrottle", guestUid, 30, 300)) !== "ok") {
+        return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+      }
       const rid = body.recipeId;
       let dishTitle = "a dish";
       // The family's own names (profile cards + accounts). A guest claim made
